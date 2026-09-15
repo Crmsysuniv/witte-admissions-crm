@@ -1,0 +1,213 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Каталог программ и направлений обучения | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Направления и программы обучения{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-10">
+
+    <!-- Header Banner -->
+    <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-witte-950 via-witte-900 to-indigo-950 text-white shadow-xl border border-white/10 relative overflow-hidden">
+        <div class="relative z-10 max-w-3xl">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 mb-3">
+                <i class="bi bi-mortarboard-fill"></i> Прием 2026 / 2027
+            </span>
+            <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white">
+                Каталог образовательных программ Витте
+            </h1>
+            <p class="mt-3 text-sm sm:text-base text-blue-100/80 leading-relaxed">
+                Выберите направление подготовки и удобную форму обучения: очную, заочную или очно-заочную (вечернюю). Ознакомьтесь с актуальной стоимостью, сроками обучения и планом набора.
+            </p>
+        </div>
+    </div>
+
+    <!-- Interactive Filters Form with Study Form Tabs -->
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-5">
+        
+        <!-- Study Form Quick Tabs (Очная / Заочная / Очно-заочная) -->
+        <div>
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                Форма обучения:
+            </label>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="?{% if selected_faculty %}faculty={{ selected_faculty }}&{% endif %}{% if selected_level %}level={{ selected_level }}&{% endif %}{% if search_query %}q={{ search_query }}&{% endif %}"
+                   class="px-4 py-2 rounded-xl text-xs font-bold transition-all {% if not selected_study_form %}bg-witte-900 text-white shadow-md{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    Все формы
+                </a>
+                {% for code, label in study_forms %}
+                <a href="?study_form={{ code }}{% if selected_faculty %}&faculty={{ selected_faculty }}{% endif %}{% if selected_level %}&level={{ selected_level }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+                   class="px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 {% if selected_study_form == code %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}bg-slate-100 text-slate-700 hover:bg-slate-200{% endif %}">
+                    {% if code == 'FULL_TIME' %}<i class="bi bi-sun-fill text-amber-400"></i>
+                    {% elif code == 'PART_TIME' %}<i class="bi bi-laptop-fill text-blue-400"></i>
+                    {% else %}<i class="bi bi-moon-stars-fill text-purple-400"></i>{% endif %}
+                    {{ label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Additional Filters: Search, Faculty, Level -->
+        <form method="get" class="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {% if selected_study_form %}
+            <input type="hidden" name="study_form" value="{{ selected_study_form }}">
+            {% endif %}
+
+            <!-- Search input -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Поиск по названию или коду</label>
+                <div class="relative">
+                    <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="Прикладная информатика, 09.03..."
+                           class="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+            </div>
+
+            <!-- Faculty select -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Факультет</label>
+                <select name="faculty" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <option value="">Все факультеты</option>
+                    {% for fac in faculties %}
+                    <option value="{{ fac.id }}" {% if selected_faculty == fac.id|stringformat:"s" %}selected{% endif %}>
+                        {{ fac.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Level select -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Уровень образования</label>
+                <select name="level" class="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    <option value="">Все уровни</option>
+                    {% for code, label in education_levels %}
+                    <option value="{{ code }}" {% if selected_level == code %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 py-2 px-4 rounded-xl bg-witte-900 hover:bg-witte-800 text-white text-xs font-bold transition-colors">
+                    Применить
+                </button>
+                <a href="/programs/" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium transition-colors" title="Сбросить фильтры">
+                    Сброс
+                </a>
+            </div>
+        </form>
+
+        <!-- Active Filter State & Result Count -->
+        <div class="pt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>Найдено программ: <strong class="text-slate-800">{{ total_found }}</strong></span>
+            {% if selected_study_form or selected_faculty or selected_level or search_query %}
+            <span class="text-indigo-600 font-medium">Применены фильтры</span>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- Programs Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for program in programs %}
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between group">
+            
+            <div>
+                <!-- Top Tags -->
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <span class="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200/80">
+                        {{ program.specialty.code }}
+                    </span>
+                    <span class="text-[11px] font-semibold px-2.5 py-1 rounded-lg
+                        {% if program.study_form == 'FULL_TIME' %}bg-amber-50 text-amber-700 border border-amber-200/60
+                        {% elif program.study_form == 'PART_TIME' %}bg-blue-50 text-blue-700 border border-blue-200/60
+                        {% else %}bg-purple-50 text-purple-700 border border-purple-200/60{% endif %}">
+                        {{ program.get_study_form_display }}
+                    </span>
+                </div>
+
+                <!-- Program Name & Faculty -->
+                <h3 class="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                    {{ program.specialty.name }}
+                </h3>
+                
+                <div class="flex items-center gap-1.5 text-xs text-slate-500 mt-2">
+                    <i class="bi bi-buildings text-slate-400"></i>
+                    <span>{{ program.specialty.faculty.name }}</span>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
+                    
+                    <!-- Duration -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Срок обучения:</span>
+                        <span class="font-bold text-slate-800">{{ program.duration }}</span>
+                    </div>
+
+                    <!-- Level -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Уровень:</span>
+                        <span class="font-semibold text-slate-700">{{ program.specialty.get_education_level_display }}</span>
+                    </div>
+
+                    <!-- Places -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">План набора:</span>
+                        <div class="flex items-center gap-1.5">
+                            {% if program.specialty.budget_places > 0 %}
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[10px]" title="Бюджетные места">
+                                {{ program.specialty.budget_places }} бюдж.
+                            </span>
+                            {% endif %}
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[10px]" title="Платные места">
+                                {{ program.specialty.paid_places }} платн.
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Cost Highlight Banner -->
+                <div class="mt-5 p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200/70">
+                    <div class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Стоимость обучения</div>
+                    <div class="mt-1 flex items-baseline gap-1.5">
+                        <span class="text-xl font-black text-witte-900">{{ program.tuition_fee|floatformat:0 }} ₽</span>
+                        <span class="text-xs text-slate-500">/ год</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Action Button -->
+            <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <a href="/admin/admissions/specialty/{{ program.specialty.id }}/change/" class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
+                    Параметры <i class="bi bi-chevron-right text-[10px]"></i>
+                </a>
+                <a href="/admin/admissions/application/add/" 
+                   class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all hover:scale-105">
+                    <i class="bi bi-file-earmark-plus"></i> Подать заявление
+                </a>
+            </div>
+
+        </div>
+        {% empty %}
+        <div class="col-span-full p-12 bg-white rounded-3xl border border-slate-200 text-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+                <i class="bi bi-search"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800">Программы не найдены</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                По выбранным параметрам фильтрации программ не найдено. Попробуйте сбросить фильтры.
+            </p>
+            <a href="/programs/" class="inline-block mt-2 px-4 py-2 rounded-xl bg-witte-900 text-white text-xs font-bold">
+                Сбросить все фильтры
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}
