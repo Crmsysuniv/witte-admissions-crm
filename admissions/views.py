@@ -1,5 +1,7 @@
-﻿from django.shortcuts import render, get_object_or_404
+import json
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Q, Count
+from django.core.serializers.json import DjangoJSONEncoder
 from .models import Faculty, Specialty, EducationProgram, ExamSubject
 
 
@@ -82,3 +84,193 @@ def specialty_detail(request, pk):
         'subjects': subjects,
     }
     return render(request, 'specialty_detail.html', context)
+
+
+def admissions_rules(request):
+    """
+    Страница «Правила приема и нормативные документы» МУ им. С.Ю. Витте.
+    """
+    documents_categories = [
+        {
+            'category': 'Основные документы вуза',
+            'icon': 'bi-shield-check',
+            'color': 'indigo',
+            'items': [
+                {
+                    'title': 'Устав ОЧУ ВО «Московский университет имени С.Ю. Витте»',
+                    'date': '15.01.2024',
+                    'number': 'Приказ №12-ОД',
+                    'type': 'PDF',
+                    'size': '2.4 МБ',
+                },
+                {
+                    'title': 'Лицензия на осуществление образовательной деятельности (с бессрочными приложениями)',
+                    'date': '20.08.2015',
+                    'number': '№ 1618, серия 90Л01 № 0008608',
+                    'type': 'PDF',
+                    'size': '1.8 МБ',
+                },
+                {
+                    'title': 'Свидетельство о государственной аккредитации образовательной деятельности',
+                    'date': '18.12.2020',
+                    'number': '№ 3469, серия 90А01 № 0003714',
+                    'type': 'PDF',
+                    'size': '3.1 МБ',
+                },
+            ]
+        },
+        {
+            'category': 'Нормативные акты приемной кампании 2026/2027',
+            'icon': 'bi-file-earmark-ruled',
+            'color': 'blue',
+            'items': [
+                {
+                    'title': 'Правила приема на обучение по программам бакалавриата и магистратуры на 2026/2027 уч. год',
+                    'date': '01.11.2025',
+                    'number': 'Утв. ректором МУ им. С.Ю. Витте',
+                    'type': 'PDF',
+                    'size': '4.2 МБ',
+                },
+                {
+                    'title': 'Правила приема на обучение в Колледж МУ им. С.Ю. Витте (программы СПО) на 2026/2027 уч. год',
+                    'date': '01.11.2025',
+                    'number': 'Приказ №108-ОД',
+                    'type': 'PDF',
+                    'size': '1.9 МБ',
+                },
+                {
+                    'title': 'Перечень вступительных испытаний с указанием минимальных баллов и приоритетности предметов',
+                    'date': '01.11.2025',
+                    'number': 'Приложение №1 к Правилам приема',
+                    'type': 'PDF',
+                    'size': '850 КБ',
+                },
+                {
+                    'title': 'Порядок учета индивидуальных достижений поступающих (ГТО, золотая медаль, олимпиады)',
+                    'date': '01.11.2025',
+                    'number': 'Приложение №2 к Правилам приема',
+                    'type': 'PDF',
+                    'size': '620 КБ',
+                },
+            ]
+        },
+        {
+            'category': 'Квоты, особые права и целевое обучение',
+            'icon': 'bi-award',
+            'color': 'emerald',
+            'items': [
+                {
+                    'title': 'Положение о приеме лиц, имеющих особые права и преимущества при зачислении',
+                    'date': '10.11.2025',
+                    'number': 'Приказ №115-ОД',
+                    'type': 'PDF',
+                    'size': '1.1 МБ',
+                },
+                {
+                    'title': 'Квота приема на целевое обучение по программам высшего образования на 2026 год',
+                    'date': '15.11.2025',
+                    'number': 'Распоряжение ПК-04',
+                    'type': 'PDF',
+                    'size': '780 КБ',
+                },
+                {
+                    'title': 'Порядок приема в пределах отдельной специальной квоты (участники СВО и их дети)',
+                    'date': '20.11.2025',
+                    'number': 'Приказ №121-ОД',
+                    'type': 'PDF',
+                    'size': '940 КБ',
+                },
+            ]
+        },
+        {
+            'category': 'Платное обучение и бланки документов',
+            'icon': 'bi-cash-coin',
+            'color': 'amber',
+            'items': [
+                {
+                    'title': 'Приказ об установлении стоимости обучения на 2026/2027 учебный год',
+                    'date': '12.01.2026',
+                    'number': 'Приказ №05-ОД',
+                    'type': 'PDF',
+                    'size': '1.5 МБ',
+                },
+                {
+                    'title': 'Типовая форма договора об оказании платных образовательных услуг (2-х и 3-х сторонний)',
+                    'date': '12.01.2026',
+                    'number': 'Утвержденная форма',
+                    'type': 'PDF',
+                    'size': '520 КБ',
+                },
+                {
+                    'title': 'Бланк согласия на обработку персональных данных абитуриента',
+                    'date': '01.02.2026',
+                    'number': 'Форма Ф-01',
+                    'type': 'DOCX',
+                    'size': '85 КБ',
+                },
+            ]
+        },
+    ]
+
+    context = {
+        'documents_categories': documents_categories,
+    }
+    return render(request, 'admissions_rules.html', context)
+
+
+def score_calculator(request):
+    """
+    Интерактивный калькулятор проходных баллов ЕГЭ и подбор направлений обучения.
+    """
+    subjects = ExamSubject.objects.all()
+    specialties = Specialty.objects.filter(is_active=True).select_related('faculty').prefetch_related('programs')
+
+    # Specialty requirements map for accurate client-side and server-side calculation
+    specialties_data = []
+    for sp in specialties:
+        # Determine required subjects based on specialty code/faculty
+        if sp.code.startswith('09.'):
+            required = ['Русский язык', 'Математика (профильная)']
+            choice_subjects = ['Информатика и ИКТ', 'Физика']
+            min_sum = 123
+        elif sp.code.startswith('40.'):
+            required = ['Русский язык', 'Обществознание']
+            choice_subjects = ['История', 'Информатика и ИКТ', 'Иностранный язык (английский)']
+            min_sum = 117
+        elif sp.code.startswith('42.'):
+            required = ['Русский язык', 'Обществознание']
+            choice_subjects = ['История', 'Иностранный язык (английский)']
+            min_sum = 112
+        else: # 38. Economics, Management, State management
+            required = ['Русский язык', 'Математика (профильная)']
+            choice_subjects = ['Обществознание', 'Информатика и ИКТ', 'История', 'Иностранный язык (английский)']
+            min_sum = 121
+
+        specialties_data.append({
+            'id': sp.id,
+            'code': sp.code,
+            'name': sp.name,
+            'faculty': sp.faculty.name,
+            'level': sp.get_education_level_display(),
+            'budget_places': sp.budget_places,
+            'paid_places': sp.paid_places,
+            'min_sum': min_sum,
+            'required': required,
+            'choice_subjects': choice_subjects,
+            'programs_count': sp.programs.count(),
+        })
+
+    subjects_data = [
+        {'id': s.id, 'name': s.name, 'min_score': s.min_score}
+        for s in subjects
+    ]
+
+    context = {
+        'subjects': subjects,
+        'specialties': specialties,
+        'specialties_data': specialties_data,
+        'specialties_json': json.dumps(specialties_data, ensure_ascii=False, cls=DjangoJSONEncoder),
+        'subjects_json': json.dumps(subjects_data, ensure_ascii=False, cls=DjangoJSONEncoder),
+    }
+    return render(request, 'score_calculator.html', context)
+

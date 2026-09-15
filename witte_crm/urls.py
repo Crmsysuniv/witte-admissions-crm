@@ -25,6 +25,8 @@ urlpatterns = [
     path('', home, name='home'),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),
+    path('rules/', admissions_views.admissions_rules, name='admissions_rules'),
+    path('calculator/', admissions_views.score_calculator, name='score_calculator'),
     path('admissions/', include('admissions.urls')),
     path('admin/', admin.site.urls),
 ]

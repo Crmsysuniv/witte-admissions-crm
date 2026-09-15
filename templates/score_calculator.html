@@ -1,0 +1,621 @@
+{% extends 'base.html' %}
+
+{% block title %}Калькулятор проходных баллов ЕГЭ | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Калькулятор баллов ЕГЭ{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12" x-data="calculatorApp()">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-calculator-fill text-amber-400"></i>
+                <span>Интерактивный сервис приемной комиссии 2026/2027</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Калькулятор <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">баллов ЕГЭ</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Укажите ваши баллы Единого государственного экзамена или внутренних вступительных испытаний, отметьте индивидуальные достижения — система автоматически рассчитает шансы и подберет доступные специальности университета.
+            </p>
+
+            <!-- Quick Presets -->
+            <div class="mt-6 flex flex-wrap items-center gap-2.5">
+                <span class="text-xs text-blue-200/70 font-semibold mr-1">Быстрые пресеты:</span>
+                <button @click="applyPreset('tech')" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/15 transition-all">
+                    <i class="bi bi-cpu mr-1 text-cyan-300"></i> IT / Прикладная информатика
+                </button>
+                <button @click="applyPreset('econ')" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/15 transition-all">
+                    <i class="bi bi-graph-up-arrow mr-1 text-amber-300"></i> Экономика / Менеджмент
+                </button>
+                <button @click="applyPreset('law')" type="button" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white border border-white/15 transition-all">
+                    <i class="bi bi-shield-check mr-1 text-emerald-300"></i> Юриспруденция
+                </button>
+                <button @click="resetAll()" type="button" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-xs font-bold text-rose-200 border border-rose-400/30 transition-all">
+                    <i class="bi bi-arrow-counterclockwise mr-1"></i> Сбросить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN CALCULATOR WORKSPACE: 2 COLUMNS (INPUTS & RESULTS) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- LEFT COLUMN: SUBJECTS INPUTS & ACHIEVEMENTS (5 COLS) -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Subject scores input block -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Баллы по предметам</h2>
+                            <p class="text-[11px] text-slate-500">Минимум 3 предмета для поступления</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700" x-text="activeSubjectsCount + ' / ' + subjectsList.length + ' сдано'"></span>
+                </div>
+
+                <!-- Subjects list -->
+                <div class="space-y-4">
+                    <template x-for="subj in subjectsList" :key="subj.id">
+                        <div class="p-3.5 rounded-2xl border transition-all"
+                             :class="scores[subj.name]?.enabled ? (isSubjectValid(subj.name) ? 'bg-blue-50/30 border-blue-200' : 'bg-rose-50/30 border-rose-200') : 'bg-slate-50/60 border-slate-200/70 opacity-80'">
+                            
+                            <!-- Checkbox and Name -->
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                                    <input type="checkbox" 
+                                           x-model="scores[subj.name].enabled"
+                                           class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300">
+                                    <span class="text-xs font-bold text-slate-800" x-text="subj.name"></span>
+                                </label>
+                                <span class="text-[10px] font-semibold text-slate-400">
+                                    Мин: <span class="text-slate-700" x-text="subj.min_score"></span>
+                                </span>
+                            </div>
+
+                            <!-- Score Slider & Input (Active when checked) -->
+                            <div x-show="scores[subj.name].enabled" class="mt-3 space-y-2 pt-2 border-t border-slate-200/60">
+                                <div class="flex items-center gap-3">
+                                    <input type="range" 
+                                           min="0" 
+                                           max="100" 
+                                           x-model.number="scores[subj.name].score" 
+                                           class="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                                    <div class="w-16">
+                                        <input type="number" 
+                                               min="0" 
+                                               max="100" 
+                                               x-model.number="scores[subj.name].score" 
+                                               class="w-full text-center px-2 py-1 text-sm font-black rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                               :class="isSubjectValid(subj.name) ? 'border-blue-300 text-blue-700 bg-white' : 'border-rose-300 text-rose-700 bg-rose-50'">
+                                    </div>
+                                </div>
+
+                                <!-- Validation warning -->
+                                <div x-show="scores[subj.name].score < subj.min_score" class="flex items-center gap-1.5 text-[10px] font-semibold text-rose-600">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    <span>Балл ниже минимального порога (<span x-text="subj.min_score"></span>)</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Individual achievements block -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Индивидуальные достижения</h2>
+                            <p class="text-[11px] text-slate-500">Дополнительно к баллам ЕГЭ (до 10 баллов)</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-800" x-text="'+ ' + totalBonusPoints + ' б.'"></span>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 hover:bg-slate-50 cursor-pointer transition-colors"
+                           :class="achievements.honors ? 'bg-amber-50/40 border-amber-300' : ''">
+                        <input type="checkbox" x-model="achievements.honors" class="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-800">Аттестат или диплом с отличием</span>
+                                <span class="font-extrabold text-amber-600">+5 баллов</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">Золотая или серебряная медаль РФ</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 hover:bg-slate-50 cursor-pointer transition-colors"
+                           :class="achievements.gto ? 'bg-amber-50/40 border-amber-300' : ''">
+                        <input type="checkbox" x-model="achievements.gto" class="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-800">Значок ГТО (золото / серебро)</span>
+                                <span class="font-extrabold text-amber-600">+2 балла</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">При наличии удостоверения установленного образца</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 hover:bg-slate-50 cursor-pointer transition-colors"
+                           :class="achievements.volunteer ? 'bg-amber-50/40 border-amber-300' : ''">
+                        <input type="checkbox" x-model="achievements.volunteer" class="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-800">Волонтерская деятельность</span>
+                                <span class="font-extrabold text-amber-600">+2 балла</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">Верифицированные часы в ЕИС «DOBRO.RU» (от 100 часов)</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-3 p-3 rounded-xl border border-slate-200/70 hover:bg-slate-50 cursor-pointer transition-colors"
+                           :class="achievements.olympiad ? 'bg-amber-50/40 border-amber-300' : ''">
+                        <input type="checkbox" x-model="achievements.olympiad" class="mt-0.5 w-4 h-4 rounded text-amber-600 focus:ring-amber-500 border-slate-300">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-800">Победитель / призер олимпиад</span>
+                                <span class="font-extrabold text-amber-600">+5 баллов</span>
+                            </div>
+                            <span class="text-[11px] text-slate-500 block mt-0.5">Всероссийская олимпиада или олимпиады из перечня РСОШ</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: RESULTS & MATCHING SPECIALTIES (7 COLS) -->
+        <div class="lg:col-span-7 space-y-6">
+            
+            <!-- Summary Stats Card -->
+            <div class="bg-gradient-to-r from-blue-900 via-witte-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg border border-white/10">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    
+                    <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-xs border border-white/10">
+                        <span class="text-[11px] text-blue-200 font-semibold block uppercase tracking-wider">Подходящих направлений</span>
+                        <div class="mt-2 text-3xl font-black text-white" x-text="passingSpecialtiesCount"></div>
+                        <span class="text-[11px] text-emerald-300 font-medium mt-0.5 block" x-text="'из ' + specialties.length + ' доступных'"></span>
+                    </div>
+
+                    <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-xs border border-white/10">
+                        <span class="text-[11px] text-blue-200 font-semibold block uppercase tracking-wider">Максимальный балл</span>
+                        <div class="mt-2 text-3xl font-black text-white" x-text="highestSpecialtyScore"></div>
+                        <span class="text-[11px] text-blue-200/80 font-medium mt-0.5 block">с учетом достижений</span>
+                    </div>
+
+                    <div class="col-span-2 sm:col-span-1 bg-white/10 rounded-2xl p-4 backdrop-blur-xs border border-white/10">
+                        <span class="text-[11px] text-blue-200 font-semibold block uppercase tracking-wider">Бонус за достижения</span>
+                        <div class="mt-2 text-3xl font-black text-amber-300" x-text="'+' + totalBonusPoints"></div>
+                        <span class="text-[11px] text-blue-200/80 font-medium mt-0.5 block">макс. 10 баллов</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Filters & Search Bar for Specialties Results -->
+            <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button @click="resultsFilter = 'all'" 
+                            :class="resultsFilter === 'all' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all">
+                        Все (<span x-text="specialties.length"></span>)
+                    </button>
+                    <button @click="resultsFilter = 'passing'" 
+                            :class="resultsFilter === 'passing' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                            class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                        <i class="bi bi-check-circle-fill text-xs"></i> Прохожу (<span x-text="passingSpecialtiesCount"></span>)
+                    </button>
+                </div>
+
+                <div class="relative w-full sm:w-64">
+                    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" 
+                           x-model="searchSpecialty" 
+                           placeholder="Поиск по названию или коду..." 
+                           class="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Specialties List Cards -->
+            <div class="space-y-4">
+                
+                <template x-for="item in filteredSpecialties" :key="item.id">
+                    <div class="bg-white rounded-3xl p-5 sm:p-6 border transition-all shadow-xs hover:shadow-md"
+                         :class="item.status.passes ? 'border-emerald-200/80 bg-white' : 'border-slate-200/80 bg-slate-50/40'">
+                        
+                        <!-- Header Row -->
+                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                                    <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono text-xs font-bold" x-text="item.code"></span>
+                                    <span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-medium" x-text="item.level"></span>
+                                    <span class="text-xs text-slate-400">•</span>
+                                    <span class="text-xs text-slate-500 font-medium truncate max-w-xs" x-text="item.faculty"></span>
+                                </div>
+                                <h3 class="text-base sm:text-lg font-bold text-slate-900 leading-snug" x-text="item.name"></h3>
+                            </div>
+
+                            <!-- Pass/Fail Badge -->
+                            <div class="shrink-0">
+                                <span x-show="item.status.passes" 
+                                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                                    <i class="bi bi-check-circle-fill"></i> Проходите по баллам
+                                </span>
+                                <span x-show="!item.status.passes" 
+                                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 border border-slate-200 text-xs font-semibold">
+                                    <i class="bi bi-x-circle-fill text-slate-400"></i> Не хватает баллов
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Scores comparison row -->
+                        <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Ваш конкурсный балл</span>
+                                <div class="mt-1 flex items-baseline gap-1.5">
+                                    <span class="text-2xl font-black" 
+                                          :class="item.status.passes ? 'text-emerald-600' : 'text-slate-700'" 
+                                          x-text="item.status.totalScore"></span>
+                                    <span class="text-xs font-bold text-slate-400">баллов</span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 block mt-0.5" x-text="'ЕГЭ: ' + item.status.examSum + ' + Достижения: ' + totalBonusPoints"></span>
+                            </div>
+
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Минимум для конкурса</span>
+                                <div class="mt-1 flex items-baseline gap-1.5">
+                                    <span class="text-2xl font-black text-slate-900" x-text="item.min_sum"></span>
+                                    <span class="text-xs font-bold text-slate-400">баллов</span>
+                                </div>
+                                <span class="text-[10px] font-bold block mt-0.5"
+                                      :class="item.status.diff >= 0 ? 'text-emerald-600' : 'text-rose-600'"
+                                      x-text="(item.status.diff >= 0 ? '+' : '') + item.status.diff + ' к проходному'"></span>
+                            </div>
+
+                            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                                <span class="text-[10px] uppercase font-bold text-slate-400 block">Места приема 2026</span>
+                                <div class="mt-1 flex items-baseline gap-2">
+                                    <span class="text-xs font-semibold text-slate-700">Бюджет: <strong class="text-slate-900" x-text="item.budget_places"></strong></span>
+                                    <span class="text-xs text-slate-300">•</span>
+                                    <span class="text-xs font-semibold text-slate-700">Платно: <strong class="text-slate-900" x-text="item.paid_places"></strong></span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 block mt-0.5" x-text="item.programs_count + ' программ обучения'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Subjects detail row: Required & Choice -->
+                        <div class="mt-4 pt-3 border-t border-slate-100 space-y-2 text-xs">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-slate-400 font-bold text-[11px] mr-1">Обязательные:</span>
+                                <template x-for="req in item.required" :key="req">
+                                    <span class="px-2 py-0.5 rounded-md text-[11px] font-medium border"
+                                          :class="scores[req]?.enabled && scores[req]?.score >= getMinScore(req) ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'">
+                                        <span x-text="req"></span>: 
+                                        <strong x-text="scores[req]?.enabled ? scores[req].score : 'не сдан'"></strong>
+                                    </span>
+                                </template>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-slate-400 font-bold text-[11px] mr-1">Предмет по выбору:</span>
+                                <template x-for="ch in item.choice_subjects" :key="ch">
+                                    <span class="px-2 py-0.5 rounded-md text-[11px] font-medium border"
+                                          :class="item.status.chosenSubject === ch ? 'bg-blue-100 text-blue-900 border-blue-300 font-bold' : (scores[ch]?.enabled ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-slate-50 text-slate-400 border-slate-200/50')">
+                                        <span x-text="ch"></span>: 
+                                        <strong x-text="scores[ch]?.enabled ? scores[ch].score : '—'"></strong>
+                                        <span x-show="item.status.chosenSubject === ch" class="text-[9px] uppercase ml-1 px-1 bg-blue-600 text-white rounded">выбран</span>
+                                    </span>
+                                </template>
+                            </div>
+
+                            <!-- Failure reason explanation if not passing -->
+                            <div x-show="!item.status.passes" class="mt-2 p-2.5 rounded-xl bg-rose-50/80 border border-rose-200/80 text-[11px] text-rose-800 flex items-start gap-2">
+                                <i class="bi bi-info-circle-fill text-rose-600 shrink-0 mt-0.5"></i>
+                                <span x-text="item.status.reason"></span>
+                            </div>
+                        </div>
+
+                        <!-- Action row -->
+                        <div class="mt-5 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                            <a :href="'/admissions/specialties/' + item.id + '/'" 
+                               class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                                <span>Подробнее о направлении</span>
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+
+                            <a :href="'/admin/admissions/application/add/?specialty=' + item.id" 
+                               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs"
+                               :class="item.status.passes ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/20' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'">
+                                <i class="bi bi-file-earmark-plus-fill"></i>
+                                <span>Подать заявление</span>
+                            </a>
+                        </div>
+
+                    </div>
+                </template>
+
+                <!-- Empty state if search or filter yield nothing -->
+                <div x-show="filteredSpecialties.length === 0" 
+                     class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-2xl">
+                        <i class="bi bi-slash-circle"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-800">Нет направлений, удовлетворяющих условиям</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                        Попробуйте изменить баллы, добавить сданные предметы или сбросить фильтр «Прохожу».
+                    </p>
+                    <button @click="resultsFilter = 'all'; searchSpecialty = ''" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500 transition-colors">
+                        Показать все направления
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 3. BOTTOM CTA / CONSULTATION -->
+    <div class="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-800 text-white shadow-xl shadow-indigo-600/20 text-center flex flex-col items-center justify-center">
+        <h2 class="text-2xl sm:text-3xl font-black max-w-xl leading-tight">
+            Нужна помощь с расчетом баллов или выбором специальности?
+        </h2>
+        <p class="mt-2 text-sm text-blue-100 max-w-lg">
+            Специалисты приемной комиссии МУ им. С.Ю. Витте ответят на любые вопросы по вступительным испытаниям, квотам и льготам.
+        </p>
+        <div class="mt-6 flex flex-wrap gap-4 justify-center">
+            <a href="/admin/feedback/feedbackmessage/add/" class="px-6 py-3 rounded-2xl bg-white text-slate-900 hover:bg-blue-50 text-xs sm:text-sm font-extrabold shadow-lg transition-all hover:scale-105 flex items-center gap-2">
+                <i class="bi bi-chat-dots-fill text-indigo-600"></i> Задать вопрос приемной комиссии
+            </a>
+            <a href="/rules/" class="px-6 py-3 rounded-2xl bg-blue-950/40 hover:bg-blue-950/60 text-white text-xs sm:text-sm font-bold border border-white/20 backdrop-blur-xs transition-all flex items-center gap-2">
+                <i class="bi bi-file-earmark-text text-amber-300"></i> Ознакомиться с правилами приема
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Pass backend JSON to client script safely -->
+<script id="specialties-json-data" type="application/json">
+{{ specialties_json|safe }}
+</script>
+<script id="subjects-json-data" type="application/json">
+{{ subjects_json|safe }}
+</script>
+
+<script>
+function calculatorApp() {
+    const rawSpecialties = JSON.parse(document.getElementById('specialties-json-data').textContent);
+    const rawSubjects = JSON.parse(document.getElementById('subjects-json-data').textContent);
+
+    return {
+        specialties: rawSpecialties,
+        subjectsList: rawSubjects,
+        scores: {},
+        achievements: {
+            honors: false,
+            gto: false,
+            volunteer: false,
+            olympiad: false
+        },
+        resultsFilter: 'all', // 'all' or 'passing'
+        searchSpecialty: '',
+
+        init() {
+            // Initialize scores dictionary
+            this.subjectsList.forEach(s => {
+                this.scores[s.name] = {
+                    enabled: false,
+                    score: s.min_score,
+                    min_score: s.min_score
+                };
+            });
+
+            // Default preset: IT with good scores
+            this.applyPreset('tech');
+        },
+
+        get activeSubjectsCount() {
+            return Object.values(this.scores).filter(s => s.enabled).length;
+        },
+
+        get totalBonusPoints() {
+            let pts = 0;
+            if (this.achievements.honors) pts += 5;
+            if (this.achievements.gto) pts += 2;
+            if (this.achievements.volunteer) pts += 2;
+            if (this.achievements.olympiad) pts += 5;
+            return Math.min(pts, 10); // РФ закон: максимум 10 баллов
+        },
+
+        getMinScore(subjName) {
+            const s = this.subjectsList.find(x => x.name === subjName);
+            return s ? s.min_score : 39;
+        },
+
+        isSubjectValid(subjName) {
+            const entry = this.scores[subjName];
+            if (!entry || !entry.enabled) return false;
+            return entry.score >= entry.min_score;
+        },
+
+        applyPreset(preset) {
+            // Reset all
+            Object.keys(this.scores).forEach(name => {
+                this.scores[name].enabled = false;
+                this.scores[name].score = this.scores[name].min_score;
+            });
+
+            if (preset === 'tech') {
+                this.setScore('Русский язык', 72);
+                this.setScore('Математика (профильная)', 75);
+                this.setScore('Информатика и ИКТ', 80);
+                this.setScore('Физика', 68);
+                this.achievements.honors = true;
+                this.achievements.gto = true;
+            } else if (preset === 'econ') {
+                this.setScore('Русский язык', 78);
+                this.setScore('Математика (профильная)', 70);
+                this.setScore('Обществознание', 76);
+                this.setScore('Иностранный язык (английский)', 65);
+                this.achievements.honors = false;
+                this.achievements.gto = true;
+                this.achievements.volunteer = true;
+            } else if (preset === 'law') {
+                this.setScore('Русский язык', 84);
+                this.setScore('Обществознание', 82);
+                this.setScore('История', 74);
+                this.setScore('Иностранный язык (английский)', 70);
+                this.achievements.honors = true;
+                this.achievements.olympiad = true;
+            }
+        },
+
+        setScore(name, val) {
+            if (this.scores[name]) {
+                this.scores[name].enabled = true;
+                this.scores[name].score = val;
+            }
+        },
+
+        resetAll() {
+            Object.keys(this.scores).forEach(name => {
+                this.scores[name].enabled = false;
+                this.scores[name].score = this.scores[name].min_score;
+            });
+            this.achievements.honors = false;
+            this.achievements.gto = false;
+            this.achievements.volunteer = false;
+            this.achievements.olympiad = false;
+        },
+
+        evaluateSpecialty(sp) {
+            // Check mandatory required subjects
+            let missingReq = [];
+            let belowMinReq = [];
+            let reqSum = 0;
+
+            for (const req of sp.required) {
+                const item = this.scores[req];
+                if (!item || !item.enabled) {
+                    missingReq.push(req);
+                } else if (item.score < this.getMinScore(req)) {
+                    belowMinReq.push(`${req} (${item.score} < ${this.getMinScore(req)})`);
+                } else {
+                    reqSum += item.score;
+                }
+            }
+
+            // Find best choice subject among choices
+            let bestChoice = null;
+            let bestChoiceScore = -1;
+            let choiceCountAvailable = 0;
+
+            for (const ch of sp.choice_subjects) {
+                const item = this.scores[ch];
+                if (item && item.enabled && item.score >= this.getMinScore(ch)) {
+                    choiceCountAvailable++;
+                    if (item.score > bestChoiceScore) {
+                        bestChoiceScore = item.score;
+                        bestChoice = ch;
+                    }
+                }
+            }
+
+            let passes = false;
+            let reason = '';
+            let totalExamScore = 0;
+
+            if (missingReq.length > 0) {
+                passes = false;
+                reason = 'Не сдан обязательный предмет: ' + missingReq.join(', ');
+            } else if (belowMinReq.length > 0) {
+                passes = false;
+                reason = 'Балл ниже минимального порога: ' + belowMinReq.join(', ');
+            } else if (bestChoiceScore === -1) {
+                passes = false;
+                reason = 'Не сдан ни один из предметов по выбору: ' + sp.choice_subjects.join(' или ');
+            } else {
+                totalExamScore = reqSum + bestChoiceScore;
+                const grandTotal = totalExamScore + this.totalBonusPoints;
+                if (grandTotal < sp.min_sum) {
+                    passes = false;
+                    reason = `Сумма баллов (${grandTotal}) ниже минимального конкурсного порога (${sp.min_sum})`;
+                } else {
+                    passes = true;
+                }
+            }
+
+            const totalScore = (totalExamScore > 0 ? totalExamScore + this.totalBonusPoints : 0);
+            const diff = totalScore - sp.min_sum;
+
+            return {
+                passes: passes,
+                reason: reason,
+                totalScore: totalScore,
+                examSum: totalExamScore,
+                diff: diff,
+                chosenSubject: bestChoice,
+                chosenSubjectScore: bestChoiceScore
+            };
+        },
+
+        get evaluatedSpecialties() {
+            return this.specialties.map(sp => {
+                return {
+                    ...sp,
+                    status: this.evaluateSpecialty(sp)
+                };
+            });
+        },
+
+        get filteredSpecialties() {
+            let list = this.evaluatedSpecialties;
+
+            if (this.resultsFilter === 'passing') {
+                list = list.filter(sp => sp.status.passes);
+            }
+
+            if (this.searchSpecialty.trim()) {
+                const q = this.searchSpecialty.toLowerCase().trim();
+                list = list.filter(sp => 
+                    sp.name.toLowerCase().includes(q) ||
+                    sp.code.toLowerCase().includes(q) ||
+                    sp.faculty.toLowerCase().includes(q)
+                );
+            }
+
+            return list;
+        },
+
+        get passingSpecialtiesCount() {
+            return this.evaluatedSpecialties.filter(sp => sp.status.passes).length;
+        },
+
+        get highestSpecialtyScore() {
+            const scores = this.evaluatedSpecialties.map(sp => sp.status.totalScore);
+            return scores.length ? Math.max(...scores) : 0;
+        }
+    };
+}
+</script>
+{% endblock %}

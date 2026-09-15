@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 
 {% block title %}Приемная кампания 2026 | МУ им. С.Ю. Витте{% endblock %}
 
@@ -37,15 +37,15 @@
                     <i class="bi bi-file-earmark-plus-fill text-lg"></i>
                     <span>Подать заявление онлайн</span>
                 </a>
-                <a href="#specialties" 
+                <a href="/calculator/" 
                    class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-base font-semibold border border-white/20 backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
-                    <i class="bi bi-mortarboard text-lg text-blue-300"></i>
-                    <span>Выбрать направление</span>
+                    <i class="bi bi-calculator text-lg text-amber-300"></i>
+                    <span>Калькулятор ЕГЭ</span>
                 </a>
-                <a href="#timeline" 
-                   class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-transparent hover:bg-white/5 text-blue-200 text-sm font-medium transition-colors">
-                    <i class="bi bi-calendar3 text-base"></i>
-                    <span>График приема 2026</span>
+                <a href="/rules/" 
+                   class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-blue-100 text-sm font-medium border border-white/10 rounded-2xl transition-colors">
+                    <i class="bi bi-file-earmark-ruled text-base text-cyan-300"></i>
+                    <span>Правила приема 2026</span>
                 </a>
             </div>
 
@@ -343,7 +343,7 @@
 
     <!-- 6. EXAM MINIMUM SCORES TABLE -->
     <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs">
-        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
                 <h2 class="text-xl sm:text-2xl font-black text-slate-900">
                     Минимальные проходные баллы ЕГЭ (2026 год)
@@ -352,9 +352,15 @@
                     Минимальные пороговые значения для допуска к участию в конкурсе МУ им. С.Ю. Витте
                 </p>
             </div>
-            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
-                100-балльная шкала
-            </span>
+            <div class="flex items-center gap-2">
+                <a href="/calculator/" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all border border-indigo-200">
+                    <i class="bi bi-calculator-fill text-indigo-600"></i>
+                    <span>Калькулятор баллов</span>
+                </a>
+                <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hidden sm:inline">
+                    100-балльная шкала
+                </span>
+            </div>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">

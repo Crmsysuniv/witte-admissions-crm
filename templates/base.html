@@ -120,7 +120,7 @@
                 <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Основное меню</div>
                 
                 <!-- 1. Панель управления -->
-                <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-white bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm hover:bg-blue-600/30">
+                <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                     <i class="bi bi-grid-1x2-fill text-lg text-blue-400"></i>
                     <span>Панель управления</span>
                 </a>
@@ -139,30 +139,36 @@
                 </a>
 
                 <!-- Section 2 -->
-                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Академическая база</div>
+                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Академическая база & Сервисы</div>
 
                 <!-- 4. Факультеты -->
-                <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faculties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                     <i class="bi bi-buildings-fill text-lg text-amber-400"></i>
                     <span>Факультеты и институты</span>
                 </a>
 
-                <!-- 5. Направления подготовки -->
-                <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-mortarboard-fill text-lg text-cyan-400"></i>
-                    <span>Направления подготовки</span>
-                </a>
-
-                <!-- 6. Образовательные программы -->
-                <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-journal-bookmark-fill text-lg text-purple-400"></i>
+                <!-- 5. Каталог программ -->
+                <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/programs/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-journal-bookmark-fill text-lg text-cyan-400"></i>
                     <span>Программы обучения</span>
                 </a>
 
-                <!-- 7. Предметы и баллы ЕГЭ -->
+                <!-- 6. Правила приема и нормативные документы -->
+                <a href="/rules/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rules/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-file-earmark-ruled-fill text-lg text-emerald-400"></i>
+                    <span>Правила приема и документы</span>
+                </a>
+
+                <!-- 7. Калькулятор баллов ЕГЭ -->
+                <a href="/calculator/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/calculator/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-calculator-fill text-lg text-purple-400"></i>
+                    <span>Калькулятор баллов ЕГЭ</span>
+                </a>
+
+                <!-- 8. Предметы и баллы ЕГЭ -->
                 <a href="/admin/admissions/examsubject/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
                     <i class="bi bi-card-checklist text-lg text-rose-400"></i>
-                    <span>Предметы и баллы ЕГЭ</span>
+                    <span>Минимальные баллы ЕГЭ</span>
                 </a>
 
                 <!-- Section 3 -->

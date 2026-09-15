@@ -1,4 +1,4 @@
-﻿from django.urls import resolve, Resolver404
+from django.urls import resolve, Resolver404
 
 PATH_TITLES = {
     # System & Auth
@@ -11,6 +11,11 @@ PATH_TITLES = {
     
     # Admissions
     'admissions': 'Приемная комиссия',
+    'faculties': 'Факультеты и институты',
+    'programs': 'Программы обучения',
+    'specialties': 'Направления подготовки',
+    'rules': 'Правила приема и документы',
+    'calculator': 'Калькулятор баллов ЕГЭ',
     'application': 'Заявления',
     'applicantprofile': 'Профили абитуриентов',
     'officerprofile': 'Профили сотрудников',
