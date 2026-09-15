@@ -1,0 +1,561 @@
+{% extends 'base.html' %}
+
+{% block title %}Стоимость обучения и скидки 2026 | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Стоимость и скидки{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-12" x-data="tuitionApp()">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-tag-fill text-amber-400"></i>
+                <span>Приемная кампания 2026/2027 • Тарифы и финансовая поддержка</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Стоимость обучения и <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-white">системы скидок</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Прозрачные условия оплаты, фиксируемые в договоре на весь период обучения. Государственный образовательный кредит со ставкой всего 3%, внутренняя беспроцентная рассрочка от вуза и скидки до 20% по баллам ЕГЭ.
+            </p>
+
+            <!-- Key Advantages Badges -->
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-medium text-blue-200">
+                <div class="bg-white/10 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2">
+                    <i class="bi bi-percent text-emerald-400 text-base"></i>
+                    <span>Кредит с господдержкой 3%</span>
+                </div>
+                <div class="bg-white/10 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2">
+                    <i class="bi bi-calendar2-week text-cyan-300 text-base"></i>
+                    <span>Рассрочка 0% на 10 платежей</span>
+                </div>
+                <div class="bg-white/10 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2">
+                    <i class="bi bi-award text-amber-400 text-base"></i>
+                    <span>Скидки до 20% по ЕГЭ</span>
+                </div>
+                <div class="bg-white/10 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2">
+                    <i class="bi bi-cash-coin text-purple-300 text-base"></i>
+                    <span>Материнский капитал</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. INTERACTIVE TUITION & INSTALLMENT CALCULATOR WIDGET -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-1.5">
+                    <i class="bi bi-calculator"></i> Интерактивный расчет
+                </span>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Калькулятор стоимости и платежей с учетом скидок
+                </h2>
+            </div>
+            <span class="text-xs text-slate-500">
+                Фиксация стоимости в договоре
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            
+            <!-- Selectors: Program & Discount -->
+            <div class="lg:col-span-7 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                        Выберите программу обучения:
+                    </label>
+                    <select x-model.number="selectedProgramId" 
+                            class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
+                        <template x-for="p in programsList" :key="p.id">
+                            <option :value="p.id" x-text="p.specialty_code + ' ' + p.specialty_name + ' (' + p.study_form_display + ' — ' + formatPrice(p.fee_annual) + ' ₽/год)'"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            Ваша категория скидки:
+                        </label>
+                        <select x-model.number="selectedDiscountPercent" 
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
+                            <option value="0">Без скидки (базовая стоимость)</option>
+                            <option value="20">Скидка 20% (ЕГЭ 240+ / Участники СВО)</option>
+                            <option value="15">Скидка 15% (ЕГЭ 200–239 / Колледж Витте)</option>
+                            <option value="10">Скидка 10% (ЕГЭ 180–199 / Семейная)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                            График внесения оплаты:
+                        </label>
+                        <select x-model="paymentSchedule" 
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all">
+                            <option value="month">Помесячная рассрочка (10 платежей / год)</option>
+                            <option value="semester">Посеместровая оплата (2 платежа / год)</option>
+                            <option value="annual">Единовременно за учебный год (1 платеж)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculation Output Card -->
+            <div class="lg:col-span-5 bg-gradient-to-br from-slate-900 via-witte-950 to-blue-950 text-white rounded-3xl p-6 border border-slate-800 shadow-xl space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                    <span class="text-xs text-blue-200 uppercase tracking-wider font-semibold">Итог к оплате</span>
+                    <span x-show="selectedDiscountPercent > 0" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/30">
+                        Скидка <span x-text="selectedDiscountPercent + '%'"></span>
+                    </span>
+                </div>
+
+                <!-- Main dynamic cost amount -->
+                <div>
+                    <span class="text-xs text-blue-200 block" x-text="scheduleLabel"></span>
+                    <div class="mt-1 flex items-baseline gap-2">
+                        <span class="text-3xl sm:text-4xl font-black text-white" x-text="formatPrice(calculatedPayment)"></span>
+                        <span class="text-base font-bold text-emerald-400">₽</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-xs">
+                    <div>
+                        <span class="text-slate-400 block">Базовая цена в год:</span>
+                        <span class="text-slate-200 font-bold" x-text="formatPrice(selectedProgram?.fee_annual || 0) + ' ₽'"></span>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Ваша экономия в год:</span>
+                        <span class="text-emerald-400 font-bold" x-text="formatPrice(annualSavings) + ' ₽'"></span>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <a :href="'/admin/admissions/application/add/?program=' + (selectedProgram?.id || '')" 
+                       class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-black shadow-lg shadow-emerald-600/30 transition-all">
+                        <i class="bi bi-file-earmark-plus-fill"></i>
+                        <span>Оформить договор с этой программой</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 3. COMPREHENSIVE TUITION FEES CATALOG TABLE -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Прейскурант стоимости обучения на 2026/2027 учебный год
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Утверждено Приказом Ректора МУ им. С.Ю. Витте №05-ОД от 12.01.2026 г.
+                </p>
+            </div>
+
+            <!-- Total count badge -->
+            <div class="text-xs text-slate-600 flex items-center gap-2">
+                <i class="bi bi-journal-check text-indigo-600 text-base"></i>
+                <span>Всего программ: <strong x-text="filteredPrograms.length"></strong> из <strong x-text="programsList.length"></strong></span>
+            </div>
+        </div>
+
+        <!-- Filters Strip -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            
+            <!-- Search -->
+            <div class="relative">
+                <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" 
+                       x-model="searchQuery" 
+                       placeholder="Поиск по названию или коду..." 
+                       class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <!-- Faculty Filter -->
+            <div>
+                <select x-model="filterFaculty" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">Все факультеты</option>
+                    {% for fac in faculties %}
+                    <option value="{{ fac.id }}">{{ fac.code|default:fac.name }} — {{ fac.name|truncatechars:35 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Study Form Filter -->
+            <div>
+                <select x-model="filterStudyForm" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">Все формы обучения</option>
+                    <option value="FULL_TIME">Очная форма</option>
+                    <option value="MIXED">Очно-заочная (вечерняя)</option>
+                    <option value="PART_TIME">Заочная форма</option>
+                </select>
+            </div>
+
+            <!-- Level Filter -->
+            <div>
+                <select x-model="filterLevel" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">Все уровни (Бакалавриат / Магистратура)</option>
+                    <option value="BACHELOR">Бакалавриат</option>
+                    <option value="MASTER">Магистратура</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Programs Table -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200/80">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200/80">
+                    <tr>
+                        <th class="px-4 py-3.5">Код и направление</th>
+                        <th class="px-4 py-3.5">Факультет</th>
+                        <th class="px-4 py-3.5">Форма обучения</th>
+                        <th class="px-4 py-3.5">Срок</th>
+                        <th class="px-4 py-3.5 text-right">В год</th>
+                        <th class="px-4 py-3.5 text-right">За семестр</th>
+                        <th class="px-4 py-3.5 text-right text-emerald-700">В месяц (рассрочка 0%)</th>
+                        <th class="px-4 py-3.5 text-center">Действие</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <template x-for="p in filteredPrograms" :key="p.id">
+                        <tr class="hover:bg-blue-50/40 transition-colors">
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700" x-text="p.specialty_code"></span>
+                                    <span class="font-bold text-slate-900" x-text="p.specialty_name"></span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 mt-0.5 block" x-text="p.level_display"></span>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-600" x-text="p.faculty_name"></td>
+                            <td class="px-4 py-3.5">
+                                <span class="px-2 py-0.5 rounded-lg text-[11px] font-semibold"
+                                      :class="p.study_form === 'FULL_TIME' ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : (p.study_form === 'MIXED' ? 'bg-purple-50 text-purple-700 border border-purple-200/60' : 'bg-amber-50 text-amber-700 border border-amber-200/60')"
+                                      x-text="p.study_form_display"></span>
+                            </td>
+                            <td class="px-4 py-3.5 text-slate-500" x-text="p.duration"></td>
+                            <td class="px-4 py-3.5 text-right font-black text-slate-900 text-sm whitespace-nowrap" x-text="formatPrice(p.fee_annual) + ' ₽'"></td>
+                            <td class="px-4 py-3.5 text-right text-slate-600 font-semibold whitespace-nowrap" x-text="formatPrice(p.fee_semester) + ' ₽'"></td>
+                            <td class="px-4 py-3.5 text-right text-emerald-700 font-bold whitespace-nowrap" x-text="formatPrice(p.fee_month) + ' ₽/мес.'"></td>
+                            <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                                <a :href="'/admin/admissions/application/add/?program=' + p.id" 
+                                   class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-xs text-[11px]">
+                                    <i class="bi bi-file-earmark-plus"></i> Подать
+                                </a>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <div x-show="filteredPrograms.length === 0" class="p-8 text-center text-slate-400">
+                <i class="bi bi-search text-2xl block mb-2"></i>
+                <p class="font-bold text-slate-700">Программ не найдено</p>
+                <p class="text-xs mt-1">Попробуйте изменить параметры поиска или фильтров</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 4. DISCOUNT SYSTEM & GRANTS (СИСТЕМА СКИДОК) -->
+    <div class="space-y-6">
+        <div class="max-w-3xl">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-gift-fill"></i> Программа поддержки
+            </span>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Система скидок и льгот МУ им. С.Ю. Витте
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Университет поощряет талантливых абитуриентов, победителей олимпиад, выпускников собственного колледжа и социально незащищенные категории граждан.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {% for cat in discount_categories %}
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                        <div class="w-10 h-10 rounded-2xl 
+                            {% if cat.color == 'indigo' %}bg-indigo-50 text-indigo-600
+                            {% elif cat.color == 'blue' %}bg-blue-50 text-blue-600
+                            {% else %}bg-emerald-50 text-emerald-600{% endif %} 
+                            flex items-center justify-center text-lg shadow-2xs">
+                            <i class="bi {{ cat.icon }}"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-slate-900 leading-snug">{{ cat.title }}</h3>
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        {% for item in cat.items %}
+                        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/60 hover:border-slate-300 transition-colors">
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="text-xs font-bold text-slate-800 leading-snug">{{ item.name }}</span>
+                                <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-black text-xs shrink-0">
+                                    {{ item.discount }}
+                                </span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                                {{ item.description }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-100">
+                    <span class="text-[10px] text-slate-400 block leading-tight">
+                        * Скидки не суммируются. При наличии нескольких оснований абитуриенту предоставляется максимальная скидка.
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 5. FINANCING OPTIONS (СПОСОБЫ ОПЛАТЫ И ГОСПОДДЕРЖКА) -->
+    <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-blue-950 text-white rounded-3xl p-6 sm:p-10 border border-slate-800 shadow-xl space-y-8">
+        <div class="max-w-3xl">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-bank"></i> Финансовые инструменты
+            </span>
+            <h2 class="text-xl sm:text-3xl font-black tracking-tight text-white">
+                4 удобных способа оплаты обучения
+            </h2>
+            <p class="text-xs sm:text-sm text-blue-200/80 mt-1">
+                Выберите комфортный для вашей семьи формат финансирования образования
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Option 1: Loan 3% -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg mb-4">
+                        <i class="bi bi-percent"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Кредит с господдержкой 3%</h3>
+                    <p class="text-xs text-blue-200/70 mt-2 leading-relaxed">
+                        Совместная программа Сбербанка и Минобрнауки РФ. Во время учебы вы платите только символические проценты (от 200 ₽/мес.), а основной долг отдаете в течение 15 лет после трудоустройства.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-emerald-300 font-semibold">
+                    Без залога и поручителей с 14 лет
+                </div>
+            </div>
+
+            <!-- Option 2: Maternity Capital -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center text-lg mb-4">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Материнский капитал</h3>
+                    <p class="text-xs text-blue-200/70 mt-2 leading-relaxed">
+                        Возможность полной или частичной оплаты обучения средствами материнского (семейного) капитала Социального фонда РФ (СФР) на любого из детей до 25 лет.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-purple-300 font-semibold">
+                    Подготовка пакета справок за 1 день
+                </div>
+            </div>
+
+            <!-- Option 3: Installment 0% -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center text-lg mb-4">
+                        <i class="bi bi-calendar2-check"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Беспроцентная рассрочка 0%</h3>
+                    <p class="text-xs text-blue-200/70 mt-2 leading-relaxed">
+                        Внутренняя рассрочка от университета без участия кредитных организаций. Оплата делится на 10 равных ежемесячных долей без комиссий и скрытых процентов.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-blue-300 font-semibold">
+                    0% переплат по заявлению
+                </div>
+            </div>
+
+            <!-- Option 4: Tax deduction 13% -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-xs flex flex-col justify-between">
+                <div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-lg mb-4">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-white">Налоговый вычет 13%</h3>
+                    <p class="text-xs text-blue-200/70 mt-2 leading-relaxed">
+                        Официально работающие студенты или их родители имеют право вернуть 13% от оплаченной за год суммы (до 19 500 рублей в год с лимита 150 000 руб.) через ФНС или работодателя.
+                    </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-white/10 text-[11px] text-amber-300 font-semibold">
+                    Предоставляем справку для ФНС
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 6. FAQ ON PAYMENT & TUITION -->
+    <div class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs" x-data="{ openFaq: null }">
+        <div class="max-w-2xl mb-6">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-question-circle-fill"></i> Финансовые вопросы
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Часто задаваемые вопросы по оплате и договорам
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Порядок заключения договоров и графики платежей в 2026 году
+            </p>
+        </div>
+
+        <div class="space-y-3">
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 1 ? null : 1)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Фиксируется ли стоимость обучения в договоре?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 1 ? 'rotate-180 text-emerald-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 1" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    Да! В соответствии с законодательством РФ и Политикой МУ им. С.Ю. Витте, полная стоимость образовательных услуг на весь период обучения фиксируется в договоре при поступлении. Возможно лишь ежегодное изменение стоимости исключительно на официальный уровень инфляции, предусмотренный федеральным бюджетом РФ (ст. 54 ФЗ «Об образовании в РФ»).
+                </div>
+            </div>
+
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 2 ? null : 2)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Как оформить образовательный кредит под 3% годовых?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 2 ? 'rotate-180 text-emerald-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 2" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    Для оформления кредита с господдержкой: 1) Заключите договор об обучении в приемной комиссии МУ им. С.Ю. Витте; 2) Получите счет на оплату; 3) Подайте заявку в приложении «СберБанк Онлайн» или в любом отделении Сбера с паспортом и договором. Банк одобряет кредит за 1–2 рабочих дня и напрямую перечисляет средства на расчетный счет университета.
+                </div>
+            </div>
+
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 3 ? null : 3)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Сохраняется ли скидка за баллы ЕГЭ на старших курсах?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 3 ? 'rotate-180 text-emerald-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 3" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    Скидка по результатам ЕГЭ предоставляется на первый год обучения. Со второго курса студент сохраняет скидку до 20%, если сдает промежуточные экзаменационные сессии в установленные сроки на оценки «отлично» и не имеет академических или дисциплинарных задолженностей.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. BOTTOM CALL TO ACTION -->
+    <div class="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-700 text-white shadow-xl shadow-emerald-600/20 text-center flex flex-col items-center justify-center">
+        <h2 class="text-2xl sm:text-3xl font-black max-w-xl leading-tight">
+            Остались вопросы по тарифам и скидкам?
+        </h2>
+        <p class="mt-2 text-sm text-emerald-100 max-w-lg">
+            Финансовый отдел приемной комиссии поможет рассчитать индивидуальный план платежей и оформить беспроцентную рассрочку.
+        </p>
+        <div class="mt-6 flex flex-wrap gap-4 justify-center">
+            <a href="/admin/admissions/application/add/" class="px-6 py-3 rounded-2xl bg-white text-slate-900 hover:bg-emerald-50 text-xs sm:text-sm font-extrabold shadow-lg transition-all hover:scale-105 flex items-center gap-2">
+                <i class="bi bi-file-earmark-plus-fill text-emerald-600"></i> Подать заявление онлайн
+            </a>
+            <a href="/dormitory/" class="px-6 py-3 rounded-2xl bg-black/20 hover:bg-black/30 text-white text-xs sm:text-sm font-bold border border-white/20 backdrop-blur-xs transition-all flex items-center gap-2">
+                <i class="bi bi-houses-fill text-amber-300"></i> Общежитие и городок
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Data passed from view -->
+<script id="programs-json-data" type="application/json">
+{{ programs_json|safe }}
+</script>
+
+<script>
+function tuitionApp() {
+    const rawPrograms = JSON.parse(document.getElementById('programs-json-data').textContent);
+
+    return {
+        programsList: rawPrograms,
+        selectedProgramId: rawPrograms.length ? rawPrograms[0].id : null,
+        selectedDiscountPercent: 0,
+        paymentSchedule: 'month',
+        searchQuery: '',
+        filterFaculty: 'all',
+        filterStudyForm: 'all',
+        filterLevel: 'all',
+
+        formatPrice(val) {
+            return Math.round(val || 0).toLocaleString('ru-RU');
+        },
+
+        get selectedProgram() {
+            return this.programsList.find(p => p.id === this.selectedProgramId) || this.programsList[0];
+        },
+
+        get discountedAnnualPrice() {
+            const base = this.selectedProgram ? this.selectedProgram.fee_annual : 0;
+            return base * (1 - (this.selectedDiscountPercent / 100));
+        },
+
+        get annualSavings() {
+            const base = this.selectedProgram ? this.selectedProgram.fee_annual : 0;
+            return base - this.discountedAnnualPrice;
+        },
+
+        get calculatedPayment() {
+            const annual = this.discountedAnnualPrice;
+            if (this.paymentSchedule === 'month') {
+                return annual / 10;
+            } else if (this.paymentSchedule === 'semester') {
+                return annual / 2;
+            }
+            return annual;
+        },
+
+        get scheduleLabel() {
+            if (this.paymentSchedule === 'month') return 'Ежемесячный платеж (10 месяцев):';
+            if (this.paymentSchedule === 'semester') return 'Платеж за 1 семестр (2 раза в год):';
+            return 'Единовременный платеж за год:';
+        },
+
+        get filteredPrograms() {
+            let list = this.programsList;
+
+            if (this.filterFaculty !== 'all') {
+                list = list.filter(p => p.faculty_id === parseInt(this.filterFaculty));
+            }
+
+            if (this.filterStudyForm !== 'all') {
+                list = list.filter(p => p.study_form === this.filterStudyForm);
+            }
+
+            if (this.filterLevel !== 'all') {
+                list = list.filter(p => p.level === this.filterLevel);
+            }
+
+            if (this.searchQuery.trim()) {
+                const q = this.searchQuery.toLowerCase().trim();
+                list = list.filter(p => 
+                    p.specialty_name.toLowerCase().includes(q) ||
+                    p.specialty_code.toLowerCase().includes(q) ||
+                    p.faculty_name.toLowerCase().includes(q)
+                );
+            }
+
+            return list;
+        }
+    };
+}
+</script>
+{% endblock %}

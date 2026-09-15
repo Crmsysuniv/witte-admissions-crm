@@ -1,0 +1,596 @@
+{% extends 'base.html' %}
+
+{% block title %}Общежитие и студенческий городок | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Общежитие и кампус{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-12" x-data="{ 
+    selectedBuilding: 1,
+    activeTab: 'rooms',
+    openFaq: null,
+    applySuccess: false,
+    applicantName: '',
+    applicantPhone: '',
+    submitDormRequest() {
+        if (this.applicantName && this.applicantPhone) {
+            this.applySuccess = true;
+            setTimeout(() => { 
+                this.applySuccess = false;
+                this.applicantName = '';
+                this.applicantPhone = '';
+            }, 5000);
+        }
+    }
+}">
+
+    <!-- Notification Toast for Dormitory Request -->
+    <div x-show="applySuccess" 
+         x-cloak
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-2"
+         class="fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <i class="bi bi-check-circle-fill text-lg"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-200">Заявка на общежитие принята</p>
+            <p class="text-xs text-slate-400 mt-0.5">Комиссия по заселению свяжется с вами для подтверждения бронирования места.</p>
+        </div>
+        <button @click="applySuccess = false" class="text-slate-400 hover:text-white transition-colors">
+            <i class="bi bi-x-lg text-sm"></i>
+        </button>
+    </div>
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-houses-fill text-amber-400"></i>
+                <span>Студенческий городок • Комфортная среда для жизни и учебы</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Общежитие и <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">студенческий городок</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Современные жилые комплексы блочного и квартирного типа в Москве. Полное обеспечение местами всех иногородних студентов очной формы, круглосуточная охрана, развитая спортивная и досуговая инфраструктура.
+            </p>
+
+            <!-- Key metrics chips -->
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-medium text-blue-200">
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-shield-check text-emerald-400 text-base"></i>
+                    <span>100% заселение 1 курса очников</span>
+                </div>
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-wallet2 text-amber-300 text-base"></i>
+                    <span>От 6 500 ₽ / месяц</span>
+                </div>
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-geo-alt-fill text-cyan-300 text-base"></i>
+                    <span>10 мин до учебных корпусов</span>
+                </div>
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-wifi text-purple-300 text-base"></i>
+                    <span>Wi-Fi 200 Мбит/с бесплатно</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. RESIDENCE BUILDINGS (КОРПУСА ОБЩЕЖИТИЯ) -->
+    <div class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+                    <i class="bi bi-building"></i> Места проживания
+                </span>
+                <h2 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    Корпуса и варианты размещения студентов
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                    Выберите подходящий комплекс в зависимости от желаемого уровня комфорта и локации
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">
+                    Всего жилой фонд: 950 мест
+                </span>
+            </div>
+        </div>
+
+        <!-- Buildings Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {% for building in buildings %}
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between group">
+                <div>
+                    <!-- Card Top Header -->
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold
+                            {% if building.badge_color == 'emerald' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                            {% elif building.badge_color == 'blue' %}bg-blue-50 text-blue-700 border border-blue-200
+                            {% else %}bg-indigo-50 text-indigo-700 border border-indigo-200{% endif %}">
+                            {{ building.badge }}
+                        </span>
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 block font-semibold">стоимость от</span>
+                            <span class="text-lg font-black text-slate-900">{{ building.price_from }} ₽</span>
+                            <span class="text-[10px] text-slate-500 font-medium">/ мес.</span>
+                        </div>
+                    </div>
+
+                    <!-- Title & Type -->
+                    <h3 class="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                        {{ building.title }}
+                    </h3>
+                    <div class="mt-1 flex items-center gap-2 text-xs font-semibold text-indigo-600">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>{{ building.type }} • {{ building.capacity }}</span>
+                    </div>
+
+                    <!-- Address & Metro -->
+                    <div class="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1.5 text-xs text-slate-600">
+                        <div class="flex items-start gap-2">
+                            <i class="bi bi-geo-alt-fill text-rose-500 shrink-0 mt-0.5"></i>
+                            <span class="font-medium text-slate-800">{{ building.address }}</span>
+                        </div>
+                        <div class="flex items-start gap-2 text-[11px] text-slate-500">
+                            <i class="bi bi-train-front-fill text-blue-500 shrink-0 mt-0.5"></i>
+                            <span>{{ building.metro }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <p class="mt-4 text-xs text-slate-600 leading-relaxed">
+                        {{ building.description }}
+                    </p>
+
+                    <!-- Features Checklist -->
+                    <div class="mt-4 space-y-2 pt-3 border-t border-slate-100 text-xs text-slate-700">
+                        {% for feat in building.features %}
+                        <div class="flex items-start gap-2">
+                            <i class="bi bi-check2-circle text-emerald-500 shrink-0 mt-0.5"></i>
+                            <span class="text-[11px] leading-snug">{{ feat }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Rooms & Rates -->
+                    <div class="mt-4 pt-3 border-t border-slate-100">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Тарифы размещения:</span>
+                        <div class="space-y-1.5">
+                            {% for rm in building.rooms %}
+                            <div class="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg bg-slate-50">
+                                <span class="text-slate-700 font-medium">{{ rm.type }}</span>
+                                <strong class="text-slate-900 font-bold">{{ rm.price }}</strong>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Action -->
+                <div class="mt-6 pt-3 border-t border-slate-100">
+                    <a href="#apply" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-800 text-xs font-bold transition-all">
+                        <i class="bi bi-bookmark-check"></i> Забронировать место
+                    </a>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 3. PHOTO GALLERY & VIRTUAL TOUR (TABBED) -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Фотогалерея условий проживания
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Ознакомьтесь с реальными интерьерами комнат, кухонь и зон общего пользования
+                </p>
+            </div>
+
+            <!-- Gallery Category Tabs -->
+            <div class="flex flex-wrap gap-1.5">
+                <button @click="activeTab = 'rooms'" 
+                        :class="activeTab === 'rooms' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all">
+                    Жилые комнаты
+                </button>
+                <button @click="activeTab = 'kitchens'" 
+                        :class="activeTab === 'kitchens' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all">
+                    Кухни и столовые
+                </button>
+                <button @click="activeTab = 'study'" 
+                        :class="activeTab === 'study' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all">
+                    Коворкинг и спорт
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 1: Rooms -->
+        <div x-show="activeTab === 'rooms'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">2-местная комната</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Стандартная спальня</h4>
+                    <p class="text-[11px] text-slate-200">Ортопедические кровати, письменные столы, гардероб</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">3-местная комната</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Просторная комната блока</h4>
+                    <p class="text-[11px] text-slate-200">Индивидуальные рабочие места, шкафы-купе, книжные полки</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">1-местная студия</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Студия в Нагатинском</h4>
+                    <p class="text-[11px] text-slate-200">Собственный санузел, кухонный уголок и кондиционер</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Kitchens -->
+        <div x-show="activeTab === 'kitchens'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Этажная кухня</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Кухня с техникой</h4>
+                    <p class="text-[11px] text-slate-200">Индукционные плиты, вытяжки, духовые шкафы, микроволновки</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Обеденная зона</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Зона приема пищи</h4>
+                    <p class="text-[11px] text-slate-200">Уютные столы, кулеры с фильтрованной горячей и холодной водой</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Прачечный комплекс</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Стирка и сушка</h4>
+                    <p class="text-[11px] text-slate-200">Автоматические стиральные машины, гладильные доски с утюгами</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Study & Sport -->
+        <div x-show="activeTab === 'study'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Учебный зал</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Коворкинг для учебы</h4>
+                    <p class="text-[11px] text-slate-200">Тихое пространство для подготовки к занятиям и курсовым</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Тренажерный зал</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Фитнес-зона кампуса</h4>
+                    <p class="text-[11px] text-slate-200">Силовые и кардиотренажеры, штанги, гантельный ряд</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 p-4 flex flex-col justify-between h-56 relative group">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+                <div class="relative z-10 flex justify-end">
+                    <span class="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold">Зона отдыха</span>
+                </div>
+                <div class="relative z-10 text-white">
+                    <h4 class="font-bold text-sm">Студенческий лаундж</h4>
+                    <p class="text-[11px] text-slate-200">Настольный теннис, аэрохоккей, пуфы и проектор для кино</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 4. STEP-BY-STEP ACCOMMODATION ALGORITHM & DOCUMENTS -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Steps Column (7 Cols) -->
+        <div class="lg:col-span-7 bg-gradient-to-br from-slate-900 via-witte-950 to-blue-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl space-y-6">
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-2">
+                    <i class="bi bi-calendar-check"></i> Сроки и этапы 2026
+                </span>
+                <h3 class="text-xl sm:text-2xl font-black text-white">Порядок заселения в общежитие</h3>
+                <p class="text-xs text-blue-200/70 mt-1">Четыре простых шага для получения ключей от комнаты</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-sm flex items-center justify-center shrink-0">1</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white">Отметка в заявлении абитуриента</h4>
+                        <p class="text-xs text-blue-200/70 mt-0.5 leading-relaxed">
+                            При подаче документов на портале CRM поставьте галочку «Нуждаюсь в общежитии» и укажите домашний адрес проживания.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0">2</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white">Публикация списков на заселение (22 августа 2026)</h4>
+                        <p class="text-xs text-blue-200/70 mt-0.5 leading-relaxed">
+                            Жилищная комиссия публикует протокол распределения мест по корпусам с указанием присвоенного номера комнаты.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="w-8 h-8 rounded-xl bg-cyan-600 text-white font-black text-sm flex items-center justify-center shrink-0">3</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white">Медицинский контроль и справки</h4>
+                        <p class="text-xs text-blue-200/70 mt-0.5 leading-relaxed">
+                            Осмотр дежурным врачом в медпункте университета и предоставление справки по форме 086/у с действующей флюорографией.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white font-black text-sm flex items-center justify-center shrink-0">4</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-white">Договор найма и заселение (26–31 августа 2026)</h4>
+                        <p class="text-xs text-blue-200/70 mt-0.5 leading-relaxed">
+                            Подписание договора найма жилого помещения, получение электронного пропуска СКУД, постельного белья и ключей.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Checklist (5 Cols) -->
+        <div class="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+                    <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm font-bold">
+                        <i class="bi bi-file-earmark-medical-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Необходимые документы</h3>
+                        <p class="text-[11px] text-slate-500">Обязательный перечень для заселения</p>
+                    </div>
+                </div>
+
+                <ul class="mt-4 space-y-2.5 text-xs text-slate-700">
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>Паспорт гражданина РФ (оригинал + 2 копии разворота с фото и пропиской)</span>
+                    </li>
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>Медицинская справка по форме 086/у (оригинал с заключением терапевта)</span>
+                    </li>
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>Справка о результатах флюорографического обследования (действительна 1 год)</span>
+                    </li>
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>Сертификат о профилактических прививках (копия)</span>
+                    </li>
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>4 матовые фотографии размером 3х4 см (для пропуска и личного дела)</span>
+                    </li>
+                    <li class="flex items-start gap-2.5 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <i class="bi bi-check-circle-fill text-emerald-500 shrink-0 mt-0.5"></i>
+                        <span>Военный билет или приписное свидетельство (для юношей)</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                <i class="bi bi-exclamation-circle-fill text-amber-600 text-base shrink-0 mt-0.5"></i>
+                <span class="text-[11px] leading-relaxed">
+                    Несовершеннолетним студентам (до 18 лет) при заключении договора найма необходимо личное присутствие одного из родителей (законного представителя) либо нотариальное согласие.
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 5. CAMPUS FACILITIES (ИНФРАСТРУКТУРА СТУДЕНЧЕСКОГО ГОРОДКА) -->
+    <div class="space-y-6">
+        <div class="max-w-3xl">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-geo-fill"></i> Инфраструктура кампуса
+            </span>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Единая образовательная среда университета
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Все необходимое для результативной учебы, спорта, творчества и карьерного старта на территории кампуса МУ им. С.Ю. Витте в ЮАО Москвы.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for fac in campus_facilities %}
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div>
+                    <div class="w-12 h-12 rounded-2xl 
+                        {% if fac.color == 'blue' %}bg-blue-50 text-blue-600
+                        {% elif fac.color == 'indigo' %}bg-indigo-50 text-indigo-600
+                        {% elif fac.color == 'amber' %}bg-amber-50 text-amber-600
+                        {% elif fac.color == 'emerald' %}bg-emerald-50 text-emerald-600
+                        {% elif fac.color == 'purple' %}bg-purple-50 text-purple-600
+                        {% else %}bg-rose-50 text-rose-600{% endif %} 
+                        flex items-center justify-center text-xl mb-4 shadow-2xs">
+                        <i class="bi {{ fac.icon }}"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 leading-snug">{{ fac.title }}</h3>
+                    <p class="mt-2 text-xs text-slate-600 leading-relaxed">{{ fac.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 6. FAQ ON DORMITORY -->
+    <div class="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-xs">
+        <div class="max-w-2xl mb-6">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-question-circle-fill"></i> Ответы на вопросы
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Часто задаваемые вопросы об общежитии
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Правила внутреннего распорядка, проживания и пропускного режима
+            </p>
+        </div>
+
+        <div class="space-y-3">
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 1 ? null : 1)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Кто имеет первоочередное право на получение места в общежитии?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 1 ? 'rotate-180 text-blue-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 1" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    Первоочередным правом на заселение пользуются: 1) Студенты, зачисленные на места, финансируемые из федерального бюджета; 2) Дети-сироты и дети, оставшиеся без попечения родителей; 3) Инвалиды I и II групп; 4) Участники специальной военной операции (СВО) и их дети; 5) Победители и призеры всероссийских олимпиад школьников. Студенты платной формы обеспечиваются местами в порядке очередности подачи заявлений.
+                </div>
+            </div>
+
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 2 ? null : 2)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Какой режим доступа в общежития и можно ли возвращаться ночью?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 2 ? 'rotate-180 text-blue-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 2" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    В соответствии с письмом Минобрнауки РФ, вход для проживающих студентов осуществляется круглосуточно по персональным электронным картам СКУД. В целях безопасности с 23:00 до 06:00 действует режим тишины. Гостевые визиты родственников и однокурсников разрешены с 09:00 до 22:00 при предъявлении паспорта на посту охраны.
+                </div>
+            </div>
+
+            <div class="border border-slate-200/80 rounded-2xl overflow-hidden">
+                <button @click="openFaq = (openFaq === 3 ? null : 3)" 
+                        class="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 hover:bg-slate-50 transition-colors focus:outline-none">
+                    <span class="text-sm font-bold text-slate-800">Какую бытовую технику разрешено привозить в комнату?</span>
+                    <i class="bi bi-chevron-down text-slate-400 transition-transform duration-200" :class="openFaq === 3 ? 'rotate-180 text-blue-600' : ''"></i>
+                </button>
+                <div x-show="openFaq === 3" x-cloak class="p-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100 bg-slate-50/50">
+                    Разрешено привозить: ноутбуки, персональные компьютеры, планшеты, настольные лампы, фены, электрические чайники с автоотключением и компактные мини-холодильники класса энергопотребления А+. Запрещено использовать в жилых комнатах приборы с открытым нагревательным элементом (кипятильники, электроплиты, обогреватели без сертификата пожарной безопасности).
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. APPLICATION & CONTACTS CTA SECTION -->
+    <div id="apply" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center bg-gradient-to-r from-blue-700 via-indigo-700 to-witte-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl shadow-indigo-700/20">
+        
+        <div class="lg:col-span-7 space-y-4">
+            <span class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold tracking-wide uppercase">
+                Отдел студенческого размещения
+            </span>
+            <h2 class="text-2xl sm:text-3xl font-black leading-tight">
+                Забронируйте место в общежитии на 2026/2027 учебный год
+            </h2>
+            <p class="text-sm text-blue-100 max-w-lg leading-relaxed">
+                Оставьте контактные данные — жилищная комиссия проверит доступность свободных мест в выбранном корпусе и проконсультирует по пакету справок.
+            </p>
+            <div class="pt-2 flex flex-wrap gap-4 text-xs text-blue-200 font-medium">
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-telephone-fill text-amber-300"></i> +7 (495) 500-03-03 (доб. 114)
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="bi bi-envelope-fill text-amber-300"></i> dorm@witte.ru
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Booking Form -->
+        <div class="lg:col-span-5 bg-white text-slate-900 rounded-2xl p-5 sm:p-6 shadow-lg space-y-3.5">
+            <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">
+                Экспресс-заявка на бронирование
+            </h3>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">ФИО абитуриента</label>
+                <input type="text" 
+                       x-model="applicantName" 
+                       placeholder="Иванов Иван Иванович" 
+                       class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Номер телефона</label>
+                <input type="tel" 
+                       x-model="applicantPhone" 
+                       placeholder="+7 (999) 000-00-00" 
+                       class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Предпочтительный корпус</label>
+                <select class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <option>Комплекс «Автозаводский» (от 6 500 ₽/мес.)</option>
+                    <option>Кампус «Нагатинский» (от 8 900 ₽/мес.)</option>
+                    <option>Комплекс «Дубровка» (от 12 500 ₽/мес.)</option>
+                </select>
+            </div>
+
+            <button @click="submitDormRequest()" 
+                    type="button" 
+                    :disabled="!applicantName || !applicantPhone"
+                    class="w-full mt-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-blue-600/30 transition-all">
+                Отправить заявку на бронь
+            </button>
+            <p class="text-[10px] text-slate-400 text-center">
+                Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
+            </p>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

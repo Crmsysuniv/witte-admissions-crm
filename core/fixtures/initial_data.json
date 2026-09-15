@@ -274,6 +274,138 @@
   }
 },
 {
+  "model": "admissions.educationprogram",
+  "pk": 10,
+  "fields": {
+    "specialty": 2,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "225000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 11,
+  "fields": {
+    "specialty": 2,
+    "study_form": "PART_TIME",
+    "tuition_fee": "115000.00",
+    "duration": "4 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 12,
+  "fields": {
+    "specialty": 3,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "235000.00",
+    "duration": "2 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 13,
+  "fields": {
+    "specialty": 3,
+    "study_form": "MIXED",
+    "tuition_fee": "150000.00",
+    "duration": "2 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 14,
+  "fields": {
+    "specialty": 9,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "210000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 15,
+  "fields": {
+    "specialty": 9,
+    "study_form": "PART_TIME",
+    "tuition_fee": "110000.00",
+    "duration": "4 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 16,
+  "fields": {
+    "specialty": 5,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "225000.00",
+    "duration": "2 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 17,
+  "fields": {
+    "specialty": 5,
+    "study_form": "MIXED",
+    "tuition_fee": "140000.00",
+    "duration": "2 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 18,
+  "fields": {
+    "specialty": 7,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "240000.00",
+    "duration": "2 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 19,
+  "fields": {
+    "specialty": 7,
+    "study_form": "MIXED",
+    "tuition_fee": "155000.00",
+    "duration": "2 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 20,
+  "fields": {
+    "specialty": 10,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "215000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 21,
+  "fields": {
+    "specialty": 10,
+    "study_form": "PART_TIME",
+    "tuition_fee": "115000.00",
+    "duration": "4 года 6 мес€цев",
+    "is_active": true
+  }
+},
+{
   "model": "admissions.examsubject",
   "pk": 1,
   "fields": {

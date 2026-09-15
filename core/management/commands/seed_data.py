@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject
@@ -236,6 +236,84 @@ class Command(BaseCommand):
                 'specialty': specialty_instances.get('38.03.02_BACHELOR'),
                 'study_form': EducationProgram.StudyForm.PART_TIME,
                 'tuition_fee': Decimal('110000.00'),
+                'duration': '4 года 6 месяцев',
+            },
+            # 09.03.01 Информатика и вычислительная техника
+            {
+                'specialty': specialty_instances.get('09.03.01_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('225000.00'),
+                'duration': '4 года',
+            },
+            {
+                'specialty': specialty_instances.get('09.03.01_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.PART_TIME,
+                'tuition_fee': Decimal('115000.00'),
+                'duration': '4 года 6 месяцев',
+            },
+            # 09.04.03 Прикладная информатика (Магистратура)
+            {
+                'specialty': specialty_instances.get('09.04.03_MASTER'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('235000.00'),
+                'duration': '2 года',
+            },
+            {
+                'specialty': specialty_instances.get('09.04.03_MASTER'),
+                'study_form': EducationProgram.StudyForm.MIXED,
+                'tuition_fee': Decimal('150000.00'),
+                'duration': '2 года 6 месяцев',
+            },
+            # 38.03.04 Государственное и муниципальное управление
+            {
+                'specialty': specialty_instances.get('38.03.04_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('210000.00'),
+                'duration': '4 года',
+            },
+            {
+                'specialty': specialty_instances.get('38.03.04_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.PART_TIME,
+                'tuition_fee': Decimal('110000.00'),
+                'duration': '4 года 6 месяцев',
+            },
+            # 38.04.01 Экономика (Магистратура)
+            {
+                'specialty': specialty_instances.get('38.04.01_MASTER'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('225000.00'),
+                'duration': '2 года',
+            },
+            {
+                'specialty': specialty_instances.get('38.04.01_MASTER'),
+                'study_form': EducationProgram.StudyForm.MIXED,
+                'tuition_fee': Decimal('140000.00'),
+                'duration': '2 года 6 месяцев',
+            },
+            # 40.04.01 Юриспруденция (Магистратура)
+            {
+                'specialty': specialty_instances.get('40.04.01_MASTER'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('240000.00'),
+                'duration': '2 года',
+            },
+            {
+                'specialty': specialty_instances.get('40.04.01_MASTER'),
+                'study_form': EducationProgram.StudyForm.MIXED,
+                'tuition_fee': Decimal('155000.00'),
+                'duration': '2 года 6 месяцев',
+            },
+            # 42.03.01 Реклама и связи с общественностью
+            {
+                'specialty': specialty_instances.get('42.03.01_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.FULL_TIME,
+                'tuition_fee': Decimal('215000.00'),
+                'duration': '4 года',
+            },
+            {
+                'specialty': specialty_instances.get('42.03.01_BACHELOR'),
+                'study_form': EducationProgram.StudyForm.PART_TIME,
+                'tuition_fee': Decimal('115000.00'),
                 'duration': '4 года 6 месяцев',
             },
         ]
