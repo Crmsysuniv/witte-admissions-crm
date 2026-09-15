@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Faculty, Specialty, EducationProgram, ExamSubject, Application
+from .models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument
+
+
+class ApplicationDocumentInline(admin.TabularInline):
+    model = ApplicationDocument
+    extra = 1
+    fields = ('document_type', 'file', 'is_verified', 'comment', 'uploaded_at')
+    readonly_fields = ('uploaded_at',)
 
 
 class EducationProgramInline(admin.TabularInline):
@@ -56,6 +63,16 @@ class ApplicationAdmin(admin.ModelAdmin):
     search_fields = ('applicant__username', 'applicant__first_name', 'applicant__last_name', 'applicant__email', 'program__specialty__name')
     list_editable = ('status', 'financing_type')
     date_hierarchy = 'submission_date'
+    inlines = [ApplicationDocumentInline]
+
+
+@admin.register(ApplicationDocument)
+class ApplicationDocumentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'application', 'document_type', 'file', 'is_verified', 'uploaded_at')
+    list_filter = ('document_type', 'is_verified', 'uploaded_at')
+    search_fields = ('application__applicant__username', 'application__applicant__last_name', 'comment')
+    list_editable = ('is_verified',)
+
 
 
 

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 
 
@@ -212,6 +213,63 @@ class Application(models.Model):
     def __str__(self):
         full_name = self.applicant.get_full_name() or self.applicant.username
         return f"Заявление №{self.id} — {full_name} — {self.program.specialty.name} ({self.get_status_display()})"
+
+
+def application_document_upload_to(instance, filename):
+    return f"applications/{instance.application_id}/documents/{instance.document_type}_{filename}"
+
+
+class ApplicationDocument(models.Model):
+    class DocumentType(models.TextChoices):
+        PASSPORT = 'PASSPORT', 'Скан паспорта'
+        CERTIFICATE = 'CERTIFICATE', 'Аттестат'
+        DIPLOMA = 'DIPLOMA', 'Диплом'
+        PRIVILEGE = 'PRIVILEGE', 'Документ о льготах'
+        OTHER = 'OTHER', 'Иной документ'
+
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.CASCADE,
+        related_name='documents',
+        verbose_name='Заявление'
+    )
+    document_type = models.CharField(
+        max_length=30,
+        choices=DocumentType.choices,
+        verbose_name='Тип документа'
+    )
+    file = models.FileField(
+        upload_to=application_document_upload_to,
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=['pdf', 'jpg', 'jpeg', 'png'],
+                message='Разрешены только файлы форматов PDF, JPG, JPEG, PNG.'
+            )
+        ],
+        verbose_name='Файл документа'
+    )
+    comment = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Комментарий'
+    )
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата загрузки'
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name='Проверен'
+    )
+
+    class Meta:
+        verbose_name = 'Документ заявления'
+        verbose_name_plural = 'Документы заявлений'
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} — {self.application}"
+
 
 
 
