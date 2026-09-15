@@ -1,0 +1,397 @@
+﻿{% extends 'base.html' %}
+
+{% block title %}Приемная кампания 2026 | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Приемная кампания 2026{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-10">
+
+    <!-- 1. HERO BANNER: Приемная кампания 2026 -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10">
+        
+        <!-- Decorative Glow Accents -->
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 px-6 py-10 sm:px-12 sm:py-16 lg:py-20 max-w-5xl">
+            
+            <!-- Live Badge -->
+            <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-6 shadow-inner">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Официальный портал приемной комиссии 2026/2027</span>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight sm:leading-none text-white">
+                Поступай в Университет <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">им. С.Ю. Витте</span>
+            </h1>
+
+            <p class="mt-5 text-base sm:text-lg text-blue-100/90 max-w-3xl leading-relaxed font-normal">
+                Государственный диплом, бюджетные и грантовые места, востребованные IT, экономические и юридические направления. Подай заявление онлайн через CRM-портал за 5 минут.
+            </p>
+
+            <!-- Action Buttons CTA -->
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+                <a href="/admin/admissions/application/add/" 
+                   class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-base font-bold shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                    <i class="bi bi-file-earmark-plus-fill text-lg"></i>
+                    <span>Подать заявление онлайн</span>
+                </a>
+                <a href="#specialties" 
+                   class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white text-base font-semibold border border-white/20 backdrop-blur-sm transition-all hover:scale-[1.02] active:scale-[0.98]">
+                    <i class="bi bi-mortarboard text-lg text-blue-300"></i>
+                    <span>Выбрать направление</span>
+                </a>
+                <a href="#timeline" 
+                   class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-transparent hover:bg-white/5 text-blue-200 text-sm font-medium transition-colors">
+                    <i class="bi bi-calendar3 text-base"></i>
+                    <span>График приема 2026</span>
+                </a>
+            </div>
+
+            <!-- Trust Badges Strip -->
+            <div class="mt-12 pt-8 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 text-xs text-blue-200/80">
+                <div class="flex items-center gap-2.5">
+                    <i class="bi bi-patch-check-fill text-lg text-emerald-400"></i>
+                    <span>Госаккредитация и лицензия</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <i class="bi bi-shield-shaded text-lg text-blue-400"></i>
+                    <span>Отсрочка от службы в армии</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <i class="bi bi-cash-stack text-lg text-amber-400"></i>
+                    <span>Бюджетные места и рассрочка</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <i class="bi bi-briefcase-fill text-lg text-purple-400"></i>
+                    <span>Содействие в трудоустройстве</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 2. QUICK STATS COUNTERS -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Бюджетных мест</span>
+                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black text-slate-900">{{ total_budget_places }}</div>
+                <p class="text-xs text-slate-500 mt-1">Мест за счет госбюджета</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Платная основа</span>
+                <div class="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black text-slate-900">{{ total_paid_places }}</div>
+                <p class="text-xs text-slate-500 mt-1">Мест с гибкой оплатой</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Факультеты</span>
+                <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
+                    <i class="bi bi-buildings-fill"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black text-slate-900">{{ faculties.count }}</div>
+                <p class="text-xs text-slate-500 mt-1">Профильных факультета и колледж</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Программы</span>
+                <div class="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black text-slate-900">{{ programs.count }}</div>
+                <p class="text-xs text-slate-500 mt-1">Очные, заочные и вечерние</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. TIMELINE: Ключевые даты подачи документов 2026 -->
+    <section id="timeline" class="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200/80 shadow-xs">
+        
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-slate-100 gap-4">
+            <div>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+                    <i class="bi bi-clock-history"></i> Календарь абитуриента
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    Сроки и этапы приемной кампании 2026
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">
+                    Соблюдайте ключевые дедлайны для гарантированного участия в конкурсе на поступление
+                </p>
+            </div>
+            <div class="text-xs text-slate-400 flex items-center gap-2">
+                <i class="bi bi-info-circle-fill text-blue-500"></i>
+                <span>Даты установлены Минобрнауки РФ</span>
+            </div>
+        </div>
+
+        <!-- Interactive Vertical Timeline -->
+        <div class="relative border-l-2 border-indigo-100 ml-4 sm:ml-8 space-y-8 py-2">
+            {% for event in timeline_events %}
+            <div class="relative pl-8 sm:pl-10 group">
+                
+                <!-- Dot Icon on the line -->
+                <div class="absolute -left-[17px] top-1 w-8 h-8 rounded-full border-4 border-white flex items-center justify-center shadow-md transition-transform group-hover:scale-110
+                    {% if event.color == 'emerald' %}bg-emerald-500 text-white
+                    {% elif event.color == 'blue' %}bg-blue-600 text-white
+                    {% elif event.color == 'indigo' %}bg-indigo-600 text-white
+                    {% elif event.color == 'amber' %}bg-amber-500 text-white
+                    {% elif event.color == 'purple' %}bg-purple-600 text-white
+                    {% else %}bg-teal-600 text-white{% endif %}">
+                    <i class="bi {{ event.icon }} text-xs"></i>
+                </div>
+
+                <!-- Event Card Content -->
+                <div class="p-5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 transition-all shadow-2xs">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span class="text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg
+                            {% if event.color == 'emerald' %}bg-emerald-100 text-emerald-800
+                            {% elif event.color == 'blue' %}bg-blue-100 text-blue-800
+                            {% elif event.color == 'indigo' %}bg-indigo-100 text-indigo-800
+                            {% elif event.color == 'amber' %}bg-amber-100 text-amber-800
+                            {% elif event.color == 'purple' %}bg-purple-100 text-purple-800
+                            {% else %}bg-teal-100 text-teal-800{% endif %}">
+                            {{ event.badge }}
+                        </span>
+                        <div class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                            <i class="bi bi-calendar2-event text-blue-600"></i>
+                            <span>{{ event.date }}</span>
+                        </div>
+                    </div>
+
+                    <h3 class="text-base sm:text-lg font-bold text-slate-800">
+                        {{ event.title }}
+                    </h3>
+                    
+                    <p class="text-xs sm:text-sm text-slate-600 mt-1.5 leading-relaxed">
+                        {{ event.description }}
+                    </p>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+    </section>
+
+    <!-- 4. THREE FEATURE CARDS / BANNERS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Banner 1: Бакалавриат -->
+        <div class="p-7 rounded-3xl bg-gradient-to-br from-blue-900 to-witte-900 text-white shadow-lg border border-blue-800/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 text-2xl mb-5">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <h3 class="text-xl font-bold">Бакалавриат и Специалитет</h3>
+                <p class="text-xs text-blue-200/80 mt-2 leading-relaxed">
+                    Первое высшее образование по очной, очно-заочной и заочной формам. Фундаментальная подготовка и раннее погружение в практику.
+                </p>
+                <div class="mt-4 space-y-1.5 text-xs text-blue-100/90">
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Срок: 4 — 4,5 года</div>
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Прием по ЕГЭ или ВИ</div>
+                </div>
+            </div>
+            <a href="/admin/admissions/specialty/?education_level=BACHELOR" class="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 hover:bg-blue-50 text-xs font-bold transition-colors">
+                Смотреть направления <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+
+        <!-- Banner 2: Магистратура -->
+        <div class="p-7 rounded-3xl bg-gradient-to-br from-indigo-900 to-[#1e1b4b] text-white shadow-lg border border-indigo-800/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 text-2xl mb-5">
+                    <i class="bi bi-award-fill"></i>
+                </div>
+                <h3 class="text-xl font-bold">Магистратура Витте</h3>
+                <p class="text-xs text-indigo-200/80 mt-2 leading-relaxed">
+                    Углубленные исследовательские и прикладные компетенции для карьерного роста и руководящих должностей. Удобное вечернее расписание.
+                </p>
+                <div class="mt-4 space-y-1.5 text-xs text-indigo-100/90">
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Срок: 2 — 2,5 года</div>
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Совмещение с работой</div>
+                </div>
+            </div>
+            <a href="/admin/admissions/specialty/?education_level=MASTER" class="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 hover:bg-indigo-50 text-xs font-bold transition-colors">
+                Программы магистратуры <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+
+        <!-- Banner 3: Колледж -->
+        <div class="p-7 rounded-3xl bg-gradient-to-br from-slate-900 to-witte-950 text-white shadow-lg border border-slate-700/40 relative overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-amber-300 text-2xl mb-5">
+                    <i class="bi bi-buildings-fill"></i>
+                </div>
+                <h3 class="text-xl font-bold">Колледж при Университете</h3>
+                <p class="text-xs text-slate-300/80 mt-2 leading-relaxed">
+                    Поступление после 9 и 11 классов по среднему баллу аттестата без сдачи ЕГЭ. Бесшовный переход в университет на ускоренные программы.
+                </p>
+                <div class="mt-4 space-y-1.5 text-xs text-slate-200">
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Поступление без ЕГЭ</div>
+                    <div class="flex items-center gap-2"><i class="bi bi-check2 text-emerald-400"></i> Диплом СПО</div>
+                </div>
+            </div>
+            <a href="/admin/admissions/faculty/" class="mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-bold transition-colors">
+                Узнать о Колледже <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- 5. SPECIALTIES & FACULTIES CATALOG -->
+    <section id="specialties" class="space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    Факультеты и направления подготовки 2026
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">
+                    Выберите профиль обучения и ознакомьтесь с планом приема
+                </p>
+            </div>
+            <a href="/admin/admissions/application/add/" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors">
+                <i class="bi bi-send-fill"></i> Подать заявку
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for faculty in faculties %}
+            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
+                <div>
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <span class="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-black text-xs border border-indigo-200">
+                            {{ faculty.code|default:"ФАКУЛЬТЕТ" }}
+                        </span>
+                        <span class="text-xs text-slate-400 font-medium">
+                            {{ faculty.specialties.count }} направл.
+                        </span>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-slate-900">
+                        {{ faculty.name }}
+                    </h3>
+                    
+                    <p class="text-xs text-slate-500 mt-2 leading-relaxed line-clamp-2">
+                        {{ faculty.description }}
+                    </p>
+
+                    <!-- Specialty badges inside faculty -->
+                    <div class="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
+                        {% for spec in faculty.specialties.all %}
+                        <div class="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 hover:bg-blue-50/50 transition-colors">
+                            <div class="flex items-center gap-2 truncate pr-2">
+                                <span class="font-mono font-bold text-blue-600">{{ spec.code }}</span>
+                                <span class="font-medium text-slate-800 truncate">{{ spec.name }}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                {% if spec.budget_places > 0 %}
+                                <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-semibold text-[10px]" title="Бюджетные места">
+                                    {{ spec.budget_places }} б.
+                                </span>
+                                {% endif %}
+                                <span class="px-2 py-0.5 rounded-md bg-slate-200/80 text-slate-700 font-medium text-[10px]" title="Платные места">
+                                    {{ spec.paid_places }} пл.
+                                </span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-xs text-slate-400 italic">Направления формируются...</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <a href="/admin/admissions/specialty/?faculty__id__exact={{ faculty.id }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                        Подробнее о программах →
+                    </a>
+                    <a href="/admin/admissions/application/add/" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors">
+                        Выбрать
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </section>
+
+    <!-- 6. EXAM MINIMUM SCORES TABLE -->
+    <section class="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Минимальные проходные баллы ЕГЭ (2026 год)
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Минимальные пороговые значения для допуска к участию в конкурсе МУ им. С.Ю. Витте
+                </p>
+            </div>
+            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600 self-start sm:self-auto">
+                100-балльная шкала
+            </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {% for subj in subjects %}
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 hover:border-blue-400 transition-colors">
+                <div class="text-xs text-slate-500 font-medium">{{ subj.name }}</div>
+                <div class="mt-2 flex items-baseline gap-1">
+                    <span class="text-2xl font-black text-slate-900">{{ subj.min_score }}</span>
+                    <span class="text-xs text-slate-400 font-bold">баллов</span>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-xs text-slate-400 col-span-4">Список предметов обновляется...</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- 7. BOTTOM CALL TO ACTION -->
+    <div class="p-8 sm:p-12 rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-800 text-white shadow-xl shadow-indigo-600/20 text-center flex flex-col items-center justify-center">
+        <span class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold tracking-wide uppercase mb-3">
+            Прием документов открыт
+        </span>
+        <h2 class="text-2xl sm:text-4xl font-black max-w-xl leading-tight">
+            Сделай свой первый шаг к диплому МУ им. С.Ю. Витте уже сегодня!
+        </h2>
+        <p class="mt-3 text-sm sm:text-base text-blue-100 max-w-lg">
+            Подайте заявление через цифровую систему приемной комиссии онлайн. Наши специалисты проверят документы и свяжутся с вами.
+        </p>
+        <div class="mt-6 flex flex-wrap gap-4 justify-center">
+            <a href="/admin/admissions/application/add/" class="px-8 py-3.5 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 text-sm font-extrabold shadow-lg transition-all hover:scale-105">
+                Подать заявление онлайн
+            </a>
+            <a href="/admin/feedback/feedbackmessage/add/" class="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-sm font-semibold border border-white/20 backdrop-blur-xs transition-all">
+                Задать вопрос комиссии
+            </a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
