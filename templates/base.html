@@ -1,4 +1,4 @@
-﻿{% load static %}
+{% load static breadcrumb_tags %}
 <!DOCTYPE html>
 <html lang="ru" class="h-full bg-slate-50">
 <head>
@@ -243,10 +243,10 @@
                         <i class="bi bi-list text-2xl"></i>
                     </button>
                     
-                    <div class="hidden sm:flex items-center gap-2 text-sm text-slate-500">
-                        <span class="font-medium text-slate-900">Приемная комиссия</span>
-                        <i class="bi bi-chevron-right text-xs text-slate-400"></i>
-                        <span class="text-slate-600 font-normal">{% block header_breadcrumb %}Главная панель{% endblock %}</span>
+                    <div class="hidden sm:flex items-center">
+                        {% block breadcrumbs %}
+                            {% render_breadcrumbs %}
+                        {% endblock %}
                     </div>
                 </div>
 
