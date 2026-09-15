@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument
+from .models import (
+    Faculty,
+    Specialty,
+    EducationProgram,
+    ExamSubject,
+    Application,
+    ApplicationDocument,
+    ExamScore,
+)
 
 
 class ApplicationDocumentInline(admin.TabularInline):
@@ -7,6 +15,12 @@ class ApplicationDocumentInline(admin.TabularInline):
     extra = 1
     fields = ('document_type', 'file', 'is_verified', 'comment', 'uploaded_at')
     readonly_fields = ('uploaded_at',)
+
+
+class ExamScoreInline(admin.TabularInline):
+    model = ExamScore
+    extra = 1
+    fields = ('subject', 'score', 'exam_type', 'year', 'document_number', 'is_verified')
 
 
 class EducationProgramInline(admin.TabularInline):
@@ -58,12 +72,16 @@ class ExamSubjectAdmin(admin.ModelAdmin):
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'applicant', 'program', 'financing_type', 'status', 'submission_date')
+    list_display = ('id', 'applicant', 'program', 'financing_type', 'get_total_score', 'status', 'submission_date')
     list_filter = ('status', 'financing_type', 'program__study_form', 'program__specialty__faculty', 'submission_date')
     search_fields = ('applicant__username', 'applicant__first_name', 'applicant__last_name', 'applicant__email', 'program__specialty__name')
     list_editable = ('status', 'financing_type')
     date_hierarchy = 'submission_date'
-    inlines = [ApplicationDocumentInline]
+    inlines = [ApplicationDocumentInline, ExamScoreInline]
+
+    def get_total_score(self, obj):
+        return obj.total_score
+    get_total_score.short_description = 'Сумма баллов'
 
 
 @admin.register(ApplicationDocument)
@@ -72,6 +90,15 @@ class ApplicationDocumentAdmin(admin.ModelAdmin):
     list_filter = ('document_type', 'is_verified', 'uploaded_at')
     search_fields = ('application__applicant__username', 'application__applicant__last_name', 'comment')
     list_editable = ('is_verified',)
+
+
+@admin.register(ExamScore)
+class ExamScoreAdmin(admin.ModelAdmin):
+    list_display = ('id', 'application', 'subject', 'score', 'exam_type', 'year', 'is_verified')
+    list_filter = ('exam_type', 'is_verified', 'subject', 'year')
+    search_fields = ('application__applicant__username', 'application__applicant__last_name', 'subject__name', 'document_number')
+    list_editable = ('score', 'is_verified')
+
 
 
 

@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from django.db import models
 
 
@@ -214,6 +214,11 @@ class Application(models.Model):
         full_name = self.applicant.get_full_name() or self.applicant.username
         return f"Заявление №{self.id} — {full_name} — {self.program.specialty.name} ({self.get_status_display()})"
 
+    @property
+    def total_score(self):
+        return sum(s.score for s in self.exam_scores.all())
+
+
 
 def application_document_upload_to(instance, filename):
     return f"applications/{instance.application_id}/documents/{instance.document_type}_{filename}"
@@ -269,6 +274,67 @@ class ApplicationDocument(models.Model):
 
     def __str__(self):
         return f"{self.get_document_type_display()} — {self.application}"
+
+
+class ExamScore(models.Model):
+    class ExamType(models.TextChoices):
+        EGE = 'EGE', 'Единый государственный экзамен (ЕГЭ)'
+        INTERNAL = 'INTERNAL', 'Вступительное испытание вуза'
+        OLYMPIAD = 'OLYMPIAD', 'Олимпиада / Особое право'
+
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.CASCADE,
+        related_name='exam_scores',
+        verbose_name='Заявление'
+    )
+    subject = models.ForeignKey(
+        ExamSubject,
+        on_delete=models.PROTECT,
+        related_name='scores',
+        verbose_name='Предмет'
+    )
+    score = models.PositiveIntegerField(
+        validators=[
+            MinValueValidator(0, message='Балл не может быть меньше 0.'),
+            MaxValueValidator(100, message='Балл не может превышать 100.')
+        ],
+        verbose_name='Балл'
+    )
+    exam_type = models.CharField(
+        max_length=20,
+        choices=ExamType.choices,
+        default=ExamType.EGE,
+        verbose_name='Тип испытания'
+    )
+    year = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Год сдачи'
+    )
+    document_number = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Номер свидетельства / документа'
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        verbose_name='Балл подтвержден'
+    )
+
+    class Meta:
+        verbose_name = 'Балл вступительного испытания'
+        verbose_name_plural = 'Баллы вступительных испытаний'
+        unique_together = ('application', 'subject')
+        ordering = ['subject__name']
+
+    def __str__(self):
+        return f"{self.subject.name}: {self.score} б. ({self.get_exam_type_display()}) — {self.application}"
+
+    @property
+    def is_passing(self):
+        return self.score >= self.subject.min_score
+
 
 
 
