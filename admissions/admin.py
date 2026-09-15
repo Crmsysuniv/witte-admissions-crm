@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Faculty, Specialty
+from .models import Faculty, Specialty, EducationProgram, ExamSubject
+
+
+class EducationProgramInline(admin.TabularInline):
+    model = EducationProgram
+    extra = 1
+    fields = ('study_form', 'tuition_fee', 'duration', 'is_active')
 
 
 class SpecialtyInline(admin.TabularInline):
@@ -25,4 +31,21 @@ class SpecialtyAdmin(admin.ModelAdmin):
     list_filter = ('faculty', 'education_level', 'is_active')
     search_fields = ('code', 'name', 'faculty__name')
     list_editable = ('budget_places', 'paid_places', 'is_active')
+    inlines = [EducationProgramInline]
+
+
+@admin.register(EducationProgram)
+class EducationProgramAdmin(admin.ModelAdmin):
+    list_display = ('specialty', 'study_form', 'tuition_fee', 'duration', 'is_active')
+    list_filter = ('study_form', 'is_active', 'specialty__faculty')
+    search_fields = ('specialty__name', 'specialty__code', 'duration')
+    list_editable = ('tuition_fee', 'is_active')
+
+
+@admin.register(ExamSubject)
+class ExamSubjectAdmin(admin.ModelAdmin):
+    list_display = ('name', 'min_score')
+    search_fields = ('name',)
+    list_editable = ('min_score',)
+
 
