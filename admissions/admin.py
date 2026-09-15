@@ -70,6 +70,16 @@ class ExamSubjectAdmin(admin.ModelAdmin):
     list_editable = ('min_score',)
 
 
+from audit.models import StatusLog
+
+
+class StatusLogInline(admin.TabularInline):
+    model = StatusLog
+    extra = 0
+    can_delete = False
+    readonly_fields = ('old_status', 'new_status', 'changed_by', 'changed_at', 'comment')
+
+
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
     list_display = ('id', 'applicant', 'program', 'financing_type', 'get_total_score', 'status', 'submission_date')
@@ -77,11 +87,24 @@ class ApplicationAdmin(admin.ModelAdmin):
     search_fields = ('applicant__username', 'applicant__first_name', 'applicant__last_name', 'applicant__email', 'program__specialty__name')
     list_editable = ('status', 'financing_type')
     date_hierarchy = 'submission_date'
-    inlines = [ApplicationDocumentInline, ExamScoreInline]
+    inlines = [ApplicationDocumentInline, ExamScoreInline, StatusLogInline]
 
     def get_total_score(self, obj):
         return obj.total_score
     get_total_score.short_description = 'Сумма баллов'
+
+    def save_model(self, request, obj, form, change):
+        if change and 'status' in form.changed_data:
+            old_status = form.initial.get('status', '')
+            StatusLog.objects.create(
+                application=obj,
+                old_status=old_status,
+                new_status=obj.status,
+                changed_by=request.user,
+                comment="Статус изменен через панель администратора"
+            )
+        super().save_model(request, obj, form, change)
+
 
 
 @admin.register(ApplicationDocument)
