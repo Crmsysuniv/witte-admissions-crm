@@ -1,0 +1,348 @@
+[
+{
+  "model": "admissions.faculty",
+  "pk": 1,
+  "fields": {
+    "name": "Факультет информационных технологий",
+    "code": "ФИТ",
+    "description": "Подготовка специалистов в сфере IT, программной инженерии, информационной безопасности и аналитики данных."
+  }
+},
+{
+  "model": "admissions.faculty",
+  "pk": 2,
+  "fields": {
+    "name": "Факультет экономики и финансов",
+    "code": "ФЭФ",
+    "description": "Ведущий центр подготовки экономистов, финансистов, бухгалтеров и специалистов по налогообложению."
+  }
+},
+{
+  "model": "admissions.faculty",
+  "pk": 3,
+  "fields": {
+    "name": "Юридический факультет",
+    "code": "ЮФ",
+    "description": "Классическое юридическое образование с углубленным изучением гражданского, уголовного и корпоративного права."
+  }
+},
+{
+  "model": "admissions.faculty",
+  "pk": 4,
+  "fields": {
+    "name": "Факультет управления",
+    "code": "ФУ",
+    "description": "Подготовка управленцев для бизнеса, государственных структур и медиа-индустрии."
+  }
+},
+{
+  "model": "admissions.faculty",
+  "pk": 5,
+  "fields": {
+    "name": "Колледж МУ им. С.Ю. Витте",
+    "code": "СПОР",
+    "description": "Программы среднего профессионального образования для выпускников 9 и 11 классов."
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 1,
+  "fields": {
+    "faculty": 1,
+    "code": "09.03.03",
+    "name": "Прикладная информатика",
+    "education_level": "BACHELOR",
+    "budget_places": 30,
+    "paid_places": 120,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 2,
+  "fields": {
+    "faculty": 1,
+    "code": "09.03.01",
+    "name": "Информатика и вычислительная техника",
+    "education_level": "BACHELOR",
+    "budget_places": 25,
+    "paid_places": 80,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 3,
+  "fields": {
+    "faculty": 1,
+    "code": "09.04.03",
+    "name": "Прикладная информатика",
+    "education_level": "MASTER",
+    "budget_places": 10,
+    "paid_places": 40,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 4,
+  "fields": {
+    "faculty": 2,
+    "code": "38.03.01",
+    "name": "Экономика",
+    "education_level": "BACHELOR",
+    "budget_places": 20,
+    "paid_places": 150,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 5,
+  "fields": {
+    "faculty": 2,
+    "code": "38.04.01",
+    "name": "Экономика",
+    "education_level": "MASTER",
+    "budget_places": 5,
+    "paid_places": 60,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 6,
+  "fields": {
+    "faculty": 3,
+    "code": "40.03.01",
+    "name": "Юриспруденция",
+    "education_level": "BACHELOR",
+    "budget_places": 20,
+    "paid_places": 200,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 7,
+  "fields": {
+    "faculty": 3,
+    "code": "40.04.01",
+    "name": "Юриспруденция",
+    "education_level": "MASTER",
+    "budget_places": 5,
+    "paid_places": 80,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 8,
+  "fields": {
+    "faculty": 4,
+    "code": "38.03.02",
+    "name": "Менеджмент",
+    "education_level": "BACHELOR",
+    "budget_places": 15,
+    "paid_places": 130,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 9,
+  "fields": {
+    "faculty": 4,
+    "code": "38.03.04",
+    "name": "Государственное и муниципальное управление",
+    "education_level": "BACHELOR",
+    "budget_places": 10,
+    "paid_places": 90,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.specialty",
+  "pk": 10,
+  "fields": {
+    "faculty": 4,
+    "code": "42.03.01",
+    "name": "Реклама и связи с общественностью",
+    "education_level": "BACHELOR",
+    "budget_places": 10,
+    "paid_places": 100,
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 1,
+  "fields": {
+    "specialty": 1,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "220000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 2,
+  "fields": {
+    "specialty": 1,
+    "study_form": "PART_TIME",
+    "tuition_fee": "115000.00",
+    "duration": "4 года 6 месяцев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 3,
+  "fields": {
+    "specialty": 1,
+    "study_form": "MIXED",
+    "tuition_fee": "145000.00",
+    "duration": "4 года 6 месяцев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 4,
+  "fields": {
+    "specialty": 4,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "210000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 5,
+  "fields": {
+    "specialty": 4,
+    "study_form": "PART_TIME",
+    "tuition_fee": "110000.00",
+    "duration": "4 года 6 месяцев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 6,
+  "fields": {
+    "specialty": 6,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "230000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 7,
+  "fields": {
+    "specialty": 6,
+    "study_form": "MIXED",
+    "tuition_fee": "155000.00",
+    "duration": "4 года 6 месяцев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 8,
+  "fields": {
+    "specialty": 8,
+    "study_form": "FULL_TIME",
+    "tuition_fee": "210000.00",
+    "duration": "4 года",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.educationprogram",
+  "pk": 9,
+  "fields": {
+    "specialty": 8,
+    "study_form": "PART_TIME",
+    "tuition_fee": "110000.00",
+    "duration": "4 года 6 месяцев",
+    "is_active": true
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 1,
+  "fields": {
+    "name": "Русский язык",
+    "min_score": 40,
+    "description": "Обязательный предмет для всех направлений."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 2,
+  "fields": {
+    "name": "Математика (профильная)",
+    "min_score": 39,
+    "description": "Профильная математика для технических и экономических направлений."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 3,
+  "fields": {
+    "name": "Обществознание",
+    "min_score": 42,
+    "description": "Профильный предмет для юридических и управленческих направлений."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 4,
+  "fields": {
+    "name": "Информатика и ИКТ",
+    "min_score": 44,
+    "description": "Профильный предмет для факультета информационных технологий."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 5,
+  "fields": {
+    "name": "История",
+    "min_score": 35,
+    "description": "Вступительный предмет для гуманитарных и юридических специальностей."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 6,
+  "fields": {
+    "name": "Иностранный язык (английский)",
+    "min_score": 30,
+    "description": "Вступительный предмет по выбору."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 7,
+  "fields": {
+    "name": "Физика",
+    "min_score": 39,
+    "description": "Вступительный предмет по выбору для IT и инженерии."
+  }
+},
+{
+  "model": "admissions.examsubject",
+  "pk": 8,
+  "fields": {
+    "name": "Биология",
+    "min_score": 39,
+    "description": "Вступительный предмет по выбору."
+  }
+}
+]
