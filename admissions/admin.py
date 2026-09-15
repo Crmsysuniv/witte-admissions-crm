@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Faculty, Specialty, EducationProgram, ExamSubject
+from .models import Faculty, Specialty, EducationProgram, ExamSubject, Application
 
 
 class EducationProgramInline(admin.TabularInline):
@@ -47,5 +47,15 @@ class ExamSubjectAdmin(admin.ModelAdmin):
     list_display = ('name', 'min_score')
     search_fields = ('name',)
     list_editable = ('min_score',)
+
+
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'applicant', 'program', 'financing_type', 'status', 'submission_date')
+    list_filter = ('status', 'financing_type', 'program__study_form', 'program__specialty__faculty', 'submission_date')
+    search_fields = ('applicant__username', 'applicant__first_name', 'applicant__last_name', 'applicant__email', 'program__specialty__name')
+    list_editable = ('status', 'financing_type')
+    date_hierarchy = 'submission_date'
+
 
 

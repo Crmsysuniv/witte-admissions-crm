@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -149,5 +150,68 @@ class ExamSubject(models.Model):
 
     def __str__(self):
         return f"{self.name} (мин. балл: {self.min_score})"
+
+
+class Application(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = 'DRAFT', 'Черновик'
+        SUBMITTED = 'SUBMITTED', 'Подано'
+        UNDER_REVIEW = 'UNDER_REVIEW', 'На рассмотрении'
+        DOCUMENTS_REQUIRED = 'DOCUMENTS_REQUIRED', 'Требуются документы'
+        APPROVED = 'APPROVED', 'Одобрено (допущен к конкурсу)'
+        ENROLLED = 'ENROLLED', 'Зачислен'
+        REJECTED = 'REJECTED', 'Отклонено'
+        WITHDRAWN = 'WITHDRAWN', 'Отозвано'
+
+    class FinancingType(models.TextChoices):
+        BUDGET = 'BUDGET', 'Бюджетная основа'
+        PAID = 'PAID', 'Платная основа (договор)'
+
+    applicant = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='applications',
+        verbose_name='Абитуриент'
+    )
+    program = models.ForeignKey(
+        EducationProgram,
+        on_delete=models.PROTECT,
+        related_name='applications',
+        verbose_name='Выбранная программа'
+    )
+    status = models.CharField(
+        max_length=30,
+        choices=Status.choices,
+        default=Status.SUBMITTED,
+        verbose_name='Статус заявки'
+    )
+    financing_type = models.CharField(
+        max_length=20,
+        choices=FinancingType.choices,
+        default=FinancingType.BUDGET,
+        verbose_name='Основа обучения'
+    )
+    submission_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата подачи'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления'
+    )
+    officer_comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий приемной комиссии'
+    )
+
+    class Meta:
+        verbose_name = 'Заявление на поступление'
+        verbose_name_plural = 'Заявления на поступление'
+        ordering = ['-submission_date']
+
+    def __str__(self):
+        full_name = self.applicant.get_full_name() or self.applicant.username
+        return f"Заявление №{self.id} — {full_name} — {self.program.specialty.name} ({self.get_status_display()})"
+
 
 
