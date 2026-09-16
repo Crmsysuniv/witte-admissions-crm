@@ -49,39 +49,107 @@
         </div>
     </div>
 
-    <!-- 2. SUCCESS NOTIFICATION (IF SUBMITTED) -->
+    <!-- 2. SUCCESS DELIVERY ALERT BANNER -->
     {% if submitted_message %}
-    <div class="bg-gradient-to-r from-emerald-950 via-teal-900 to-witte-950 text-white rounded-3xl p-6 sm:p-8 border border-emerald-800/60 shadow-xl space-y-4">
-        <div class="flex items-start gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/30 flex items-center justify-center text-2xl shrink-0">
-                <i class="bi bi-check-circle-fill"></i>
+    <div x-data="{ showBanner: true }" x-show="showBanner" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 -translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-teal-950 to-witte-950 text-white p-6 sm:p-8 lg:p-10 border-2 border-emerald-500/40 shadow-2xl space-y-6">
+        <div class="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+        
+        <!-- Header row -->
+        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+            <div class="flex items-start sm:items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 flex items-center justify-center text-3xl shrink-0 shadow-inner">
+                    <i class="bi bi-patch-check-fill"></i>
+                </div>
+                <div>
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold border border-emerald-400/30">
+                            Регистрационный №{{ submitted_message.id }}
+                        </span>
+                        <span class="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
+                            Статус: Доставлено в CRM
+                        </span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-black text-white">
+                        Обращение успешно доставлено в приемную комиссию!
+                    </h2>
+                </div>
             </div>
-            <div class="flex-1 space-y-1">
-                <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold border border-emerald-500/30">
-                    Обращение №{{ submitted_message.id }}
-                </span>
-                <h2 class="text-xl font-black text-white">
-                    Ваше обращение успешно зарегистрировано в CRM!
-                </h2>
-                <p class="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-                    Спасибо за обращение в приемную комиссию МУ им. С.Ю. Витте. Ответ будет подготовлен профильным специалистом и направлен на адрес <strong>{{ submitted_message.email }}</strong>.
-                </p>
+            
+            <button @click="showBanner = false" type="button" aria-label="Закрыть уведомление" class="self-start sm:self-center text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition-colors">
+                <i class="bi bi-x-lg text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5 rounded-2xl bg-black/30 border border-white/10 text-xs">
+            <div>
+                <span class="text-slate-400 block mb-0.5">Тема обращения:</span>
+                <strong class="text-white font-semibold text-sm">{{ submitted_message.subject }}</strong>
+            </div>
+            <div>
+                <span class="text-slate-400 block mb-0.5">Заявитель:</span>
+                <strong class="text-white font-semibold text-sm">{{ submitted_message.full_name }}</strong>
+            </div>
+            <div>
+                <span class="text-slate-400 block mb-0.5">Email для официального ответа:</span>
+                <strong class="text-emerald-300 font-semibold text-sm">{{ submitted_message.email }}</strong>
+            </div>
+            <div>
+                <span class="text-slate-400 block mb-0.5">Точное время регистрации:</span>
+                <strong class="text-white font-semibold text-sm">{{ submitted_message.created_at|date:"d.m.Y в H:i:s" }}</strong>
             </div>
         </div>
 
-        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
-            <div>
-                <span class="text-slate-400 block">Тема обращения:</span>
-                <strong class="text-white">{{ submitted_message.subject }}</strong>
+        <!-- Processing Steps Roadmap -->
+        <div class="relative z-10 pt-2 space-y-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                <i class="bi bi-clock-history"></i> Этапы обработки вашего обращения:
+            </span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                <div class="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-white">1. Принято системой</div>
+                        <div class="text-[11px] text-emerald-200/80">Заявка сохранена в базе CRM</div>
+                    </div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-white/10 border border-white/15 flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-lg bg-blue-500 text-white flex items-center justify-center font-bold text-xs shrink-0 animate-pulse">
+                        2
+                    </div>
+                    <div>
+                        <div class="font-bold text-white">2. Рассмотрение комиссией</div>
+                        <div class="text-[11px] text-blue-200/80">Срок: 2–4 рабочих часа</div>
+                    </div>
+                </div>
+                <div class="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3 text-slate-400">
+                    <div class="w-7 h-7 rounded-lg bg-white/10 text-slate-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        3
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-200">3. Ответ заявителю</div>
+                        <div class="text-[11px] text-slate-400">Письмо на указанный email</div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <span class="text-slate-400 block">Отправитель:</span>
-                <strong class="text-white">{{ submitted_message.full_name }}</strong>
-            </div>
-            <div>
-                <span class="text-slate-400 block">Дата и время:</span>
-                <strong class="text-white">{{ submitted_message.created_at|date:"d.m.Y в H:i" }}</strong>
-            </div>
+        </div>
+
+        <!-- Action Links inside Banner -->
+        <div class="relative z-10 flex flex-wrap items-center gap-3 pt-2">
+            <button @click="showBanner = false" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md">
+                <i class="bi bi-pencil-square"></i>
+                <span>Направить еще одно обращение</span>
+            </button>
+            <a href="tel:+74955000303" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/15 transition-all">
+                <i class="bi bi-telephone"></i>
+                <span>Горячая линия: +7 (495) 500-03-03</span>
+            </a>
+            <a href="/faq/" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-blue-200 text-xs font-semibold border border-white/15 transition-all">
+                <i class="bi bi-question-circle"></i>
+                <span>Раздел FAQ</span>
+            </a>
         </div>
     </div>
     {% endif %}
@@ -103,7 +171,7 @@
 
             <!-- Form Validation Summary (If invalid) -->
             {% if form.errors %}
-            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5">
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5" role="alert">
                 <div class="flex items-center gap-2 font-bold text-rose-900">
                     <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
                     <span>Обнаружены ошибки при заполнении:</span>
@@ -121,7 +189,7 @@
             </div>
             {% endif %}
 
-            <form method="post" action="{% url 'feedback:feedback_form' %}" @submit="isSubmitting = true" class="space-y-5" novalidate>
+            <form method="post" action="{% url 'feedback:feedback_submit' %}" @submit="isSubmitting = true" class="space-y-5" novalidate>
                 {% csrf_token %}
 
                 <!-- Anti-spam Honeypot (hidden from real users) -->
