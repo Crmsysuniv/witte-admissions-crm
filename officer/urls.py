@@ -10,4 +10,5 @@ urlpatterns = [
     path('applications/<int:pk>/', views.application_detail_view, name='application_detail'),
     path('inquiries/', views.inquiries_view, name='inquiries'),
     path('protocols/', views.protocols_view, name='protocols'),
+    path('export/rating/', views.export_rating_xlsx_view, name='export_rating_xlsx'),
 ]

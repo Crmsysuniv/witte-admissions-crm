@@ -12,6 +12,8 @@ urlpatterns = [
     path('calculator/', views.score_calculator, name='score_calculator'),
     path('tuition/', views.tuition_fees, name='tuition_fees'),
     path('dormitory/', views.dormitory_info, name='dormitory_info'),
+    path('rating/export/', views.export_rating_xlsx, name='export_rating_xlsx'),
+    path('export/rating/', views.export_rating_xlsx, name='export_rating_alias'),
     path('faq/', core_views.faq, name='faq'),
     path('contacts/', core_views.contacts, name='contacts'),
 ]

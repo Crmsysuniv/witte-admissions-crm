@@ -905,6 +905,42 @@ def withdraw_application_view(request, application_id):
     return render(request, 'student/application_confirm_withdraw.html', context)
 
 
+@login_required
+@applicant_required
+def export_rating_xlsx_view(request):
+    """
+    Экспорт конкурсного списка для абитуриента в формате Excel (.xlsx).
+    """
+    from admissions.exports import export_rating_xlsx_response
+
+    program_id = request.GET.get('program')
+    financing_type = request.GET.get('financing', Application.FinancingType.BUDGET)
+    only_originals = request.GET.get('originals') in ['1', 'true', 'True']
+
+    selected_program = None
+    if program_id and str(program_id).isdigit():
+        selected_program = EducationProgram.objects.filter(id=program_id, is_active=True).first()
+
+    if not selected_program:
+        user_apps = Application.objects.filter(applicant=request.user).exclude(status=Application.Status.WITHDRAWN)
+        if user_apps.exists():
+            selected_program = user_apps.first().program
+        else:
+            selected_program = EducationProgram.objects.filter(is_active=True).first()
+
+    if not selected_program:
+        messages.error(request, 'Не найдено программы для экспорта конкурсного списка.')
+        return redirect('student:rating')
+
+    return export_rating_xlsx_response(
+        program=selected_program,
+        financing_type=financing_type,
+        only_originals=only_originals,
+        is_officer=False
+    )
+
+
+
 
 
 

@@ -36,6 +36,7 @@ urlpatterns = [
     path('apply/', student_views.apply_view, name='apply_shortcut'),
     path('documents/', student_views.documents_view, name='documents_shortcut'),
     path('rating/', student_views.rating_view, name='rating_shortcut'),
+    path('rating/export/', admissions_views.export_rating_xlsx, name='export_rating_root'),
     path('accounts/', include('accounts.urls')),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),

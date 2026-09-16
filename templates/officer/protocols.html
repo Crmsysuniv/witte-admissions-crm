@@ -99,6 +99,11 @@
                     <i class="bi bi-printer-fill text-sm text-emerald-200 group-hover:scale-110 transition-transform"></i>
                     <span>Печать протокола</span>
                 </button>
+                <a href="{% url 'officer:export_rating_xlsx' %}{% if specialty_id %}?specialty={{ specialty_id }}{% endif %}{% if financing_type %}&financing={{ financing_type }}{% endif %}"
+                   class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-900/60 hover:bg-emerald-800/80 text-emerald-100 text-xs font-bold transition-all border border-emerald-400/30 shadow-sm group">
+                    <i class="bi bi-file-earmark-excel-fill text-sm text-emerald-400 group-hover:scale-110 transition-transform"></i>
+                    <span>Экспорт в Excel (.xlsx)</span>
+                </a>
                 <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 backdrop-blur-md shadow-sm group">
                     <i class="bi bi-card-checklist text-sm text-sky-300 group-hover:scale-110 transition-transform"></i>
                     <span>Реестр заявлений</span>

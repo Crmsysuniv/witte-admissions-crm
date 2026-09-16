@@ -1001,5 +1001,40 @@ def protocols_view(request):
     return render(request, 'officer/protocols.html', context)
 
 
+@login_required
+@officer_required
+def export_rating_xlsx_view(request):
+    """
+    Экспорт конкурсного списка в формате Excel (.xlsx) для сотрудника приемной комиссии.
+    """
+    from admissions.exports import export_rating_xlsx_response
+
+    program_id = request.GET.get('program')
+    specialty_id = request.GET.get('specialty')
+    financing_type = request.GET.get('financing', Application.FinancingType.BUDGET)
+    only_originals = request.GET.get('originals') in ['1', 'true', 'True']
+
+    selected_program = None
+    if program_id and str(program_id).isdigit():
+        selected_program = EducationProgram.objects.filter(id=program_id, is_active=True).first()
+    elif specialty_id and str(specialty_id).isdigit():
+        selected_program = EducationProgram.objects.filter(specialty_id=specialty_id, is_active=True).first()
+
+    if not selected_program:
+        selected_program = EducationProgram.objects.filter(is_active=True).select_related('specialty__faculty').first()
+
+    if not selected_program:
+        messages.error(request, 'Не найдено программы для формирования отчета.')
+        return redirect('officer:protocols')
+
+    return export_rating_xlsx_response(
+        program=selected_program,
+        financing_type=financing_type,
+        only_originals=only_originals,
+        is_officer=True
+    )
+
+
+
 
 

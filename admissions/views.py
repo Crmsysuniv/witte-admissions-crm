@@ -519,3 +519,45 @@ def dormitory_info(request):
     }
     return render(request, 'dormitory.html', context)
 
+
+def export_rating_xlsx(request):
+    """
+    Экспорт рейтингового конкурсного списка по образовательной программе в файл .xlsx.
+    Принимает параметры:
+    - program (ID программы) или specialty (ID специальности);
+    - financing (BUDGET или PAID);
+    - originals (1 - только с оригиналами).
+    """
+    from .exports import export_rating_xlsx_response
+    from .models import Application
+
+    program_id = request.GET.get('program') or request.GET.get('program_id')
+    specialty_id = request.GET.get('specialty') or request.GET.get('specialty_id')
+    financing_type = request.GET.get('financing', Application.FinancingType.BUDGET)
+    only_originals = request.GET.get('originals') in ['1', 'true', 'True']
+
+    selected_program = None
+    if program_id and str(program_id).isdigit():
+        selected_program = EducationProgram.objects.filter(id=program_id, is_active=True).first()
+    elif specialty_id and str(specialty_id).isdigit():
+        selected_program = EducationProgram.objects.filter(specialty_id=specialty_id, is_active=True).first()
+
+    if not selected_program:
+        selected_program = EducationProgram.objects.filter(is_active=True).select_related('specialty__faculty').first()
+
+    if not selected_program:
+        from django.http import HttpResponseBadRequest
+        return HttpResponseBadRequest("Нет активных программ для экспорта.")
+
+    is_officer = request.user.is_authenticated and (
+        getattr(request.user, 'role', '') == 'OFFICER' or request.user.is_staff or request.user.is_superuser
+    )
+
+    return export_rating_xlsx_response(
+        program=selected_program,
+        financing_type=financing_type,
+        only_originals=only_originals,
+        is_officer=is_officer
+    )
+
+
