@@ -3,3 +3,4 @@ mysqlclient
 pillow
 openpyxl
 python-docx
+whitenoise
