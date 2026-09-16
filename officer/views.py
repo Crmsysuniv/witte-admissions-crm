@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 
 from .decorators import officer_required
-from admissions.models import Application, ApplicationDocument, Faculty, EducationProgram, ExamScore
+from admissions.models import Application, ApplicationDocument, Faculty, Specialty, EducationProgram, ExamScore
 from audit.models import StatusLog, Notification
 from accounts.models import OfficerProfile
 from feedback.models import FeedbackMessage
@@ -716,6 +716,290 @@ def inquiries_view(request):
     }
 
     return render(request, 'officer/inquiries.html', context)
+
+
+@login_required
+@officer_required
+def protocols_view(request):
+    """
+    Страница формирования приказов на зачисление и протоколов приемной комиссии.
+    Позволяет сотруднику:
+    - Просматривать списки абитуриентов, допущенных к конкурсу (APPROVED) и уже зачисленных (ENROLLED)
+    - Фильтровать кандидатов по факультетам, специальностям, формам обучения и основам финансирования
+    - Проводить массовое формирование приказов о зачислении с автоматической генерацией аудита и уведомлений
+    - Формировать официальные протоколы заседания приемной комиссии с возможностью печати и экспорта
+    - Отслеживать заполнение контрольных цифр приема (бюджетных и платных мест)
+    """
+    user = request.user
+    officer_profile = getattr(user, 'officer_profile', None)
+
+    # Обработка POST-действий (формирование приказа / зачисление, отмена зачисления)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'generate_order':
+            selected_ids = request.POST.getlist('selected_applications')
+            order_number = request.POST.get('order_number', '').strip()
+            order_date = request.POST.get('order_date', '').strip() or timezone.now().strftime('%d.%m.%Y')
+            order_type = request.POST.get('order_type', 'BUDGET')
+            order_basis = request.POST.get('order_basis', 'Решение приемной комиссии (протокол заседания)').strip()
+            protocol_num = request.POST.get('protocol_number', '').strip() or '1'
+
+            if not selected_ids:
+                messages.error(request, 'Не выбрано ни одно заявление для включения в приказ.')
+            elif not order_number:
+                messages.error(request, 'Пожалуйста, укажите номер формируемого приказа.')
+            else:
+                apps_to_enroll = Application.objects.filter(
+                    id__in=selected_ids,
+                    status=Application.Status.APPROVED
+                ).select_related('applicant', 'program__specialty')
+
+                enrolled_count = 0
+                for app in apps_to_enroll:
+                    old_status = app.status
+                    app.status = Application.Status.ENROLLED
+                    comment_text = (
+                        f'Зачислен приказом №{order_number} от {order_date} '
+                        f'(Протокол №{protocol_num}). Основание: {order_basis}.'
+                    )
+                    app.officer_comment = (
+                        (app.officer_comment + ' | ' + comment_text) if app.officer_comment else comment_text
+                    )
+                    app.save()
+
+                    # Фиксация в StatusLog
+                    StatusLog.objects.create(
+                        application=app,
+                        old_status=old_status,
+                        new_status=Application.Status.ENROLLED,
+                        changed_by=user,
+                        comment=f'Включение в приказ о зачислении №{order_number} от {order_date}.'
+                    )
+
+                    # Уведомление абитуриенту
+                    Notification.objects.create(
+                        user=app.applicant,
+                        title='Поздравляем! Вы зачислены в МУ им. С.Ю. Витте',
+                        message=(
+                            f'Уважаемый(ая) {app.applicant.get_full_name() or app.applicant.username}! '
+                            f'Вы успешно зачислены на направление «{app.program.specialty.name}» '
+                            f'({app.program.get_study_form_display()}, {app.get_financing_type_display()}) '
+                            f'приказом №{order_number} от {order_date}.'
+                        ),
+                        notification_type=Notification.NotificationType.SUCCESS,
+                        application=app
+                    )
+                    enrolled_count += 1
+
+                if enrolled_count > 0:
+                    messages.success(
+                        request,
+                        f'Приказ №{order_number} от {order_date} успешно сформирован. '
+                        f'Зачислено абитуриентов: {enrolled_count} чел.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        'Среди выбранных заявлений не найдено заявлений со статусом «Одобрено».'
+                    )
+
+            return redirect(request.get_full_path())
+
+        elif action == 'revert_enrollment':
+            application_id = request.POST.get('application_id')
+            revert_reason = request.POST.get('revert_reason', '').strip()
+            if application_id:
+                app = get_object_or_404(Application, pk=application_id)
+                if app.status == Application.Status.ENROLLED:
+                    app.status = Application.Status.APPROVED
+                    comment_text = f'Исключен из приказа: {revert_reason or "По решению приемной комиссии"}'
+                    app.officer_comment = (
+                        (app.officer_comment + ' | ' + comment_text) if app.officer_comment else comment_text
+                    )
+                    app.save()
+
+                    StatusLog.objects.create(
+                        application=app,
+                        old_status=Application.Status.ENROLLED,
+                        new_status=Application.Status.APPROVED,
+                        changed_by=user,
+                        comment=f'Исключение из приказа о зачислении. {revert_reason}'
+                    )
+
+                    Notification.objects.create(
+                        user=app.applicant,
+                        title=f'Статус заявления №{app.id} изменен',
+                        message=(
+                            f'Ваше заявление переведено обратно в статус «Одобрено (допущен к конкурсу)». '
+                            f'Причина: {revert_reason or "Корректировка состава приказа"}.'
+                        ),
+                        notification_type=Notification.NotificationType.STATUS_CHANGE,
+                        application=app
+                    )
+
+                    messages.success(
+                        request,
+                        f'Заявление №{app.id} ({app.applicant.get_full_name() or app.applicant.username}) возвращено в статус «Одобрено».'
+                    )
+            return redirect(request.get_full_path())
+
+    # Параметры фильтрации
+    status_filter = request.GET.get('status', 'APPROVED')  # 'APPROVED', 'ENROLLED', 'ALL_ELIGIBLE'
+    faculty_id = request.GET.get('faculty', '').strip()
+    specialty_id = request.GET.get('specialty', '').strip()
+    study_form = request.GET.get('study_form', '').strip()
+    financing_type = request.GET.get('financing', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    sort_by = request.GET.get('sort', 'score_desc').strip()
+
+    # Базовая выборка заявлений (APPROVED или ENROLLED)
+    eligible_statuses = [Application.Status.APPROVED, Application.Status.ENROLLED]
+    applications_qs = Application.objects.filter(
+        status__in=eligible_statuses
+    ).select_related(
+        'applicant',
+        'applicant__applicant_profile',
+        'program',
+        'program__specialty',
+        'program__specialty__faculty'
+    ).prefetch_related(
+        'documents',
+        'exam_scores',
+        'exam_scores__subject'
+    )
+
+    if status_filter == 'APPROVED':
+        applications_qs = applications_qs.filter(status=Application.Status.APPROVED)
+    elif status_filter == 'ENROLLED':
+        applications_qs = applications_qs.filter(status=Application.Status.ENROLLED)
+
+    if faculty_id:
+        applications_qs = applications_qs.filter(program__specialty__faculty_id=faculty_id)
+
+    if specialty_id:
+        applications_qs = applications_qs.filter(program__specialty_id=specialty_id)
+
+    if study_form:
+        applications_qs = applications_qs.filter(program__study_form=study_form)
+
+    if financing_type:
+        applications_qs = applications_qs.filter(financing_type=financing_type)
+
+    if search_query:
+        tokens = search_query.split()
+        q_expr = Q()
+        for token in tokens:
+            q_expr &= (
+                Q(applicant__first_name__icontains=token)
+                | Q(applicant__last_name__icontains=token)
+                | Q(applicant__username__icontains=token)
+                | Q(applicant__applicant_profile__snils__icontains=token)
+                | Q(id__icontains=token)
+                | Q(program__specialty__name__icontains=token)
+                | Q(program__specialty__code__icontains=token)
+            )
+        applications_qs = applications_qs.filter(q_expr)
+
+    # Добавляем сортировку по баллам или дате
+    apps_list = list(applications_qs)
+    if sort_by == 'score_desc':
+        apps_list.sort(key=lambda a: a.total_score, reverse=True)
+    elif sort_by == 'score_asc':
+        apps_list.sort(key=lambda a: a.total_score)
+    elif sort_by == 'name_asc':
+        apps_list.sort(key=lambda a: a.applicant.get_full_name() or a.applicant.username)
+    elif sort_by == 'date_desc':
+        apps_list.sort(key=lambda a: a.submission_date, reverse=True)
+    else:
+        apps_list.sort(key=lambda a: a.total_score, reverse=True)
+
+    # Подсчет сводной статистики для плашек
+    total_approved = Application.objects.filter(status=Application.Status.APPROVED).count()
+    total_enrolled = Application.objects.filter(status=Application.Status.ENROLLED).count()
+    total_budget_enrolled = Application.objects.filter(
+        status=Application.Status.ENROLLED,
+        financing_type=Application.FinancingType.BUDGET
+    ).count()
+    total_paid_enrolled = Application.objects.filter(
+        status=Application.Status.ENROLLED,
+        financing_type=Application.FinancingType.PAID
+    ).count()
+
+    total_budget_places = Specialty.objects.filter(is_active=True).aggregate(Sum('budget_places'))['budget_places__sum'] or 0
+    total_paid_places = Specialty.objects.filter(is_active=True).aggregate(Sum('paid_places'))['paid_places__sum'] or 0
+
+    # Справочники для фильтрации
+    faculties = Faculty.objects.all().order_by('name')
+    specialties = Specialty.objects.filter(is_active=True).select_related('faculty').order_by('name')
+    study_forms = EducationProgram.StudyForm.choices
+    financing_choices = Application.FinancingType.choices
+
+    # Группировка по направлениям для сводки плана приема
+    specialty_stats = []
+    for spec in specialties:
+        spec_approved = Application.objects.filter(program__specialty=spec, status=Application.Status.APPROVED).count()
+        spec_enrolled_budget = Application.objects.filter(
+            program__specialty=spec,
+            status=Application.Status.ENROLLED,
+            financing_type=Application.FinancingType.BUDGET
+        ).count()
+        spec_enrolled_paid = Application.objects.filter(
+            program__specialty=spec,
+            status=Application.Status.ENROLLED,
+            financing_type=Application.FinancingType.PAID
+        ).count()
+
+        specialty_stats.append({
+            'specialty': spec,
+            'approved_count': spec_approved,
+            'budget_places': spec.budget_places,
+            'enrolled_budget': spec_enrolled_budget,
+            'budget_remaining': max(0, spec.budget_places - spec_enrolled_budget),
+            'paid_places': spec.paid_places,
+            'enrolled_paid': spec_enrolled_paid,
+            'paid_remaining': max(0, spec.paid_places - spec_enrolled_paid),
+        })
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Рабочий стол сотрудника', 'url': '/officer/workplace/'},
+        {'title': 'Приказы и протоколы зачисления', 'is_active': True},
+    ]
+
+    context = {
+        'officer_profile': officer_profile,
+        'applications': apps_list,
+        'total_count': len(apps_list),
+        'metrics': {
+            'total_approved': total_approved,
+            'total_enrolled': total_enrolled,
+            'total_budget_enrolled': total_budget_enrolled,
+            'total_paid_enrolled': total_paid_enrolled,
+            'total_budget_places': total_budget_places,
+            'total_paid_places': total_paid_places,
+            'budget_fill_percentage': round((total_budget_enrolled / total_budget_places * 100) if total_budget_places else 0, 1),
+            'paid_fill_percentage': round((total_paid_enrolled / total_paid_places * 100) if total_paid_places else 0, 1),
+        },
+        'specialty_stats': specialty_stats,
+        'faculties': faculties,
+        'specialties': specialties,
+        'study_forms': study_forms,
+        'financing_choices': financing_choices,
+        'status_filter': status_filter,
+        'faculty_id': faculty_id,
+        'specialty_id': specialty_id,
+        'study_form': study_form,
+        'financing_type': financing_type,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'breadcrumbs': breadcrumbs,
+        'current_date': timezone.now().strftime('%d.%m.%Y'),
+        'current_year': timezone.now().year,
+    }
+
+    return render(request, 'officer/protocols.html', context)
+
 
 
 

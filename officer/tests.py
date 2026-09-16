@@ -466,3 +466,173 @@ class OfficerInquiriesTests(TestCase):
         self.assertEqual(self.inquiry1.responded_by, self.officer_user)
 
 
+class OfficerProtocolsTests(TestCase):
+    """
+    Тестирование раздела формирования приказов о зачислении и протоколов (officer:protocols).
+    Проверяет права доступа, фильтрацию кандидатов, массовую генерацию приказов
+    со сменой статуса на ENROLLED, создание аудита (StatusLog) и уведомлений (Notification),
+    а также операцию возврата заявления в статус «Одобрено».
+    """
+    def setUp(self):
+        self.client = Client()
+
+        self.officer_user = User.objects.create_user(
+            username='officer_secretary',
+            password='testpassword123',
+            email='secretary@witte.ru',
+            first_name='Татьяна',
+            last_name='Васильева',
+            role=User.Role.OFFICER
+        )
+        OfficerProfile.objects.create(
+            user=self.officer_user,
+            position='Ответственный секретарь',
+            cabinet='201'
+        )
+
+        self.applicant1_user = User.objects.create_user(
+            username='applicant_enr1',
+            password='testpassword123',
+            email='enr1@example.com',
+            first_name='Алексей',
+            last_name='Кузнецов',
+            role=User.Role.APPLICANT
+        )
+        ApplicantProfile.objects.create(
+            user=self.applicant1_user,
+            snils='111-222-333 44'
+        )
+
+        self.applicant2_user = User.objects.create_user(
+            username='applicant_enr2',
+            password='testpassword123',
+            email='enr2@example.com',
+            first_name='Дарья',
+            last_name='Попова',
+            role=User.Role.APPLICANT
+        )
+        ApplicantProfile.objects.create(
+            user=self.applicant2_user,
+            snils='555-666-777 88'
+        )
+
+        self.faculty = Faculty.objects.create(name='Факультет информационных технологий', code='ФИТ')
+        self.specialty = Specialty.objects.create(
+            faculty=self.faculty,
+            code='09.03.01',
+            name='Информатика и вычислительная техника',
+            education_level=Specialty.EducationLevel.BACHELOR,
+            budget_places=15,
+            paid_places=30
+        )
+        self.program = EducationProgram.objects.create(
+            specialty=self.specialty,
+            study_form=EducationProgram.StudyForm.FULL_TIME,
+            tuition_fee=150000.00,
+            duration='4 года'
+        )
+
+        self.app1 = Application.objects.create(
+            applicant=self.applicant1_user,
+            program=self.program,
+            status=Application.Status.APPROVED,
+            financing_type=Application.FinancingType.BUDGET
+        )
+
+        self.app2 = Application.objects.create(
+            applicant=self.applicant2_user,
+            program=self.program,
+            status=Application.Status.ENROLLED,
+            financing_type=Application.FinancingType.PAID
+        )
+
+    def test_anonymous_redirected_to_login(self):
+        url = reverse('officer:protocols')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_applicant_cannot_access_protocols(self):
+        self.client.login(username='applicant_enr1', password='testpassword123')
+        url = reverse('officer:protocols')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_officer_can_view_protocols(self):
+        self.client.login(username='officer_secretary', password='testpassword123')
+        url = reverse('officer:protocols')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'officer/protocols.html')
+        self.assertContains(response, 'Формирование приказов')
+        self.assertContains(response, 'Кузнецов')
+
+    def test_filter_protocols_by_status(self):
+        self.client.login(username='officer_secretary', password='testpassword123')
+        url = reverse('officer:protocols')
+
+        # Только одобренные
+        response_appr = self.client.get(url, {'status': 'APPROVED'})
+        self.assertEqual(response_appr.status_code, 200)
+        apps = response_appr.context['applications']
+        self.assertEqual(len(apps), 1)
+        self.assertEqual(apps[0].id, self.app1.id)
+
+        # Только зачисленные
+        response_enr = self.client.get(url, {'status': 'ENROLLED'})
+        self.assertEqual(response_enr.status_code, 200)
+        apps_enr = response_enr.context['applications']
+        self.assertEqual(len(apps_enr), 1)
+        self.assertEqual(apps_enr[0].id, self.app2.id)
+
+    def test_generate_order_batch_enrollment(self):
+        self.client.login(username='officer_secretary', password='testpassword123')
+        url = reverse('officer:protocols')
+        post_data = {
+            'action': 'generate_order',
+            'selected_applications': [str(self.app1.id)],
+            'order_number': '2026/П-042',
+            'order_date': '15.08.2026',
+            'order_type': 'BUDGET',
+            'protocol_number': '12',
+            'order_basis': 'Решение приемной комиссии МУ им. С.Ю. Витте'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.app1.refresh_from_db()
+        self.assertEqual(self.app1.status, Application.Status.ENROLLED)
+        self.assertIn('2026/П-042', self.app1.officer_comment)
+
+        # Проверка StatusLog
+        log = StatusLog.objects.filter(application=self.app1).latest('changed_at')
+        self.assertEqual(log.old_status, Application.Status.APPROVED)
+        self.assertEqual(log.new_status, Application.Status.ENROLLED)
+        self.assertEqual(log.changed_by, self.officer_user)
+
+        # Проверка Notification
+        notification = Notification.objects.filter(user=self.applicant1_user).latest('created_at')
+        self.assertIn('2026/П-042', notification.message)
+        self.assertEqual(notification.notification_type, Notification.NotificationType.SUCCESS)
+
+    def test_revert_enrollment(self):
+        self.client.login(username='officer_secretary', password='testpassword123')
+        url = reverse('officer:protocols')
+        post_data = {
+            'action': 'revert_enrollment',
+            'application_id': self.app2.id,
+            'revert_reason': 'Заявление об отзыве согласия'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.app2.refresh_from_db()
+        self.assertEqual(self.app2.status, Application.Status.APPROVED)
+
+        log = StatusLog.objects.filter(application=self.app2).latest('changed_at')
+        self.assertEqual(log.old_status, Application.Status.ENROLLED)
+        self.assertEqual(log.new_status, Application.Status.APPROVED)
+        self.assertEqual(log.changed_by, self.officer_user)
+
+
+
