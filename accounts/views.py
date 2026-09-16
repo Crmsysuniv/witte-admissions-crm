@@ -26,7 +26,7 @@ def get_redirect_url_for_role(user, next_url=None, request=None):
     elif user.role == User.Role.OFFICER:
         return '/admin/admissions/application/'
     elif user.role == User.Role.APPLICANT:
-        return '/'
+        return '/student/dashboard/'
 
     return '/'
 

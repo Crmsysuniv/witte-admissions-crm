@@ -9,6 +9,8 @@ PATH_TITLES = {
     'register': 'Регистрация абитуриента',
     'logout': 'Выход',
     'password_change': 'Смена пароля',
+    'student': 'Кабинет абитуриента',
+    'dashboard': 'Дашборд',
     
     # Admissions
     'admissions': 'Приемная комиссия',

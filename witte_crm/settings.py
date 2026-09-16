@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'admissions',
     'feedback',
     'audit',
+    'student',
 ]
 
 MIDDLEWARE = [

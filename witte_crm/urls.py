@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 from core import views as core_views
 from admissions import views as admissions_views
 from accounts import views as accounts_views
+from student import views as student_views
 
 urlpatterns = [
     path('', core_views.home, name='home'),
@@ -28,6 +29,8 @@ urlpatterns = [
     path('logout/', accounts_views.logout_view, name='logout'),
     path('register/', accounts_views.register_view, name='register'),
     path('password_change/', accounts_views.password_change_view, name='password_change'),
+    path('student/', include('student.urls')),
+    path('dashboard/', student_views.dashboard_view, name='dashboard_shortcut'),
     path('accounts/', include('accounts.urls')),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),
