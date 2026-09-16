@@ -107,3 +107,56 @@ class Notification(models.Model):
         self.read_at = timezone.now()
         self.save()
 
+
+class SecurityLog(models.Model):
+    class EventType(models.TextChoices):
+        LOGIN = 'LOGIN', 'Вход в систему'
+        LOGOUT = 'LOGOUT', 'Выход из системы'
+        LOGIN_FAILED = 'LOGIN_FAILED', 'Неудачная попытка входа'
+        ROLE_CHANGE = 'ROLE_CHANGE', 'Изменение роли/прав'
+        STATUS_CHANGE = 'STATUS_CHANGE', 'Смена статуса заявления'
+        DOCUMENT_VERIFY = 'DOCUMENT_VERIFY', 'Верификация документов'
+        SETTINGS_CHANGE = 'SETTINGS_CHANGE', 'Изменение параметров кампании'
+        EXPORT_DATA = 'EXPORT_DATA', 'Экспорт данных (Excel/Word)'
+        PASSWORD_CHANGE = 'PASSWORD_CHANGE', 'Смена пароля'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='security_logs',
+        verbose_name='Пользователь'
+    )
+    event_type = models.CharField(
+        max_length=50,
+        choices=EventType.choices,
+        default=EventType.LOGIN,
+        verbose_name='Тип события'
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        verbose_name='IP-адрес'
+    )
+    user_agent = models.TextField(
+        blank=True,
+        verbose_name='User-Agent'
+    )
+    description = models.TextField(
+        verbose_name='Описание события'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата и время'
+    )
+
+    class Meta:
+        verbose_name = 'Запись журнала безопасности'
+        verbose_name_plural = 'Журнал безопасности и аудита'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_event_type_display()}] {self.user or 'Аноним'} — {self.created_at:%d.%m.%Y %H:%M}"
+
+

@@ -301,6 +301,13 @@
                     <span class="flex-1">Направления & КЦП</span>
                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">План</span>
                 </a>
+
+                <!-- 13.3 Журнал аудита и логов безопасности -->
+                <a href="/admin/audit/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/audit/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-shield-check text-lg text-cyan-400"></i>
+                    <span class="flex-1">Журнал аудита</span>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-cyan-500/30 text-cyan-200">Логи</span>
+                </a>
                 {% endif %}
 
                 <!-- 14. Панель администратора Django -->

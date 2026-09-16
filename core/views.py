@@ -263,7 +263,7 @@ from django.utils import timezone
 from accounts.decorators import admin_required
 from accounts.models import User, ApplicantProfile, OfficerProfile
 from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore
-from audit.models import StatusLog, Notification
+from audit.models import StatusLog, Notification, SecurityLog
 from feedback.models import FeedbackMessage
 
 
@@ -975,6 +975,144 @@ def admin_specialties_manage_view(request):
     }
 
     return render(request, 'admin/specialties_manage.html', context)
+
+
+@admin_required
+def admin_audit_logs_view(request):
+    """
+    Журнал аудита, истории операций и логов безопасности системы (admin/audit_logs.html).
+    Позволяет администратору:
+    - Отслеживать в реальном времени события аутентификации (успешные входы, выходы, неудачные попытки);
+    - Анализировать историю изменения статусов заявлений и протоколы валидации документов;
+    - Фильтровать записи по типу события, пользователю, диапазону дат и текстовому запросу;
+    - Просматривать метаданные каждого события (IP-адрес, User-Agent, временная метка, субъект действия);
+    - Анализировать сводные показатели безопасности (Security Health Check, аномальные попытки входа).
+    """
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Параметры фильтрации из GET
+    tab = request.GET.get('tab', 'all').strip()  # 'all', 'security', 'status', 'docs'
+    event_type = request.GET.get('event_type', '').strip()
+    search_query = request.GET.get('q', '').strip()
+    user_id = request.GET.get('user_id', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    page_number = request.GET.get('page', 1)
+
+    # Базовый QuerySet SecurityLog
+    security_logs_qs = SecurityLog.objects.select_related('user').all().order_by('-created_at')
+
+    # Базовый QuerySet StatusLog
+    status_logs_qs = StatusLog.objects.select_related('application', 'application__applicant', 'changed_by').all().order_by('-changed_at')
+
+    # Фильтры для SecurityLog
+    if event_type and event_type in SecurityLog.EventType.values:
+        security_logs_qs = security_logs_qs.filter(event_type=event_type)
+
+    if user_id and user_id.isdigit():
+        security_logs_qs = security_logs_qs.filter(user_id=int(user_id))
+        status_logs_qs = status_logs_qs.filter(Q(changed_by_id=int(user_id)) | Q(application__applicant_id=int(user_id)))
+
+    if search_query:
+        security_logs_qs = security_logs_qs.filter(
+            Q(description__icontains=search_query) |
+            Q(ip_address__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(user__username__icontains=search_query) |
+            Q(user__last_name__icontains=search_query)
+        )
+        status_logs_qs = status_logs_qs.filter(
+            Q(comment__icontains=search_query) |
+            Q(old_status__icontains=search_query) |
+            Q(new_status__icontains=search_query) |
+            Q(application__applicant__email__icontains=search_query) |
+            Q(application__applicant__last_name__icontains=search_query)
+        )
+
+    if date_from:
+        try:
+            df = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            df_aware = timezone.make_aware(df)
+            security_logs_qs = security_logs_qs.filter(created_at__gte=df_aware)
+            status_logs_qs = status_logs_qs.filter(changed_at__gte=df_aware)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            dt = timezone.datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            dt_aware = timezone.make_aware(dt)
+            security_logs_qs = security_logs_qs.filter(created_at__lt=dt_aware)
+            status_logs_qs = status_logs_qs.filter(changed_at__lt=dt_aware)
+        except ValueError:
+            pass
+
+    if tab == 'status':
+        selected_logs = status_logs_qs
+        is_status_mode = True
+    else:
+        if tab == 'security':
+            security_logs_qs = security_logs_qs.filter(event_type__in=[
+                SecurityLog.EventType.LOGIN,
+                SecurityLog.EventType.LOGOUT,
+                SecurityLog.EventType.LOGIN_FAILED,
+                SecurityLog.EventType.PASSWORD_CHANGE,
+                SecurityLog.EventType.ROLE_CHANGE
+            ])
+        elif tab == 'docs':
+            security_logs_qs = security_logs_qs.filter(event_type__in=[
+                SecurityLog.EventType.DOCUMENT_VERIFY,
+                SecurityLog.EventType.STATUS_CHANGE
+            ])
+        selected_logs = security_logs_qs
+        is_status_mode = False
+
+    paginator = Paginator(selected_logs, 25)
+    try:
+        logs_page = paginator.get_page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        logs_page = paginator.get_page(1)
+
+    # KPI безопасности
+    total_security_events = SecurityLog.objects.count()
+    today_logins = SecurityLog.objects.filter(event_type=SecurityLog.EventType.LOGIN, created_at__gte=today_start).count()
+    failed_logins = SecurityLog.objects.filter(event_type=SecurityLog.EventType.LOGIN_FAILED, created_at__gte=today_start).count()
+    status_changes_today = StatusLog.objects.filter(changed_at__gte=today_start).count()
+    doc_verifications_count = ApplicationDocument.objects.filter(is_verified=True).count()
+
+    all_users = User.objects.filter(is_active=True).order_by('last_name', 'first_name')
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Панель администратора', 'url': '/admin/dashboard/'},
+        {'title': 'Журнал аудита и безопасности', 'is_active': True},
+    ]
+
+    context = {
+        'logs_page': logs_page,
+        'tab': tab,
+        'is_status_mode': is_status_mode,
+        'event_types': SecurityLog.EventType.choices,
+        'all_users': all_users,
+        'kpi': {
+            'total_events': total_security_events,
+            'today_logins': today_logins,
+            'failed_logins': failed_logins,
+            'status_changes_today': status_changes_today,
+            'doc_verifications': doc_verifications_count,
+            'filtered_count': paginator.count,
+        },
+        'search_query': search_query,
+        'event_type': event_type,
+        'user_id': int(user_id) if user_id.isdigit() else '',
+        'date_from': date_from,
+        'date_to': date_to,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'admin/audit_logs.html', context)
+
 
 
 

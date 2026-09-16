@@ -1,0 +1,569 @@
+{% extends "base.html" %}
+
+{% block title %}Журнал аудита и логов безопасности — МУ им. С.Ю. Витте{% endblock %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ 
+    detailModal: false, 
+    activeLog: {
+        id: '',
+        date: '',
+        type: '',
+        typeDisplay: '',
+        user: '',
+        userRole: '',
+        ip: '',
+        userAgent: '',
+        description: '',
+        isStatus: false,
+        oldStatus: '',
+        newStatus: '',
+        appNumber: '',
+        applicant: ''
+    },
+    openDetail(log) {
+        this.activeLog = log;
+        this.detailModal = true;
+    }
+}">
+
+    <!-- Page Header & Badges -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shadow-xs">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                        Журнал аудита и логов безопасности
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        Непрерывный мониторинг действий пользователей, сессий авторизации, смены статусов и верификации документов.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 self-start md:self-auto">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Система аудита активна (24/7)
+            </span>
+            <a href="{% url 'admin_audit_logs' %}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+                <i class="bi bi-arrow-clockwise"></i> Обновить
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Summary Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- 1. Всего событий -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Всего событий</span>
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-base">
+                    <i class="bi bi-journal-text"></i>
+                </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-black text-slate-900">{{ kpi.total_events }}</span>
+                <span class="text-xs text-slate-500">в базе</span>
+            </div>
+        </div>
+
+        <!-- 2. Входов сегодня -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Входов сегодня</span>
+                <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-base">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-black text-blue-600">{{ kpi.today_logins }}</span>
+                <span class="text-xs text-slate-500">сессий</span>
+            </div>
+        </div>
+
+        <!-- 3. Неудачные попытки -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ошибки входа</span>
+                <div class="w-8 h-8 rounded-lg {% if kpi.failed_logins > 0 %}bg-rose-50 text-rose-600{% else %}bg-slate-50 text-slate-400{% endif %} flex items-center justify-center text-base">
+                    <i class="bi bi-shield-x"></i>
+                </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-black {% if kpi.failed_logins > 0 %}text-rose-600{% else %}text-slate-900{% endif %}">{{ kpi.failed_logins }}</span>
+                <span class="text-xs text-slate-500">тревог</span>
+            </div>
+        </div>
+
+        <!-- 4. Смен статусов -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Смен статусов</span>
+                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-base">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-black text-purple-600">{{ kpi.status_changes_today }}</span>
+                <span class="text-xs text-slate-500">за сегодня</span>
+            </div>
+        </div>
+
+        <!-- 5. Верификация документов -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Верифицировано</span>
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-base">
+                    <i class="bi bi-file-earmark-check"></i>
+                </div>
+            </div>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-2xl font-black text-emerald-600">{{ kpi.doc_verifications }}</span>
+                <span class="text-xs text-slate-500">сканов</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto">
+        <a href="?tab=all{% if search_query %}&q={{ search_query }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}"
+           class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap {% if tab == 'all' or not tab %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 hover:text-slate-900 hover:bg-white{% endif %}">
+            <i class="bi bi-layers-fill mr-1.5"></i> Все события безопасности
+        </a>
+        <a href="?tab=security{% if search_query %}&q={{ search_query }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}"
+           class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap {% if tab == 'security' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 hover:text-slate-900 hover:bg-white{% endif %}">
+            <i class="bi bi-key-fill mr-1.5"></i> Авторизация и доступ
+        </a>
+        <a href="?tab=status{% if search_query %}&q={{ search_query }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}"
+           class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap {% if tab == 'status' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 hover:text-slate-900 hover:bg-white{% endif %}">
+            <i class="bi bi-clock-history mr-1.5"></i> История статусов заявлений
+        </a>
+        <a href="?tab=docs{% if search_query %}&q={{ search_query }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}"
+           class="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap {% if tab == 'docs' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/20{% else %}text-slate-600 hover:text-slate-900 hover:bg-white{% endif %}">
+            <i class="bi bi-folder-check mr-1.5"></i> Верификация документов
+        </a>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+        <form method="GET" action="{% url 'admin_audit_logs' %}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+            <input type="hidden" name="tab" value="{{ tab }}">
+
+            <!-- Search Query -->
+            <div class="lg:col-span-4 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Поиск по описанию / IP / ФИО</label>
+                <div class="relative">
+                    <i class="bi bi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" name="q" value="{{ search_query }}" placeholder="IP, email, фамилия, действие..."
+                           class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                </div>
+            </div>
+
+            <!-- Event Type Filter (if not status mode) -->
+            {% if not is_status_mode %}
+            <div class="lg:col-span-3 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Тип события</label>
+                <select name="event_type" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                    <option value="">Все типы событий</option>
+                    {% for val, label in event_types %}
+                    <option value="{{ val }}" {% if event_type == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <div class="lg:col-span-3 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Журнал</label>
+                <input type="text" disabled value="История статусов заявлений" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 text-xs text-slate-500">
+            </div>
+            {% endif %}
+
+            <!-- User filter -->
+            <div class="lg:col-span-2 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Пользователь</label>
+                <select name="user_id" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                    <option value="">Все пользователи</option>
+                    {% for u in all_users %}
+                    <option value="{{ u.id }}" {% if user_id == u.id %}selected{% endif %}>
+                        {{ u.get_full_name|default:u.username }} ({{ u.get_role_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Date From -->
+            <div class="lg:col-span-1 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Дата с</label>
+                <input type="date" name="date_from" value="{{ date_from }}" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+            </div>
+
+            <!-- Date To -->
+            <div class="lg:col-span-1 space-y-1">
+                <label class="block text-xs font-bold text-slate-700">Дата по</label>
+                <input type="date" name="date_to" value="{{ date_to }}" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white">
+            </div>
+
+            <!-- Buttons -->
+            <div class="lg:col-span-1 flex items-center gap-1.5">
+                <button type="submit" class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-xs transition-colors flex items-center justify-center" title="Применить фильтры">
+                    <i class="bi bi-funnel-fill"></i>
+                </button>
+                <a href="{% url 'admin_audit_logs' %}?tab={{ tab }}" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors flex items-center justify-center" title="Сбросить">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Audit Logs Main Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-slate-900">
+                    {% if is_status_mode %}Реестр изменений статусов{% else %}Реестр событий аудита и безопасности{% endif %}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Найдено: {{ kpi.filtered_count }}
+                </span>
+            </div>
+            <div class="text-xs text-slate-400">
+                Страница {{ logs_page.number }} из {{ logs_page.paginator.num_pages|default:1 }}
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/75 border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-4">Время и дата</th>
+                        {% if not is_status_mode %}
+                        <th class="py-3 px-4">Тип события</th>
+                        <th class="py-3 px-4">Пользователь</th>
+                        <th class="py-3 px-4">IP / Источник</th>
+                        <th class="py-3 px-4">Описание действия</th>
+                        {% else %}
+                        <th class="py-3 px-4">Заявление</th>
+                        <th class="py-3 px-4">Абитуриент</th>
+                        <th class="py-3 px-4">Изменение статуса</th>
+                        <th class="py-3 px-4">Сотрудник</th>
+                        <th class="py-3 px-4">Комментарий</th>
+                        {% endif %}
+                        <th class="py-3 px-4 text-right">Инфо</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for log in logs_page %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        {% if not is_status_mode %}
+                        <!-- 1. Timestamp -->
+                        <td class="py-3 px-4 whitespace-nowrap font-mono text-slate-600">
+                            <div class="font-bold text-slate-800">{{ log.created_at|date:"d.m.Y" }}</div>
+                            <div class="text-[11px] text-slate-400">{{ log.created_at|date:"H:i:s" }}</div>
+                        </td>
+
+                        <!-- 2. Event Type Badge -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            {% if log.event_type == 'LOGIN' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <i class="bi bi-box-arrow-in-right"></i> Вход в систему
+                            </span>
+                            {% elif log.event_type == 'LOGOUT' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                <i class="bi bi-box-arrow-right"></i> Выход
+                            </span>
+                            {% elif log.event_type == 'LOGIN_FAILED' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <i class="bi bi-shield-x"></i> Ошибка входа
+                            </span>
+                            {% elif log.event_type == 'ROLE_CHANGE' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                <i class="bi bi-person-badge"></i> Смена роли
+                            </span>
+                            {% elif log.event_type == 'STATUS_CHANGE' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                <i class="bi bi-arrow-repeat"></i> Смена статуса
+                            </span>
+                            {% elif log.event_type == 'DOCUMENT_VERIFY' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="bi bi-file-earmark-check"></i> Верификация
+                            </span>
+                            {% elif log.event_type == 'EXPORT_DATA' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
+                                <i class="bi bi-download"></i> Экспорт данных
+                            </span>
+                            {% elif log.event_type == 'SETTINGS_CHANGE' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <i class="bi bi-sliders"></i> Настройки
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
+                                {{ log.get_event_type_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 3. User Info -->
+                        <td class="py-3 px-4">
+                            {% if log.user %}
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                    {{ log.user.username|first|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-bold text-slate-900 truncate">
+                                        {{ log.user.get_full_name|default:log.user.username }}
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 truncate">
+                                        {{ log.user.email }} • <span class="font-medium text-slate-600">{{ log.user.get_role_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-slate-400 italic">Анонимный гость</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 4. IP & Client -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <span class="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                {{ log.ip_address|default:"127.0.0.1" }}
+                            </span>
+                        </td>
+
+                        <!-- 5. Description -->
+                        <td class="py-3 px-4 max-w-md">
+                            <div class="text-slate-800 leading-snug line-clamp-2" title="{{ log.description }}">
+                                {{ log.description }}
+                            </div>
+                        </td>
+
+                        <!-- 6. Detail Action Button -->
+                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                            <button type="button"
+                                    @click="openDetail({
+                                        id: '{{ log.id }}',
+                                        date: '{{ log.created_at|date:'d.m.Y H:i:s' }}',
+                                        type: '{{ log.event_type }}',
+                                        typeDisplay: '{{ log.get_event_type_display }}',
+                                        user: '{% if log.user %}{{ log.user.get_full_name|default:log.user.username }} ({{ log.user.email }}){% else %}Анонимный гость{% endif %}',
+                                        userRole: '{% if log.user %}{{ log.user.get_role_display }}{% else %}—{% endif %}',
+                                        ip: '{{ log.ip_address|default:'127.0.0.1' }}',
+                                        userAgent: `{{ log.user_agent|escapejs }}`,
+                                        description: `{{ log.description|escapejs }}`,
+                                        isStatus: false
+                                    })"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 font-semibold text-xs transition-colors">
+                                <i class="bi bi-info-circle"></i> Детали
+                            </button>
+                        </td>
+
+                        {% else %}
+                        <!-- StatusLog Mode -->
+                        <!-- 1. Timestamp -->
+                        <td class="py-3 px-4 whitespace-nowrap font-mono text-slate-600">
+                            <div class="font-bold text-slate-800">{{ log.changed_at|date:"d.m.Y" }}</div>
+                            <div class="text-[11px] text-slate-400">{{ log.changed_at|date:"H:i:s" }}</div>
+                        </td>
+
+                        <!-- 2. Application -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <a href="{% url 'officer:application_detail' log.application_id %}" class="font-bold text-indigo-600 hover:text-indigo-800 hover:underline">
+                                №{{ log.application.number|default:log.application_id }}
+                            </a>
+                        </td>
+
+                        <!-- 3. Applicant -->
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-slate-900">{{ log.application.applicant.get_full_name }}</div>
+                            <div class="text-[11px] text-slate-400">{{ log.application.applicant.email }}</div>
+                        </td>
+
+                        <!-- 4. Status Transition -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            <div class="flex items-center gap-1.5 font-medium">
+                                <span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600">
+                                    {{ log.old_status|default:"Новое" }}
+                                </span>
+                                <i class="bi bi-arrow-right text-slate-400 text-xs"></i>
+                                <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    {{ log.new_status }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- 5. Officer -->
+                        <td class="py-3 px-4 whitespace-nowrap">
+                            {% if log.changed_by %}
+                            <div class="font-semibold text-slate-800">{{ log.changed_by.get_full_name|default:log.changed_by.username }}</div>
+                            <div class="text-[10px] text-slate-400">{{ log.changed_by.get_role_display }}</div>
+                            {% else %}
+                            <span class="text-slate-400">Система (Авто)</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 6. Comment -->
+                        <td class="py-3 px-4 max-w-xs truncate text-slate-600">
+                            {{ log.comment|default:"—" }}
+                        </td>
+
+                        <!-- 7. Detail Action Button -->
+                        <td class="py-3 px-4 text-right whitespace-nowrap">
+                            <button type="button"
+                                    @click="openDetail({
+                                        id: '{{ log.id }}',
+                                        date: '{{ log.changed_at|date:'d.m.Y H:i:s' }}',
+                                        type: 'STATUS_CHANGE',
+                                        typeDisplay: 'Смена статуса заявления',
+                                        user: '{% if log.changed_by %}{{ log.changed_by.get_full_name|default:log.changed_by.username }} ({{ log.changed_by.email }}){% else %}Системный сервис{% endif %}',
+                                        userRole: '{% if log.changed_by %}{{ log.changed_by.get_role_display }}{% else %}Автомат{% endif %}',
+                                        ip: 'Внутренний сервер',
+                                        userAgent: 'Django CRM Backend',
+                                        description: `Переход статуса: ${'{{ log.old_status|default:'Новое' }}'} → ${'{{ log.new_status }}'}. Комментарий: ${'{{ log.comment|escapejs|default:'Без комментария' }}'}`,
+                                        isStatus: true,
+                                        oldStatus: '{{ log.old_status|default:'—' }}',
+                                        newStatus: '{{ log.new_status }}',
+                                        appNumber: '{{ log.application.number|default:log.application_id }}',
+                                        applicant: '{{ log.application.applicant.get_full_name }}'
+                                    })"
+                                    class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 font-semibold text-xs transition-colors">
+                                <i class="bi bi-info-circle"></i> Детали
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">
+                            <i class="bi bi-shield-slash text-4xl text-slate-300 block mb-2"></i>
+                            <div class="text-sm font-bold text-slate-700">Записей аудита не найдено</div>
+                            <div class="text-xs text-slate-400 mt-1">Попробуйте изменить параметры поиска или фильтрации</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if logs_page.has_other_pages %}
+        <div class="p-4 sm:p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-500">
+                Показаны записи {{ logs_page.start_index }}–{{ logs_page.end_index }} из {{ logs_page.paginator.count }}
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if logs_page.has_previous %}
+                <a href="?page={{ logs_page.previous_page_number }}&tab={{ tab }}{% if search_query %}&q={{ search_query }}{% endif %}{% if event_type %}&event_type={{ event_type }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+                   class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors">
+                    <i class="bi bi-chevron-left"></i> Назад
+                </a>
+                {% endif %}
+
+                <span class="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs">
+                    {{ logs_page.number }}
+                </span>
+
+                {% if logs_page.has_next %}
+                <a href="?page={{ logs_page.next_page_number }}&tab={{ tab }}{% if search_query %}&q={{ search_query }}{% endif %}{% if event_type %}&event_type={{ event_type }}{% endif %}{% if user_id %}&user_id={{ user_id }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+                   class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors">
+                    Вперед <i class="bi bi-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Alpine.js Event Inspection Modal -->
+    <div x-show="detailModal" 
+         x-cloak
+         @keydown.escape.window="detailModal = false"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Overlay -->
+            <div x-show="detailModal" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 transition-opacity bg-slate-900/60 backdrop-blur-xs" 
+                 @click="detailModal = false" 
+                 aria-hidden="true"></div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal Body -->
+            <div x-show="detailModal" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-200">
+                
+                <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900" id="modal-title">
+                                Инспекция записи аудита #<span x-text="activeLog.id"></span>
+                            </h3>
+                            <p class="text-xs text-slate-500" x-text="activeLog.typeDisplay"></p>
+                        </div>
+                    </div>
+                    <button @click="detailModal = false" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                        <i class="bi bi-x-lg text-sm"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase">Временная метка</span>
+                            <div class="font-mono text-xs font-bold text-slate-800" x-text="activeLog.date"></div>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase">IP-Адрес</span>
+                            <div class="font-mono text-xs font-bold text-slate-800" x-text="activeLog.ip"></div>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1 sm:col-span-2">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase">Субъект (Пользователь)</span>
+                            <div class="text-xs font-bold text-slate-800" x-text="activeLog.user"></div>
+                            <div class="text-[11px] text-slate-500">Роль в системе: <span class="font-semibold text-slate-700" x-text="activeLog.userRole"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Description / Event Details -->
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase">Описание события / Payload</label>
+                        <div class="p-4 rounded-xl bg-slate-900 text-slate-200 font-mono text-xs leading-relaxed whitespace-pre-wrap break-all" x-text="activeLog.description"></div>
+                    </div>
+
+                    <!-- User Agent -->
+                    <div class="space-y-1">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase">Клиентский User-Agent</label>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 font-mono text-[11px] break-all" x-text="activeLog.userAgent || 'Не зарегистрирован'"></div>
+                    </div>
+                </div>
+
+                <div class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
+                    <button type="button" @click="detailModal = false" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-colors">
+                        Закрыть
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

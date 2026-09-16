@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore
-from audit.models import StatusLog, Notification
+from audit.models import StatusLog, Notification, SecurityLog
 from accounts.models import ApplicantProfile, OfficerProfile
 from feedback.models import FeedbackMessage
 
@@ -479,6 +479,99 @@ class AdminSpecialtiesManageTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.assertTrue(self.specialty.programs.filter(study_form=EducationProgram.StudyForm.PART_TIME).exists())
+
+
+class AdminAuditLogsTests(TestCase):
+    """
+    Тестирование журнала аудита и логов безопасности (admin/audit_logs.html).
+    """
+    def setUp(self):
+        self.client = Client()
+
+        self.admin = User.objects.create_user(
+            username='admin_audit',
+            password='testpassword123',
+            email='admin_audit@witte.ru',
+            role=User.Role.ADMIN
+        )
+
+        self.officer = User.objects.create_user(
+            username='officer_audit',
+            password='testpassword123',
+            email='officer_audit@witte.ru',
+            role=User.Role.OFFICER
+        )
+
+        self.applicant = User.objects.create_user(
+            username='applicant_audit',
+            password='testpassword123',
+            email='applicant_audit@witte.ru',
+            first_name='Тест',
+            last_name='Аудитов',
+            role=User.Role.APPLICANT
+        )
+
+        # Создаем тестовые записи SecurityLog
+        self.sec_log1 = SecurityLog.objects.create(
+            user=self.admin,
+            event_type=SecurityLog.EventType.LOGIN,
+            ip_address='192.168.1.10',
+            user_agent='Mozilla/5.0 Chrome/120.0',
+            description='Успешный вход администратора admin_audit'
+        )
+
+        self.sec_log2 = SecurityLog.objects.create(
+            user=self.applicant,
+            event_type=SecurityLog.EventType.DOCUMENT_VERIFY,
+            ip_address='192.168.1.20',
+            user_agent='Mozilla/5.0 Firefox/121.0',
+            description='Верифицирован скан паспорта абитуриента'
+        )
+
+        self.sec_log_failed = SecurityLog.objects.create(
+            user=None,
+            event_type=SecurityLog.EventType.LOGIN_FAILED,
+            ip_address='10.0.0.99',
+            description='Неудачная попытка входа с логином: hacker'
+        )
+
+    def test_anonymous_access_redirected(self):
+        response = self.client.get(reverse('admin_audit_logs'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_officer_access_forbidden(self):
+        self.client.login(username='officer_audit', password='testpassword123')
+        response = self.client.get(reverse('admin_audit_logs'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_access_success(self):
+        self.client.login(username='admin_audit', password='testpassword123')
+        response = self.client.get(reverse('admin_audit_logs'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'admin/audit_logs.html')
+        self.assertContains(response, 'Журнал аудита и логов безопасности')
+        self.assertContains(response, 'Успешный вход администратора admin_audit')
+
+    def test_filter_by_event_type(self):
+        self.client.login(username='admin_audit', password='testpassword123')
+        response = self.client.get(reverse('admin_audit_logs'), {'event_type': 'LOGIN_FAILED'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Неудачная попытка входа с логином: hacker')
+        self.assertNotContains(response, 'Верифицирован скан паспорта')
+
+    def test_filter_by_search_query(self):
+        self.client.login(username='admin_audit', password='testpassword123')
+        response = self.client.get(reverse('admin_audit_logs'), {'q': '192.168.1.20'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Верифицирован скан паспорта')
+        self.assertNotContains(response, 'hacker')
+
+    def test_status_log_tab(self):
+        self.client.login(username='admin_audit', password='testpassword123')
+        response = self.client.get(reverse('admin_audit_logs'), {'tab': 'status'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_status_mode'])
+
 
 
 
