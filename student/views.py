@@ -940,6 +940,30 @@ def export_rating_xlsx_view(request):
     )
 
 
+@login_required
+@applicant_required
+def download_receipt_docx_view(request, application_id):
+    """
+    Скачивание официальной расписки о приеме документов абитуриента в формате .docx.
+    """
+    from admissions.exports import export_receipt_docx_response
+
+    application = get_object_or_404(
+        Application.objects.select_related(
+            'applicant',
+            'applicant__applicant_profile',
+            'program',
+            'program__specialty',
+            'program__specialty__faculty'
+        ).prefetch_related('documents', 'exam_scores__subject'),
+        id=application_id,
+        applicant=request.user
+    )
+
+    return export_receipt_docx_response(application)
+
+
+
 
 
 

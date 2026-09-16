@@ -11,4 +11,5 @@ urlpatterns = [
     path('inquiries/', views.inquiries_view, name='inquiries'),
     path('protocols/', views.protocols_view, name='protocols'),
     path('export/rating/', views.export_rating_xlsx_view, name='export_rating_xlsx'),
+    path('applications/<int:pk>/receipt/docx/', views.download_receipt_docx_view, name='application_receipt_docx'),
 ]

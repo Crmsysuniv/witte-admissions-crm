@@ -196,3 +196,71 @@ class ExcelExportCompetitiveListTests(TestCase):
         self.assertEqual(ws['D8'].value, "Алексей Смирнов")
         # На следующей строке уже нет Поповой
         self.assertNotEqual(ws['D9'].value, "Елена Попова")
+
+    def test_generate_application_receipt_docx_content(self):
+        """Проверка формирования расписки в формате .docx с помощью python-docx."""
+        from admissions.exports import generate_application_receipt_docx
+        doc = generate_application_receipt_docx(self.app1)
+
+        # Проверка текста в абзацах
+        full_text = "\n".join([p.text for p in doc.paragraphs])
+        self.assertIn("МОСКОВСКИЙ УНИВЕРСИТЕТ ИМЕНИ С.Ю. ВИТТЕ", full_text)
+        self.assertIn(f"РАСПИСКА В ПРИЕМЕ ДОКУМЕНТОВ № 2026-{self.app1.id:04d}", full_text)
+
+        # Проверка таблиц документа
+        tables_text = ""
+        for t in doc.tables:
+            for row in t.rows:
+                for cell in row.cells:
+                    tables_text += " " + cell.text
+
+        self.assertIn("Алексей Смирнов", tables_text)
+        self.assertIn("111-222-333 44", tables_text)
+        self.assertIn("09.03.03", tables_text)
+        self.assertIn("Прикладная информатика", tables_text)
+        self.assertIn("Русский язык", tables_text)
+        self.assertIn("90 б.", tables_text)
+        self.assertIn("170 б.", tables_text)
+
+    def test_export_receipt_docx_response(self):
+        """Проверка HTTP-ответа и MIME-типа расписки .docx."""
+        from admissions.exports import export_receipt_docx_response
+        import docx
+
+        response = export_receipt_docx_response(self.app1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+        self.assertIn('attachment;', response['Content-Disposition'])
+        self.assertIn('.docx', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'PK'))
+
+        # Проверка считывания документа из байтов
+        stream = io.BytesIO(response.content)
+        loaded_doc = docx.Document(stream)
+        self.assertTrue(len(loaded_doc.paragraphs) > 5)
+
+    def test_student_download_receipt_endpoint(self):
+        """Проверка скачивания расписки абитуриентом через личный кабинет."""
+        self.client.login(username='app_alex', password='testpassword123')
+        url = reverse('student:download_receipt_docx', kwargs={'application_id': self.app1.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+
+    def test_officer_download_receipt_endpoint(self):
+        """Проверка формирования расписки сотрудником приемной комиссии."""
+        self.client.login(username='officer_exp', password='testpassword123')
+        url = reverse('officer:application_receipt_docx', kwargs={'pk': self.app1.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+

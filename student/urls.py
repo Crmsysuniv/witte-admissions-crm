@@ -12,4 +12,5 @@ urlpatterns = [
     path('rating/', views.rating_view, name='rating'),
     path('rating/export/', views.export_rating_xlsx_view, name='rating_export_xlsx'),
     path('applications/<int:application_id>/withdraw/', views.withdraw_application_view, name='withdraw_application'),
+    path('applications/<int:application_id>/receipt/docx/', views.download_receipt_docx_view, name='download_receipt_docx'),
 ]
