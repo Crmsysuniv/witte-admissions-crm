@@ -269,7 +269,7 @@
                     </a>
 
                     <!-- 5. Рейтинг и конкурсные списки (общие) -->
-                    <a href="/rating/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <a href="/rating/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/rating/' in request.path or request.path == '/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                         <i class="bi bi-trophy-fill text-lg text-yellow-400"></i>
                         <span>Конкурсные списки</span>
                     </a>
@@ -436,7 +436,7 @@
                             </div>
 
                             <div class="py-1">
-                                {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+                                {% if user.is_authenticated and user.role == 'APPLICANT' %}
                                 <a href="/student/dashboard/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-workspace text-slate-400"></i>
                                     <span>Кабинет абитуриента</span>
@@ -453,7 +453,7 @@
                                     <i class="bi bi-folder-check text-slate-400"></i>
                                     <span>Документы и сканы</span>
                                 </a>
-                                <a href="/student/rating/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                <a href="/rating/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-trophy-fill text-slate-400"></i>
                                     <span>Конкурсные списки</span>
                                 </a>
@@ -474,6 +474,10 @@
                                 <a href="{% url 'officer:protocols' %}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-file-earmark-check-fill text-emerald-500"></i>
                                     <span>Приказы и протоколы</span>
+                                </a>
+                                <a href="/rating/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                    <i class="bi bi-trophy-fill text-yellow-500"></i>
+                                    <span>Конкурсные списки</span>
                                 </a>
                                 {% endif %}
                                 {% if user.is_authenticated %}

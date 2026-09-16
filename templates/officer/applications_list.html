@@ -5,6 +5,8 @@
 
 {% block header_breadcrumb %}Реестр заявлений абитуриентов{% endblock %}
 
+{% block content_width %}{% endblock %}
+
 {% block content %}
 <div class="space-y-8 pb-16" x-data="{
     statusModalOpen: false,
@@ -330,14 +332,14 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="border-b border-slate-200/80 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th class="py-3.5 px-4">№ / Дата</th>
-                        <th class="py-3.5 px-4">Абитуриент (ФИО, Контакты)</th>
-                        <th class="py-3.5 px-4">Факультет и Специальность</th>
-                        <th class="py-3.5 px-4 text-center">Основа / Форма</th>
-                        <th class="py-3.5 px-4 text-center">Баллы</th>
-                        <th class="py-3.5 px-4 text-center">Документы</th>
-                        <th class="py-3.5 px-4 text-center">Статус</th>
-                        <th class="py-3.5 px-4 text-right">Действия</th>
+                        <th class="py-3 px-3">№ / Дата</th>
+                        <th class="py-3 px-3">Абитуриент (ФИО, Контакты)</th>
+                        <th class="py-3 px-3">Факультет и Специальность</th>
+                        <th class="py-3 px-3 text-center">Основа / Форма</th>
+                        <th class="py-3 px-3 text-center">Баллы</th>
+                        <th class="py-3 px-3 text-center">Документы</th>
+                        <th class="py-3 px-3 text-center">Статус</th>
+                        <th class="py-3 px-3 text-right">Действия</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
@@ -345,42 +347,42 @@
                     <tr class="hover:bg-slate-50/80 transition-colors group">
                         
                         <!-- 1. № / Дата подачи -->
-                        <td class="py-4 px-4 whitespace-nowrap">
+                        <td class="py-3 px-3 whitespace-nowrap">
                             <div class="font-black text-indigo-700 text-sm">
                                 №{{ app.id }}
                             </div>
-                            <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
-                                <i class="bi bi-clock text-[10px]"></i>
+                            <div class="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                <i class="bi bi-clock text-[9px]"></i>
                                 <span>{{ app.submission_date|date:"d.m.Y H:i" }}</span>
                             </div>
                         </td>
 
                         <!-- 2. Абитуриент: ФИО, телефон, email, СНИЛС -->
-                        <td class="py-4 px-4">
-                            <div class="flex items-start gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                        <td class="py-3 px-3 min-w-[200px]">
+                            <div class="flex items-start gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
                                     {{ app.applicant.first_name|default:app.applicant.username|slice:":1"|upper }}
                                 </div>
                                 <div class="min-w-0">
-                                    <div class="font-bold text-slate-900 text-sm leading-tight hover:text-indigo-600 transition-colors">
+                                    <div class="font-bold text-slate-900 text-xs leading-tight hover:text-indigo-600 transition-colors truncate max-w-[220px]">
                                         {{ app.applicant.get_full_name|default:app.applicant.username }}
                                     </div>
-                                    <div class="text-[11px] text-slate-500 mt-0.5 space-y-0.5">
+                                    <div class="text-[10px] text-slate-500 mt-0.5 space-y-0.5">
                                         {% if app.applicant.phone %}
                                         <div class="flex items-center gap-1">
-                                            <i class="bi bi-telephone text-[10px] text-slate-400"></i>
+                                            <i class="bi bi-telephone text-[9px] text-slate-400"></i>
                                             <a href="tel:{{ app.applicant.phone }}" class="hover:text-indigo-600">{{ app.applicant.phone }}</a>
                                         </div>
                                         {% endif %}
                                         {% if app.applicant.email %}
                                         <div class="flex items-center gap-1">
-                                            <i class="bi bi-envelope text-[10px] text-slate-400"></i>
-                                            <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 truncate max-w-[200px]">{{ app.applicant.email }}</a>
+                                            <i class="bi bi-envelope text-[9px] text-slate-400"></i>
+                                            <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 truncate max-w-[180px]">{{ app.applicant.email }}</a>
                                         </div>
                                         {% endif %}
                                         {% if app.applicant.applicant_profile.snils %}
-                                        <div class="flex items-center gap-1 text-[10px] text-slate-600">
-                                            <span class="font-semibold text-slate-500">СНИЛС:</span>
+                                        <div class="flex items-center gap-1 text-[10px] text-slate-500">
+                                            <span class="font-medium text-slate-400">СНИЛС:</span>
                                             <span>{{ app.applicant.applicant_profile.snils }}</span>
                                         </div>
                                         {% endif %}
@@ -390,21 +392,21 @@
                         </td>
 
                         <!-- 3. Факультет и Специальность -->
-                        <td class="py-4 px-4 max-w-xs">
-                            <span class="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 mb-1">
+                        <td class="py-3 px-3 min-w-[200px]">
+                            <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 mb-0.5">
                                 {{ app.program.specialty.faculty.name }}
                             </span>
                             <div class="font-semibold text-slate-800 text-xs leading-snug">
                                 <span class="font-mono text-indigo-600 font-bold">{{ app.program.specialty.code }}</span>
                                 {{ app.program.specialty.name }}
                             </div>
-                            <div class="text-[11px] text-slate-500 mt-0.5">
+                            <div class="text-[10px] text-slate-400 mt-0.5">
                                 {{ app.program.specialty.get_education_level_display }}
                             </div>
                         </td>
 
                         <!-- 4. Основа и Форма -->
-                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
                             {% if app.financing_type == 'BUDGET' %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 Бюджет
@@ -414,20 +416,20 @@
                                 Договор
                             </span>
                             {% endif %}
-                            <div class="text-[11px] font-medium text-slate-600 mt-1">
+                            <div class="text-[10px] font-medium text-slate-500 mt-1">
                                 {{ app.program.get_study_form_display }}
                             </div>
                         </td>
 
                         <!-- 5. Баллы -->
-                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
                             <div class="inline-flex flex-col items-center">
-                                <span class="text-sm font-black text-slate-900">
+                                <span class="text-xs font-black text-slate-900">
                                     {{ app.computed_total_score }} б.
                                 </span>
                                 {% if app.scores_list %}
                                 <span class="text-[10px] text-slate-400 cursor-help" title="{% for s in app.scores_list %}{{ s.subject.name }}: {{ s.score }} б. ({{ s.get_exam_type_display }})&#10;{% endfor %}">
-                                    {{ app.scores_list|length }} предм. <i class="bi bi-info-circle"></i>
+                                    {{ app.scores_list|length }} предм. <i class="bi bi-info-circle text-[9px]"></i>
                                 </span>
                                 {% else %}
                                 <span class="text-[10px] text-slate-400">Нет баллов</span>
@@ -436,69 +438,69 @@
                         </td>
 
                         <!-- 6. Документы -->
-                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
                             {% if app.docs_total == 0 %}
-                            <span class="inline-flex items-center gap-1 text-[11px] text-slate-400">
+                            <span class="inline-flex items-center gap-1 text-[10px] text-slate-400">
                                 <i class="bi bi-dash-circle"></i> 0 файлов
                             </span>
                             {% elif app.docs_verified == app.docs_total %}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 <i class="bi bi-check2-all"></i> {{ app.docs_total }} пров.
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                                 <i class="bi bi-hourglass-split"></i> {{ app.docs_verified }}/{{ app.docs_total }} пров.
                             </span>
                             {% endif %}
                         </td>
 
                         <!-- 7. Статус заявления -->
-                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                        <td class="py-3 px-3 text-center whitespace-nowrap">
                             {% if app.status == 'SUBMITTED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-xs">
-                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                 Подано
                             </span>
                             {% elif app.status == 'UNDER_REVIEW' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                <i class="bi bi-search text-xs"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                <i class="bi bi-search text-[10px]"></i>
                                 На рассмотрении
                             </span>
                             {% elif app.status == 'DOCUMENTS_REQUIRED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                <i class="bi bi-exclamation-circle text-xs"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <i class="bi bi-exclamation-circle text-[10px]"></i>
                                 Нужны документы
                             </span>
                             {% elif app.status == 'APPROVED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <i class="bi bi-check-circle-fill text-xs text-emerald-600"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="bi bi-check-circle-fill text-[10px] text-emerald-600"></i>
                                 Одобрено
                             </span>
                             {% elif app.status == 'ENROLLED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                                <i class="bi bi-mortarboard-fill text-xs text-purple-600"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                <i class="bi bi-mortarboard-fill text-[10px] text-purple-600"></i>
                                 Зачислен
                             </span>
                             {% elif app.status == 'REJECTED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                                <i class="bi bi-x-circle text-xs"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                <i class="bi bi-x-circle text-[10px]"></i>
                                 Отклонено
                             </span>
                             {% elif app.status == 'WITHDRAWN' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
-                                <i class="bi bi-arrow-return-left text-xs"></i>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                <i class="bi bi-arrow-return-left text-[10px]"></i>
                                 Отозвано
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                                 {{ app.get_status_display }}
                             </span>
                             {% endif %}
                         </td>
 
                         <!-- 8. Действия -->
-                        <td class="py-4 px-4 text-right whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-1.5">
+                        <td class="py-3 px-3 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1">
                                 
                                 <!-- Кнопка детального просмотра -->
                                 <button type="button"
@@ -544,32 +546,32 @@
                                                 {% endfor %}
                                             ]
                                         })"
-                                        class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors shadow-xs"
-                                        title="Просмотр карточки заявления">
+                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors shadow-xs"
+                                        title="Быстрый просмотр">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
 
                                 <!-- Кнопка перехода на полную страницу проверки -->
                                 <a href="{% url 'officer:application_detail' app.id %}"
-                                   class="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors shadow-xs font-semibold flex items-center gap-1"
+                                   class="px-2 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors shadow-xs font-semibold inline-flex items-center gap-1"
                                    title="Полная проверка заявления">
                                     <i class="bi bi-shield-check"></i>
-                                    <span class="text-[11px] hidden xl:inline">Проверка</span>
+                                    <span class="text-[11px]">Проверка</span>
                                 </a>
 
                                 <!-- Кнопка смены статуса -->
                                 <button type="button"
                                         @click="openStatusModal('{{ app.id }}', '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}', '{{ app.officer_comment|default:''|escapejs }}')"
-                                        class="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors shadow-xs font-semibold flex items-center gap-1"
+                                        class="px-2 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors shadow-xs font-semibold inline-flex items-center gap-1"
                                         title="Изменить статус заявления">
                                     <i class="bi bi-arrow-repeat"></i>
-                                    <span class="text-[11px] hidden sm:inline">Статус</span>
+                                    <span class="text-[11px]">Статус</span>
                                 </button>
 
                                 <!-- Ссылка в Django Admin -->
                                 <a href="/admin/admissions/application/{{ app.id }}/change/"
                                    target="_blank"
-                                   class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors shadow-xs"
+                                   class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-800 transition-colors shadow-xs"
                                    title="Открыть в Django Admin">
                                     <i class="bi bi-gear-fill"></i>
                                 </a>

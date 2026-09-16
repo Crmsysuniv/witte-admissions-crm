@@ -2,7 +2,7 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from accounts.models import ApplicantProfile
+from accounts.models import User, ApplicantProfile
 from admissions.models import Faculty, Specialty, EducationProgram, Application, ApplicationDocument, ExamScore
 from audit.models import Notification, StatusLog
 from .forms import StudentProfileForm, ApplicationSubmissionForm, DocumentUploadForm
@@ -594,11 +594,10 @@ def documents_view(request):
     return render(request, 'student/documents.html', context)
 
 
-@login_required
-@applicant_required
 def rating_view(request):
     """
     Страница отслеживания конкурсных списков и позиций в рейтинге (student/rating.html):
+    - Доступна абитуриентам, сотрудникам приемной комиссии, администраторам и гостям;
     - Персональная сводка конкурсных позиций текущего абитуриента;
     - Официальные конкурсные списки поступающих с детализацией по баллам;
     - Обезличенные идентификаторы абитуриентов (СНИЛС или номер заявления согласно ФЗ-152);
@@ -606,15 +605,24 @@ def rating_view(request):
     - Фильтрация по специальностям, форме финансирования (бюджет / договор), оригиналам документов;
     - Подсчет текущего проходного балла, конкурса (человек на место) и прогноза шансов.
     """
-    user = request.user
-
-    # 1. Поданные заявления текущего пользователя
-    user_applications = (
-        Application.objects.filter(applicant=user)
-        .select_related('program__specialty__faculty', 'program')
-        .prefetch_related('exam_scores__subject', 'documents')
-        .order_by('-submission_date')
+    user = request.user if request.user.is_authenticated else None
+    is_applicant = bool(
+        user and (
+            getattr(user, 'role', None) == User.Role.APPLICANT
+            or getattr(user, 'is_applicant', False)
+        )
     )
+
+    # 1. Поданные заявления текущего пользователя (если абитуриент)
+    if is_applicant:
+        user_applications = (
+            Application.objects.filter(applicant=user)
+            .select_related('program__specialty__faculty', 'program')
+            .prefetch_related('exam_scores__subject', 'documents')
+            .order_by('-submission_date')
+        )
+    else:
+        user_applications = Application.objects.none()
 
     # 2. Расчет персональных позиций пользователя в каждом конкурсе
     user_rankings_summary = []
@@ -746,7 +754,7 @@ def rating_view(request):
                 document_type__in=[ApplicationDocument.DocumentType.CERTIFICATE, ApplicationDocument.DocumentType.DIPLOMA]
             ).exists()
 
-            is_current = (applicant.id == user.id)
+            is_current = (applicant.id == user.id) if user else False
 
             temp_list.append({
                 'app_id': c_app.id,
@@ -905,11 +913,10 @@ def withdraw_application_view(request, application_id):
     return render(request, 'student/application_confirm_withdraw.html', context)
 
 
-@login_required
-@applicant_required
 def export_rating_xlsx_view(request):
     """
-    Экспорт конкурсного списка для абитуриента в формате Excel (.xlsx).
+    Экспорт конкурсного списка в формате Excel (.xlsx).
+    Доступен абитуриентам, сотрудникам приемной комиссии, администраторам и гостям.
     """
     from admissions.exports import export_rating_xlsx_response
 
@@ -922,21 +929,28 @@ def export_rating_xlsx_view(request):
         selected_program = EducationProgram.objects.filter(id=program_id, is_active=True).first()
 
     if not selected_program:
-        user_apps = Application.objects.filter(applicant=request.user).exclude(status=Application.Status.WITHDRAWN)
-        if user_apps.exists():
-            selected_program = user_apps.first().program
-        else:
+        if request.user.is_authenticated:
+            user_apps = Application.objects.filter(applicant=request.user).exclude(status=Application.Status.WITHDRAWN)
+            if user_apps.exists():
+                selected_program = user_apps.first().program
+        if not selected_program:
             selected_program = EducationProgram.objects.filter(is_active=True).first()
 
     if not selected_program:
         messages.error(request, 'Не найдено программы для экспорта конкурсного списка.')
-        return redirect('student:rating')
+        return redirect('rating_shortcut')
+
+    is_officer = request.user.is_authenticated and (
+        getattr(request.user, 'role', None) in [User.Role.OFFICER, User.Role.ADMIN]
+        or request.user.is_staff
+        or request.user.is_superuser
+    )
 
     return export_rating_xlsx_response(
         program=selected_program,
         financing_type=financing_type,
         only_originals=only_originals,
-        is_officer=False
+        is_officer=is_officer
     )
 
 

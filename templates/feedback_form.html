@@ -203,7 +203,7 @@
                         Фамилия, Имя и Отчество <span class="text-rose-500">*</span>
                     </label>
                     <div class="relative">
-                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                         {{ form.full_name }}
                     </div>
                     {% if form.full_name.errors %}
@@ -218,7 +218,7 @@
                             Контактный телефон <span class="text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <i class="bi bi-telephone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <i class="bi bi-telephone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                             {{ form.phone }}
                         </div>
                         {% if form.phone.errors %}
@@ -231,7 +231,7 @@
                             Электронная почта (Email) <span class="text-rose-500">*</span>
                         </label>
                         <div class="relative">
-                            <i class="bi bi-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <i class="bi bi-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
                             {{ form.email }}
                         </div>
                         {% if form.email.errors %}

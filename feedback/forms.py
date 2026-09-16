@@ -67,15 +67,15 @@ class FeedbackForm(forms.ModelForm):
         widgets = {
             'full_name': forms.TextInput(attrs={
                 'placeholder': 'Например: Иванов Иван Иванович',
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+                'class': 'w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
             }),
             'phone': forms.TextInput(attrs={
                 'placeholder': '+7 (999) 000-00-00',
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+                'class': 'w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
             }),
             'email': forms.EmailInput(attrs={
                 'placeholder': 'applicant@example.ru',
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+                'class': 'w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
             }),
             'message': forms.Textarea(attrs={
                 'rows': 5,

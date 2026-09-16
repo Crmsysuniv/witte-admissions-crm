@@ -5,6 +5,8 @@
 
 {% block header_breadcrumb %}Рабочий стол сотрудника приемной комиссии{% endblock %}
 
+{% block content_width %}{% endblock %}
+
 {% block content %}
 <div class="space-y-8 pb-16" x-data="{
     statusModalOpen: false,
@@ -288,22 +290,22 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        <th class="py-3.5 px-5">№ и дата подачи</th>
-                        <th class="py-3.5 px-5">Абитуриент</th>
-                        <th class="py-3.5 px-5">Специальность & Факультет</th>
-                        <th class="py-3.5 px-5">Основа / Баллы</th>
-                        <th class="py-3.5 px-5">Документы</th>
-                        <th class="py-3.5 px-5">Статус</th>
-                        <th class="py-3.5 px-5 text-right">Действия сотрудника</th>
+                        <th class="py-3 px-3">№ / Дата</th>
+                        <th class="py-3 px-3">Абитуриент</th>
+                        <th class="py-3 px-3">Специальность & Факультет</th>
+                        <th class="py-3 px-3 text-center">Основа / Баллы</th>
+                        <th class="py-3 px-3">Документы</th>
+                        <th class="py-3 px-3 text-center">Статус</th>
+                        <th class="py-3 px-3 text-right">Действия</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-xs">
                     {% for app in applications %}
-                    <tr class="hover:bg-indigo-50/30 transition-colors group">
+                    <tr class="hover:bg-slate-50/80 transition-colors group">
                         
-                        <!-- № и дата подачи -->
-                        <td class="py-4 px-5 align-top whitespace-nowrap">
-                            <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                        <!-- 1. № и дата подачи -->
+                        <td class="py-3 px-3 align-top whitespace-nowrap">
+                            <div class="font-bold text-slate-900 text-xs flex items-center gap-1">
                                 <i class="bi bi-file-earmark-text text-indigo-600"></i>
                                 <span>№ {{ app.id }}</span>
                             </div>
@@ -314,7 +316,7 @@
                                 {% if app.status == 'SUBMITTED' %}
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
                                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                    Ожидает
+                                    Новое
                                 </span>
                                 {% elif app.status == 'UNDER_REVIEW' %}
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">
@@ -324,42 +326,42 @@
                             </div>
                         </td>
 
-                        <!-- Абитуриент -->
-                        <td class="py-4 px-5 align-top">
-                            <div class="font-bold text-slate-900 text-sm">
+                        <!-- 2. Абитуриент -->
+                        <td class="py-3 px-3 align-top">
+                            <div class="font-bold text-slate-900 text-xs">
                                 {{ app.applicant.get_full_name|default:app.applicant.username }}
                             </div>
-                            <div class="text-slate-500 text-[11px] mt-0.5 flex items-center gap-2">
-                                {% if app.applicant.applicant_profile.snils %}
-                                <span>СНИЛС: <strong class="text-slate-700 font-mono">{{ app.applicant.applicant_profile.snils }}</strong></span>
-                                {% endif %}
+                            {% if app.applicant.applicant_profile.snils %}
+                            <div class="text-slate-500 text-[11px] mt-0.5">
+                                СНИЛС: <strong class="text-slate-700 font-mono">{{ app.applicant.applicant_profile.snils }}</strong>
                             </div>
-                            <div class="text-slate-500 text-[11px] mt-1 space-y-0.5">
+                            {% endif %}
+                            <div class="text-slate-500 text-[11px] mt-0.5 space-y-0.5">
                                 {% if app.applicant.phone %}
-                                <div class="flex items-center gap-1.5">
-                                    <i class="bi bi-telephone text-slate-400"></i>
+                                <div class="flex items-center gap-1">
+                                    <i class="bi bi-telephone text-slate-400 text-[10px]"></i>
                                     <a href="tel:{{ app.applicant.phone }}" class="hover:text-indigo-600 transition-colors">{{ app.applicant.phone }}</a>
                                 </div>
                                 {% endif %}
                                 {% if app.applicant.email %}
-                                <div class="flex items-center gap-1.5">
-                                    <i class="bi bi-envelope text-slate-400"></i>
-                                    <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 transition-colors truncate max-w-[180px]">{{ app.applicant.email }}</a>
+                                <div class="flex items-center gap-1">
+                                    <i class="bi bi-envelope text-slate-400 text-[10px]"></i>
+                                    <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 transition-colors truncate max-w-[150px]">{{ app.applicant.email }}</a>
                                 </div>
                                 {% endif %}
                             </div>
                         </td>
 
-                        <!-- Специальность & Факультет -->
-                        <td class="py-4 px-5 align-top">
-                            <div class="font-bold text-slate-800">
-                                <span class="font-mono text-indigo-700">{{ app.program.specialty.code }}</span>
+                        <!-- 3. Специальность & Факультет -->
+                        <td class="py-3 px-3 align-top">
+                            <div class="font-semibold text-slate-800 text-xs">
+                                <span class="font-mono text-indigo-700 font-bold">{{ app.program.specialty.code }}</span>
                                 {{ app.program.specialty.name }}
                             </div>
                             <div class="text-[11px] text-slate-500 mt-0.5">
                                 {{ app.program.specialty.faculty.name }}
                             </div>
-                            <div class="mt-1 flex items-center gap-1.5 text-[11px]">
+                            <div class="mt-1 flex items-center gap-1.5 text-[10px]">
                                 <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
                                     {{ app.program.get_study_form_display }}
                                 </span>
@@ -368,30 +370,30 @@
                             </div>
                         </td>
 
-                        <!-- Основа / Баллы -->
-                        <td class="py-4 px-5 align-top whitespace-nowrap">
+                        <!-- 4. Основа / Баллы -->
+                        <td class="py-3 px-3 align-top text-center whitespace-nowrap">
                             <div>
                                 {% if app.financing_type == 'BUDGET' %}
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60 text-[11px]">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60 text-[11px]">
                                     <i class="bi bi-award-fill text-emerald-600"></i>
                                     Бюджет
                                 </span>
                                 {% else %}
-                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60 text-[11px]">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60 text-[11px]">
                                     <i class="bi bi-credit-card-2-front-fill text-indigo-600"></i>
                                     Договор
                                 </span>
                                 {% endif %}
                             </div>
 
-                            <div class="mt-2 flex items-baseline gap-1.5">
-                                <span class="text-xs text-slate-500">Сумма:</span>
-                                <span class="text-base font-black text-slate-900 font-mono">{{ app.total_score }}</span>
-                                <span class="text-[10px] text-slate-400">баллов</span>
+                            <div class="mt-1 flex items-baseline justify-center gap-1">
+                                <span class="text-[11px] text-slate-500">Сумма:</span>
+                                <span class="text-sm font-black text-slate-900 font-mono">{{ app.total_score }}</span>
+                                <span class="text-[10px] text-slate-400">б.</span>
                             </div>
 
                             {% if app.exam_scores.exists %}
-                            <div class="mt-1 text-[10px] text-slate-500 space-y-0.5">
+                            <div class="mt-0.5 text-[10px] text-slate-500 space-y-0.5">
                                 {% for score in app.exam_scores.all %}
                                 <div>{{ score.subject.name }}: <strong class="text-slate-700 font-mono">{{ score.score }}</strong></div>
                                 {% endfor %}
@@ -399,14 +401,14 @@
                             {% endif %}
                         </td>
 
-                        <!-- Документы -->
-                        <td class="py-4 px-5 align-top">
+                        <!-- 5. Документы -->
+                        <td class="py-3 px-3 align-top">
                             {% with docs=app.documents.all %}
                             {% if docs %}
-                            <div class="space-y-1.5 min-w-[170px]">
+                            <div class="space-y-1 min-w-[140px]">
                                 {% for doc in docs %}
-                                <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
-                                    <a href="{{ doc.file.url }}" target="_blank" class="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 hover:text-indigo-600 truncate max-w-[110px]" title="{{ doc.get_document_type_display }}">
+                                <div class="flex items-center justify-between gap-1.5 p-1 rounded-md bg-slate-50 border border-slate-200/60">
+                                    <a href="{{ doc.file.url }}" target="_blank" class="flex items-center gap-1 text-[10px] font-medium text-slate-700 hover:text-indigo-600 truncate max-w-[100px]" title="{{ doc.get_document_type_display }}">
                                         <i class="bi bi-file-earmark-pdf text-rose-500"></i>
                                         <span>{{ doc.get_document_type_display }}</span>
                                     </a>
@@ -417,11 +419,11 @@
                                         <input type="hidden" name="application_id" value="{{ app.id }}">
                                         <input type="hidden" name="document_id" value="{{ doc.id }}">
                                         {% if doc.is_verified %}
-                                        <button type="submit" title="Верифицирован (клик для отмены)" class="text-emerald-600 hover:text-emerald-700 text-sm">
+                                        <button type="submit" title="Верифицирован (клик для отмены)" class="text-emerald-600 hover:text-emerald-700 text-xs">
                                             <i class="bi bi-check-circle-fill"></i>
                                         </button>
                                         {% else %}
-                                        <button type="submit" title="Не верифицирован (клик для подтверждения)" class="text-amber-500 hover:text-emerald-600 text-sm">
+                                        <button type="submit" title="Не верифицирован (клик для подтверждения)" class="text-amber-500 hover:text-emerald-600 text-xs">
                                             <i class="bi bi-circle"></i>
                                         </button>
                                         {% endif %}
@@ -440,64 +442,64 @@
                                 </form>
                             </div>
                             {% else %}
-                            <span class="text-[11px] text-slate-400 italic">Документы еще не прикреплены</span>
+                            <span class="text-[11px] text-slate-400 italic">Нет файлов</span>
                             {% endif %}
                             {% endwith %}
                         </td>
 
-                        <!-- Статус заявления -->
-                        <td class="py-4 px-5 align-top whitespace-nowrap">
+                        <!-- 6. Статус заявления -->
+                        <td class="py-3 px-3 align-top text-center whitespace-nowrap">
                             {% if app.status == 'SUBMITTED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 Подано
                             </span>
                             {% elif app.status == 'UNDER_REVIEW' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                На рассмотрении
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                В работе
                             </span>
                             {% elif app.status == 'DOCUMENTS_REQUIRED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                                Требуются документы
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Документы
                             </span>
                             {% elif app.status == 'APPROVED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Одобрено
                             </span>
                             {% elif app.status == 'ENROLLED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                 Зачислен
                             </span>
                             {% elif app.status == 'REJECTED' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
-                                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                                 Отклонено
                             </span>
                             {% elif app.status == 'WITHDRAWN' %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                 Отозвано
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
                                 {{ app.get_status_display }}
                             </span>
                             {% endif %}
 
                             {% if app.officer_comment %}
-                            <div class="mt-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200/60 text-[10px] text-slate-600 max-w-[160px] truncate" title="{{ app.officer_comment }}">
-                                <i class="bi bi-chat-quote-fill text-slate-400 mr-1"></i>{{ app.officer_comment }}
+                            <div class="mt-1 p-1 rounded bg-slate-50 border border-slate-200/60 text-[10px] text-slate-600 max-w-[130px] truncate mx-auto" title="{{ app.officer_comment }}">
+                                <i class="bi bi-chat-quote-fill text-slate-400 mr-0.5"></i>{{ app.officer_comment }}
                             </div>
                             {% endif %}
                         </td>
 
-                        <!-- Действия сотрудника -->
-                        <td class="py-4 px-5 align-top text-right whitespace-nowrap">
-                            <div class="flex flex-col items-end gap-1.5">
+                        <!-- 7. Действия сотрудника -->
+                        <td class="py-3 px-3 align-top text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1">
                                 
                                 <!-- Быстрое взятие в работу, если статус SUBMITTED -->
                                 {% if app.status == 'SUBMITTED' %}
@@ -506,7 +508,7 @@
                                     <input type="hidden" name="action" value="change_status">
                                     <input type="hidden" name="application_id" value="{{ app.id }}">
                                     <input type="hidden" name="new_status" value="UNDER_REVIEW">
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors">
+                                    <button type="submit" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors" title="Взять в работу">
                                         <i class="bi bi-play-fill"></i>
                                         <span>В работу</span>
                                     </button>
@@ -514,13 +516,13 @@
                                 {% endif %}
 
                                 <!-- Быстрое одобрение, если в работе -->
-                                {% if app.status == 'UNDER_REVIEW' or app.status == 'SUBMITTED' %}
+                                {% if app.status == 'UNDER_REVIEW' %}
                                 <form method="post" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="change_status">
                                     <input type="hidden" name="application_id" value="{{ app.id }}">
                                     <input type="hidden" name="new_status" value="APPROVED">
-                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors">
+                                    <button type="submit" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors" title="Одобрить заявление">
                                         <i class="bi bi-check-lg"></i>
                                         <span>Одобрить</span>
                                     </button>
@@ -529,21 +531,23 @@
 
                                 <!-- Подробная проверка заявления -->
                                 <a href="{% url 'officer:application_detail' app.id %}"
-                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors">
-                                    <i class="bi bi-shield-check text-indigo-600"></i>
-                                    <span>Проверка карточки</span>
+                                   class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors"
+                                   title="Перейти к проверке заявления">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span>Проверка</span>
                                 </a>
 
                                 <!-- Модальное окно изменения статуса с комментарием -->
                                 <button @click="openStatusModal({{ app.id }}, '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}')"
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">
-                                    <i class="bi bi-pencil-square text-slate-500"></i>
-                                    <span>Сменить статус...</span>
+                                        class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors"
+                                        title="Сменить статус с комментарием">
+                                    <i class="bi bi-arrow-repeat"></i>
                                 </button>
 
-                                <a href="/admin/admissions/application/{{ app.id }}/change/" target="_blank" class="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 mt-0.5">
-                                    <span>Редактор Django</span>
-                                    <i class="bi bi-box-arrow-up-right text-[9px]"></i>
+                                <a href="/admin/admissions/application/{{ app.id }}/change/" target="_blank"
+                                   class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-indigo-600 transition-colors"
+                                   title="Редактировать в Django Admin">
+                                    <i class="bi bi-gear-fill"></i>
                                 </a>
                             </div>
                         </td>
@@ -685,22 +689,6 @@
                     </button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- 6. ИНФОРМАЦИОННЫЙ БЛОК И АВТОРСКИЙ КОПИРАЙТ -->
-    <div class="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-slate-500">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                <i class="bi bi-info-circle-fill"></i>
-            </div>
-            <div>
-                <p class="font-bold text-slate-800">Приемная комиссия Московского университета имени С.Ю. Витте</p>
-                <p class="text-[11px]">Электронный документооборот и регламент проверки заявлений в соответствии с правилами приема 2026.</p>
-            </div>
-        </div>
-        <div class="text-right font-medium">
-            Разработка модуля: <strong class="text-slate-800">{{ developer_name }}</strong>
         </div>
     </div>
 
