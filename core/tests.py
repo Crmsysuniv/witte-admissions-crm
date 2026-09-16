@@ -366,4 +366,120 @@ class AdminUsersListTests(TestCase):
         self.assertTrue(self.admin_user.is_active)
 
 
+class AdminSpecialtiesManageTests(TestCase):
+    """
+    Тестирование страницы управления направлениями подготовки и квотами КЦП (admin/specialties_manage.html).
+    """
+    def setUp(self):
+        self.client = Client()
+
+        # Администратор
+        self.admin = User.objects.create_user(
+            username='admin_kcp',
+            password='testpassword123',
+            email='kcp@witte.ru',
+            role=User.Role.ADMIN
+        )
+
+        # Факультет
+        self.faculty = Faculty.objects.create(name='Факультет экономики', code='ФЭК')
+
+        # Специальность
+        self.specialty = Specialty.objects.create(
+            faculty=self.faculty,
+            code='38.03.01',
+            name='Экономика предприятий',
+            education_level=Specialty.EducationLevel.BACHELOR,
+            budget_places=15,
+            paid_places=30,
+            is_active=True
+        )
+
+        self.program = EducationProgram.objects.create(
+            specialty=self.specialty,
+            study_form=EducationProgram.StudyForm.FULL_TIME,
+            tuition_fee=165000.00,
+            duration='4 года',
+            is_active=True
+        )
+
+    def test_admin_access_and_render(self):
+        self.client.login(username='admin_kcp', password='testpassword123')
+        url = reverse('admin_specialties_manage')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'admin/specialties_manage.html')
+        self.assertContains(response, '38.03.01')
+        self.assertContains(response, 'Экономика предприятий')
+        self.assertContains(response, 'Факультет экономики')
+        self.assertEqual(response.context['kpi']['total_specialties'], 1)
+        self.assertEqual(response.context['kpi']['total_budget'], 15)
+        self.assertEqual(response.context['kpi']['total_paid'], 30)
+
+    def test_create_specialty_action(self):
+        self.client.login(username='admin_kcp', password='testpassword123')
+        url = reverse('admin_specialties_manage')
+
+        post_data = {
+            'action': 'create_specialty',
+            'faculty': self.faculty.id,
+            'code': '38.03.02',
+            'name': 'Менеджмент и маркетинг',
+            'education_level': Specialty.EducationLevel.BACHELOR,
+            'budget_places': 10,
+            'paid_places': 40,
+            'is_active': '1',
+            'initial_study_form': EducationProgram.StudyForm.FULL_TIME,
+            'initial_tuition_fee': 170000,
+            'initial_duration': '4 года',
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.assertTrue(Specialty.objects.filter(code='38.03.02').exists())
+        new_sp = Specialty.objects.get(code='38.03.02')
+        self.assertEqual(new_sp.budget_places, 10)
+        self.assertEqual(new_sp.paid_places, 40)
+        self.assertTrue(new_sp.programs.filter(study_form=EducationProgram.StudyForm.FULL_TIME).exists())
+
+    def test_edit_specialty_action(self):
+        self.client.login(username='admin_kcp', password='testpassword123')
+        url = reverse('admin_specialties_manage')
+
+        post_data = {
+            'action': 'edit_specialty',
+            'specialty_id': self.specialty.id,
+            'faculty': self.faculty.id,
+            'code': '38.03.01',
+            'name': 'Экономика и финансы (обновлено)',
+            'education_level': Specialty.EducationLevel.BACHELOR,
+            'budget_places': 20,
+            'paid_places': 35,
+            'is_active': '1',
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.specialty.refresh_from_db()
+        self.assertEqual(self.specialty.name, 'Экономика и финансы (обновлено)')
+        self.assertEqual(self.specialty.budget_places, 20)
+
+    def test_add_program_action(self):
+        self.client.login(username='admin_kcp', password='testpassword123')
+        url = reverse('admin_specialties_manage')
+
+        post_data = {
+            'action': 'add_program',
+            'specialty_id': self.specialty.id,
+            'study_form': EducationProgram.StudyForm.PART_TIME,
+            'tuition_fee': 95000,
+            'duration': '4 года 6 месяцев',
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.assertTrue(self.specialty.programs.filter(study_form=EducationProgram.StudyForm.PART_TIME).exists())
+
+
+
 

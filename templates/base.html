@@ -294,6 +294,13 @@
                     <span class="flex-1">Управление пользователями</span>
                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-500/30 text-blue-200">Роли</span>
                 </a>
+
+                <!-- 13.2 Направления подготовки и квоты КЦП -->
+                <a href="/admin/specialties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/specialties/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-mortarboard-fill text-lg text-emerald-400"></i>
+                    <span class="flex-1">Направления & КЦП</span>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">План</span>
+                </a>
                 {% endif %}
 
                 <!-- 14. Панель администратора Django -->

@@ -1,0 +1,764 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Управление направлениями подготовки и квотами КЦП | МУ им. С.Ю. Витте CRM{% endblock %}
+
+{% block header_breadcrumb %}Управление направлениями & квотами КЦП{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    createModalOpen: false,
+    editModalOpen: false,
+    programModalOpen: false,
+    deleteModalOpen: false,
+
+    activeSpecialty: {
+        id: null,
+        facultyId: '',
+        code: '',
+        name: '',
+        level: 'BACHELOR',
+        budgetPlaces: 0,
+        paidPlaces: 0,
+        isActive: true,
+        appsCount: 0
+    },
+
+    openCreateModal() {
+        this.createModalOpen = true;
+    },
+
+    openEditModal(spec) {
+        this.activeSpecialty = { ...spec };
+        this.editModalOpen = true;
+    },
+
+    openProgramModal(spec) {
+        this.activeSpecialty = { ...spec };
+        this.programModalOpen = true;
+    },
+
+    openDeleteModal(spec) {
+        this.activeSpecialty = { ...spec };
+        this.deleteModalOpen = true;
+    }
+}">
+
+    <!-- 1. Executive Header Banner -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-witte-950 via-witte-900 to-indigo-950 p-6 sm:p-8 text-white shadow-2xl border border-witte-800/50">
+        <div class="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute right-1/3 -bottom-20 w-60 h-60 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl space-y-2.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider shadow-xs">
+                        <i class="bi bi-mortarboard-fill text-indigo-400"></i>
+                        Академическая структура
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        КЦП 2026: {{ kpi.total_kcp }} мест
+                    </span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                    Управление направлениями & квотами КЦП
+                </h1>
+                <p class="text-xs sm:text-sm text-blue-100/80 leading-relaxed">
+                    Администрирование каталога направлений подготовки, образовательных программ, форм обучения, стоимости и распределения контрольных цифр приема (бюджет/договор).
+                </p>
+            </div>
+
+            <!-- Quick Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button type="button" @click="openCreateModal()" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/30">
+                    <i class="bi bi-plus-circle-fill text-sm"></i>
+                    <span>Добавить направление</span>
+                </button>
+                <a href="{% url 'admin_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/30">
+                    <i class="bi bi-speedometer2 text-sm"></i>
+                    <span>Дашборд</span>
+                </a>
+                <a href="/programs/" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                    <i class="bi bi-eye text-sm"></i>
+                    <span>Публичный каталог</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- KPI strip inside banner -->
+        <div class="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-blue-200/70">
+            <div class="flex flex-wrap items-center gap-4">
+                <span><strong class="text-white">Институтов / Факультетов:</strong> {{ faculties|length }}</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Направлений:</strong> {{ kpi.total_specialties }} (активных: {{ kpi.active_specialties }})</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Программ обучения:</strong> {{ kpi.total_programs }}</span>
+            </div>
+            <div class="text-[11px] text-blue-300/80">
+                Бюджет: <strong>{{ kpi.total_budget }}</strong> мест • Платно: <strong>{{ kpi.total_paid }}</strong> мест
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. KPI Overview Cards (5 Columns) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Направлений</span>
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-journal-bookmark-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-slate-900">{{ kpi.total_specialties }}</div>
+                <div class="text-[11px] text-emerald-600 font-semibold mt-0.5">Активно: {{ kpi.active_specialties }}</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Бюджетных мест</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-emerald-950">{{ kpi.total_budget }}</div>
+                <div class="text-[11px] text-emerald-600 mt-0.5">Гос. финансирование</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Платных мест</span>
+                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-indigo-950">{{ kpi.total_paid }}</div>
+                <div class="text-[11px] text-indigo-600 mt-0.5">Договорная основа</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-purple-700">Всего КЦП (план)</span>
+                <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-layers-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-purple-950">{{ kpi.total_kcp }}</div>
+                <div class="text-[11px] text-purple-600 mt-0.5">Суммарный объем приема</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700">Программ обучения</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-diagram-3-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-blue-950">{{ kpi.total_programs }}</div>
+                <div class="text-[11px] text-blue-600 mt-0.5">Формы: очная/заоч./веч.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Search & Filter Bar -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <form method="GET" action="{% url 'admin_specialties_manage' %}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+            
+            <!-- Search Query (4 cols) -->
+            <div class="lg:col-span-4 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Поиск направления
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <input type="text" name="q" value="{{ search_query }}"
+                           placeholder="Код специальности, наименование, институт..."
+                           class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                </div>
+            </div>
+
+            <!-- Faculty Filter (3 cols) -->
+            <div class="lg:col-span-3 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Факультет / Институт
+                </label>
+                <select name="faculty" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="">Все институты и факультеты</option>
+                    {% for fac in faculties %}
+                    <option value="{{ fac.id }}" {% if faculty_filter == fac.id %}selected{% endif %}>{{ fac.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Level Filter (2 cols) -->
+            <div class="lg:col-span-2 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Уровень образования
+                </label>
+                <select name="level" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="">Все уровни</option>
+                    {% for l_code, l_name in education_levels %}
+                    <option value="{{ l_code }}" {% if level_filter == l_code %}selected{% endif %}>{{ l_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter (2 cols) -->
+            <div class="lg:col-span-2 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Статус набора
+                </label>
+                <select name="status" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="">Любой статус</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Активен (ведется прием)</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Приостановлен</option>
+                </select>
+            </div>
+
+            <!-- Action buttons (1 col) -->
+            <div class="lg:col-span-1 flex items-center gap-1.5">
+                <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center shadow-xs" title="Применить фильтр">
+                    <i class="bi bi-funnel-fill text-sm"></i>
+                </button>
+                {% if search_query or faculty_filter or level_filter or status_filter %}
+                <a href="{% url 'admin_specialties_manage' %}" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs transition-colors flex items-center justify-center shrink-0" title="Сбросить фильтры">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <div>
+                Найдено направлений: <strong class="text-slate-900 font-bold">{{ kpi.filtered_count }}</strong> из {{ kpi.total_specialties }}
+            </div>
+            <div class="text-[11px] text-slate-400">
+                Для добавления форм обучения (очная, заочная, вечерняя) используйте кнопку «+ Форма» в строке направления
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Specialties & Programs Table -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 divide-y divide-slate-100">
+                <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <tr>
+                        <th class="px-5 py-4">Направление подготовки</th>
+                        <th class="px-4 py-4">Факультет / Институт</th>
+                        <th class="px-3 py-4 text-center">Уровень</th>
+                        <th class="px-4 py-4 text-center">Квоты приема (КЦП)</th>
+                        <th class="px-4 py-4">Формы обучения & Стоимость</th>
+                        <th class="px-3 py-4 text-center">Статус</th>
+                        <th class="px-5 py-4 text-right">Действия</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for sp in specialties %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        
+                        <!-- 1. Код и Наименование -->
+                        <td class="px-5 py-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-mono font-bold text-xs shrink-0 mt-0.5 shadow-xs">
+                                    {{ sp.code|slice:":5" }}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                                        <span class="font-mono text-indigo-600">{{ sp.code }}</span>
+                                        <span>{{ sp.name }}</span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                                        <span>Подано заявлений: <strong class="text-slate-700 font-semibold">{{ sp.apps_count }}</strong></span>
+                                        {% if sp.total_places > 0 %}
+                                        <span>•</span>
+                                        <span>Конкурс: <strong>{% widthratio sp.apps_count sp.total_places 1 %}</strong> чел./место</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 2. Факультет -->
+                        <td class="px-4 py-4">
+                            <div class="font-semibold text-slate-800">{{ sp.faculty.name }}</div>
+                            {% if sp.faculty.code %}
+                            <span class="inline-block mt-0.5 px-2 py-0.2 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold">
+                                {{ sp.faculty.code }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 3. Уровень образования -->
+                        <td class="px-3 py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold {% if sp.education_level == 'BACHELOR' %}bg-blue-50 text-blue-700 border border-blue-200/60{% elif sp.education_level == 'MASTER' %}bg-purple-50 text-purple-700 border border-purple-200/60{% elif sp.education_level == 'SPECIALIST' %}bg-amber-50 text-amber-700 border border-amber-200/60{% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                                {{ sp.get_education_level_display }}
+                            </span>
+                        </td>
+
+                        <!-- 4. Квоты приема -->
+                        <td class="px-4 py-4 text-center">
+                            <div class="inline-flex flex-col items-center">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="text-emerald-700 font-bold" title="Бюджетные места">Б: {{ sp.budget_places }}</span>
+                                    <span class="text-slate-300">|</span>
+                                    <span class="text-indigo-700 font-bold" title="Платные места">П: {{ sp.paid_places }}</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 font-semibold mt-0.5">
+                                    Всего: <strong class="text-slate-900 font-black">{{ sp.total_places }}</strong> мест
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 5. Формы обучения & программы -->
+                        <td class="px-4 py-4">
+                            <div class="space-y-1.5">
+                                {% for prog in sp.programs.all %}
+                                <div class="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px]">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full {% if prog.study_form == 'FULL_TIME' %}bg-blue-500{% elif prog.study_form == 'PART_TIME' %}bg-amber-500{% else %}bg-purple-500{% endif %}"></span>
+                                        <span class="font-bold text-slate-800">{{ prog.get_study_form_display }}</span>
+                                        <span class="text-slate-400">({{ prog.duration }})</span>
+                                    </div>
+                                    <div class="font-mono font-semibold text-indigo-700 shrink-0">
+                                        {{ prog.tuition_fee|floatformat:0 }} ₽/год
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <span class="text-xs text-slate-400 italic">Формы не настроены</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+
+                        <!-- 6. Статус набора -->
+                        <td class="px-3 py-4 text-center">
+                            <form method="POST" action="{% url 'admin_specialties_manage' %}" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="toggle_active">
+                                <input type="hidden" name="specialty_id" value="{{ sp.id }}">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all {% if sp.is_active %}bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100{% else %}bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200{% endif %}"
+                                        title="Нажмите для переключения статуса приема">
+                                    <span class="w-1.5 h-1.5 rounded-full {% if sp.is_active %}bg-emerald-500{% else %}bg-slate-400{% endif %}"></span>
+                                    <span>{% if sp.is_active %}Активен{% else %}Приостановлен{% endif %}</span>
+                                </button>
+                            </form>
+                        </td>
+
+                        <!-- 7. Действия -->
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                
+                                <!-- Добавить форму обучения -->
+                                <button type="button"
+                                        @click="openProgramModal({
+                                            id: {{ sp.id }},
+                                            code: '{{ sp.code|escapejs }}',
+                                            name: '{{ sp.name|escapejs }}'
+                                        })"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200/60 transition-colors"
+                                        title="Добавить форму обучения / программу">
+                                    <i class="bi bi-plus-lg text-sm"></i>
+                                </button>
+
+                                <!-- Редактировать -->
+                                <button type="button"
+                                        @click="openEditModal({
+                                            id: {{ sp.id }},
+                                            facultyId: '{{ sp.faculty.id }}',
+                                            code: '{{ sp.code|escapejs }}',
+                                            name: '{{ sp.name|escapejs }}',
+                                            level: '{{ sp.education_level }}',
+                                            budgetPlaces: {{ sp.budget_places }},
+                                            paidPlaces: {{ sp.paid_places }},
+                                            isActive: {{ sp.is_active|yesno:'true,false' }}
+                                        })"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/60 transition-colors"
+                                        title="Редактировать параметры направления">
+                                    <i class="bi bi-pencil-square text-sm"></i>
+                                </button>
+
+                                <!-- Удалить -->
+                                <button type="button"
+                                        @click="openDeleteModal({
+                                            id: {{ sp.id }},
+                                            code: '{{ sp.code|escapejs }}',
+                                            name: '{{ sp.name|escapejs }}',
+                                            appsCount: {{ sp.apps_count }}
+                                        })"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/60 transition-colors"
+                                        title="Удалить направление">
+                                    <i class="bi bi-trash text-sm"></i>
+                                </button>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-5 py-12 text-center text-slate-400">
+                            <div class="max-w-sm mx-auto space-y-3">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+                                    <i class="bi bi-journal-x"></i>
+                                </div>
+                                <div class="text-sm font-bold text-slate-700">Направления не найдены</div>
+                                <p class="text-xs text-slate-400">Попробуйте изменить параметры поиска или добавьте новое направление подготовки.</p>
+                                <button type="button" @click="openCreateModal()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors">
+                                    <i class="bi bi-plus-circle"></i> Добавить направление
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- 5. Modal: Создание нового направления подготовки -->
+    <div x-show="createModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="createModalOpen = false"
+             class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="bi bi-plus-circle-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Новое направление подготовки</h3>
+                        <p class="text-xs text-slate-500">Добавление специальности и установка квот КЦП</p>
+                    </div>
+                </div>
+                <button @click="createModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'admin_specialties_manage' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_specialty">
+
+                <!-- Факультет -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Факультет / Институт *</label>
+                    <select name="faculty" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        {% for fac in faculties %}
+                        <option value="{{ fac.id }}">{{ fac.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Код и Наименование -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Код *</label>
+                        <input type="text" name="code" required placeholder="09.03.03"
+                               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 font-mono focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                    <div class="sm:col-span-2 space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Наименование направления *</label>
+                        <input type="text" name="name" required placeholder="Прикладная информатика"
+                               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                </div>
+
+                <!-- Уровень образования -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Уровень образования *</label>
+                    <select name="education_level" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        {% for l_code, l_name in education_levels %}
+                        <option value="{{ l_code }}">{{ l_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Квоты приема -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">Квоты приема (КЦП 2026)</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-emerald-700">Бюджетные места</label>
+                            <input type="number" name="budget_places" value="0" min="0"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-indigo-700">Платные места (Договор)</label>
+                            <input type="number" name="paid_places" value="25" min="0"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Начальная форма обучения -->
+                <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-3">
+                    <div class="text-xs font-bold text-blue-900 uppercase tracking-wider">Начальная программа обучения</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-600">Форма</label>
+                            <select name="initial_study_form" class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none">
+                                {% for f_code, f_name in study_forms %}
+                                <option value="{{ f_code }}">{{ f_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-600">Стоимость (₽/год)</label>
+                            <input type="number" name="initial_tuition_fee" value="160000" step="1000"
+                                   class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-600">Срок обучения</label>
+                            <input type="text" name="initial_duration" value="4 года"
+                                   class="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статус активности -->
+                <label class="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
+                    <input type="checkbox" name="is_active" value="1" checked class="rounded text-emerald-600 focus:ring-emerald-500">
+                    <span>Открыть прием документов на данное направление</span>
+                </label>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="createModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/20">
+                        Создать направление
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. Modal: Редактирование направления подготовки -->
+    <div x-show="editModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="editModalOpen = false"
+             class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Редактирование параметров</h3>
+                        <p class="text-xs text-slate-500" x-text="activeSpecialty.code + ' ' + activeSpecialty.name"></p>
+                    </div>
+                </div>
+                <button @click="editModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'admin_specialties_manage' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_specialty">
+                <input type="hidden" name="specialty_id" :value="activeSpecialty.id">
+
+                <!-- Факультет -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Факультет / Институт *</label>
+                    <select name="faculty" x-model="activeSpecialty.facultyId" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        {% for fac in faculties %}
+                        <option value="{{ fac.id }}">{{ fac.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Код и Наименование -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Код *</label>
+                        <input type="text" name="code" x-model="activeSpecialty.code" required
+                               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 font-mono focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                    <div class="sm:col-span-2 space-y-1.5">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Наименование *</label>
+                        <input type="text" name="name" x-model="activeSpecialty.name" required
+                               class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                    </div>
+                </div>
+
+                <!-- Уровень образования -->
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Уровень образования *</label>
+                    <select name="education_level" x-model="activeSpecialty.level" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        {% for l_code, l_name in education_levels %}
+                        <option value="{{ l_code }}">{{ l_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Квоты приема -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                    <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">Квоты приема (КЦП 2026)</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-emerald-700">Бюджетные места</label>
+                            <input type="number" name="budget_places" x-model="activeSpecialty.budgetPlaces" min="0"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-indigo-700">Платные места (Договор)</label>
+                            <input type="number" name="paid_places" x-model="activeSpecialty.paidPlaces" min="0"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Статус активности -->
+                <label class="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
+                    <input type="checkbox" name="is_active" value="1" x-model="activeSpecialty.isActive" class="rounded text-emerald-600 focus:ring-emerald-500">
+                    <span>Ведется активный набор абитуриентов</span>
+                </label>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="editModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/20">
+                        Сохранить изменения
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. Modal: Добавление формы обучения (EducationProgram) -->
+    <div x-show="programModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="programModalOpen = false"
+             class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                        <i class="bi bi-diagram-3-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Добавить форму обучения</h3>
+                        <p class="text-xs text-slate-500" x-text="activeSpecialty.code + ' ' + activeSpecialty.name"></p>
+                    </div>
+                </div>
+                <button @click="programModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <form method="POST" action="{% url 'admin_specialties_manage' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_program">
+                <input type="hidden" name="specialty_id" :value="activeSpecialty.id">
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Форма обучения *</label>
+                    <select name="study_form" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                        {% for f_code, f_name in study_forms %}
+                        <option value="{{ f_code }}">{{ f_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Стоимость обучения в год (руб.) *</label>
+                    <input type="number" name="tuition_fee" value="150000" step="1000" min="0" required
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 font-mono font-bold focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Нормативный срок обучения *</label>
+                    <input type="text" name="duration" value="4 года" required placeholder="Например: 4 года или 2 года"
+                           class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="programModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/20">
+                        Сохранить программу
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 8. Modal: Подтверждение удаления -->
+    <div x-show="deleteModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="deleteModalOpen = false"
+             class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
+                    <i class="bi bi-trash-fill"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Удаление направления</h3>
+                    <p class="text-xs text-slate-500" x-text="activeSpecialty.code + ' ' + activeSpecialty.name"></p>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Вы действительно хотите удалить данное направление подготовки и все связанные формы обучения из базы CRM?
+            </p>
+
+            <form method="POST" action="{% url 'admin_specialties_manage' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_specialty">
+                <input type="hidden" name="specialty_id" :value="activeSpecialty.id">
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" @click="deleteModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md shadow-rose-900/20">
+                        Удалить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

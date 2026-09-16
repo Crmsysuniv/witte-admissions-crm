@@ -50,6 +50,7 @@ urlpatterns = [
     path('admissions/', include('admissions.urls')),
     path('admin/dashboard/', core_views.admin_dashboard_view, name='admin_dashboard'),
     path('admin/users/', core_views.admin_users_list_view, name='admin_users_list'),
+    path('admin/specialties/', core_views.admin_specialties_manage_view, name='admin_specialties_manage'),
     path('admin/', admin.site.urls),
 ]
 

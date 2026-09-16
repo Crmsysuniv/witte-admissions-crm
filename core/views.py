@@ -779,5 +779,204 @@ def admin_users_list_view(request):
     return render(request, 'admin/users_list.html', context)
 
 
+@admin_required
+def admin_specialties_manage_view(request):
+    """
+    Управление справочниками направлений подготовки, образовательных программ и квот приема (admin/specialties_manage.html).
+    Позволяет администратору:
+    - Просматривать сводную таблицу всех направлений с квотами (бюджет/платка) и программами;
+    - Фильтровать по факультету, уровню образования и статусу активности;
+    - Добавлять новые направления подготовки и редактировать существующие;
+    - Добавлять и настраивать образовательные программы (формы обучения, стоимость, срок);
+    - Быстро переключать статус набора (is_active) и удалять неиспользуемые записи.
+    """
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create_specialty':
+            faculty_id = request.POST.get('faculty')
+            code = request.POST.get('code', '').strip()
+            name = request.POST.get('name', '').strip()
+            education_level = request.POST.get('education_level', Specialty.EducationLevel.BACHELOR)
+            budget_places = int(request.POST.get('budget_places') or 0)
+            paid_places = int(request.POST.get('paid_places') or 0)
+            is_active = request.POST.get('is_active') in ['1', 'true', 'on', True]
+
+            # Опциональные данные для начальной программы
+            initial_study_form = request.POST.get('initial_study_form')
+            initial_tuition_fee = float(request.POST.get('initial_tuition_fee') or 0)
+            initial_duration = request.POST.get('initial_duration', '').strip() or '4 года'
+
+            faculty = get_object_or_404(Faculty, id=faculty_id)
+
+            if code and name:
+                specialty, created = Specialty.objects.get_or_create(
+                    code=code,
+                    name=name,
+                    education_level=education_level,
+                    defaults={
+                        'faculty': faculty,
+                        'budget_places': budget_places,
+                        'paid_places': paid_places,
+                        'is_active': is_active,
+                    }
+                )
+                if not created:
+                    specialty.faculty = faculty
+                    specialty.budget_places = budget_places
+                    specialty.paid_places = paid_places
+                    specialty.is_active = is_active
+                    specialty.save()
+
+                if initial_study_form:
+                    EducationProgram.objects.get_or_create(
+                        specialty=specialty,
+                        study_form=initial_study_form,
+                        defaults={
+                            'tuition_fee': initial_tuition_fee,
+                            'duration': initial_duration,
+                            'is_active': True,
+                        }
+                    )
+
+                messages.success(request, f"Направление подготовки «{specialty.code} {specialty.name}» успешно сохранено.")
+            else:
+                messages.error(request, "Пожалуйста, заполните код и наименование направления подготовки.")
+
+        elif action == 'edit_specialty':
+            specialty_id = request.POST.get('specialty_id')
+            specialty = get_object_or_404(Specialty, id=specialty_id)
+            faculty_id = request.POST.get('faculty')
+            specialty.faculty = get_object_or_404(Faculty, id=faculty_id)
+            specialty.code = request.POST.get('code', '').strip() or specialty.code
+            specialty.name = request.POST.get('name', '').strip() or specialty.name
+            specialty.education_level = request.POST.get('education_level', specialty.education_level)
+            specialty.budget_places = int(request.POST.get('budget_places') or 0)
+            specialty.paid_places = int(request.POST.get('paid_places') or 0)
+            specialty.is_active = request.POST.get('is_active') in ['1', 'true', 'on', True]
+            specialty.save()
+            messages.success(request, f"Параметры направления «{specialty.code} {specialty.name}» успешно обновлены.")
+
+        elif action == 'toggle_active':
+            specialty_id = request.POST.get('specialty_id')
+            specialty = get_object_or_404(Specialty, id=specialty_id)
+            specialty.is_active = not specialty.is_active
+            specialty.save()
+            st_text = "активирован" if specialty.is_active else "приостановлен"
+            messages.success(request, f"Набор на направление «{specialty.code}» успешно {st_text}.")
+
+        elif action == 'delete_specialty':
+            specialty_id = request.POST.get('specialty_id')
+            specialty = get_object_or_404(Specialty, id=specialty_id)
+            apps_count = Application.objects.filter(program__specialty=specialty).count()
+            if apps_count > 0:
+                messages.warning(
+                    request,
+                    f"Направление «{specialty.code}» не может быть удалено, так как к нему привязано {apps_count} поданных заявлений. Вместо этого вы можете деактивировать набор."
+                )
+            else:
+                s_name = f"{specialty.code} {specialty.name}"
+                specialty.delete()
+                messages.success(request, f"Направление «{s_name}» успешно удалено.")
+
+        elif action == 'add_program':
+            specialty_id = request.POST.get('specialty_id')
+            specialty = get_object_or_404(Specialty, id=specialty_id)
+            study_form = request.POST.get('study_form')
+            tuition_fee = float(request.POST.get('tuition_fee') or 0)
+            duration = request.POST.get('duration', '').strip() or '4 года'
+
+            if study_form in EducationProgram.StudyForm.values:
+                prog, created = EducationProgram.objects.update_or_create(
+                    specialty=specialty,
+                    study_form=study_form,
+                    defaults={
+                        'tuition_fee': tuition_fee,
+                        'duration': duration,
+                        'is_active': True,
+                    }
+                )
+                action_text = "добавлена" if created else "обновлена"
+                messages.success(request, f"Программа ({prog.get_study_form_display()}) для направления «{specialty.code}» успешно {action_text}.")
+            else:
+                messages.error(request, "Некорректная форма обучения.")
+
+        return redirect(request.META.get('HTTP_REFERER') or reverse('admin_specialties_manage'))
+
+    # GET-параметры
+    search_query = request.GET.get('q', '').strip()
+    faculty_filter = request.GET.get('faculty', '').strip()
+    level_filter = request.GET.get('level', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    faculties = Faculty.objects.all().order_by('name')
+
+    # Базовый QuerySet
+    specialties_qs = Specialty.objects.select_related('faculty').prefetch_related(
+        'programs',
+        'programs__applications'
+    ).annotate(
+        apps_count=Count('programs__applications')
+    ).order_by('faculty__name', 'code')
+
+    # Фильтры
+    if search_query:
+        specialties_qs = specialties_qs.filter(
+            Q(code__icontains=search_query) |
+            Q(name__icontains=search_query) |
+            Q(faculty__name__icontains=search_query)
+        )
+
+    if faculty_filter and faculty_filter.isdigit():
+        specialties_qs = specialties_qs.filter(faculty_id=int(faculty_filter))
+
+    if level_filter in Specialty.EducationLevel.values:
+        specialties_qs = specialties_qs.filter(education_level=level_filter)
+
+    if status_filter == 'active':
+        specialties_qs = specialties_qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        specialties_qs = specialties_qs.filter(is_active=False)
+
+    # KPI
+    all_specs = Specialty.objects.all()
+    total_specialties = all_specs.count()
+    active_specialties = all_specs.filter(is_active=True).count()
+    total_budget_places = all_specs.aggregate(t=Sum('budget_places'))['t'] or 0
+    total_paid_places = all_specs.aggregate(t=Sum('paid_places'))['t'] or 0
+    total_kcp = total_budget_places + total_paid_places
+    total_programs_count = EducationProgram.objects.count()
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Панель администратора', 'url': '/admin/dashboard/'},
+        {'title': 'Управление направлениями и квотами КЦП', 'is_active': True},
+    ]
+
+    context = {
+        'specialties': specialties_qs,
+        'faculties': faculties,
+        'education_levels': Specialty.EducationLevel.choices,
+        'study_forms': EducationProgram.StudyForm.choices,
+        'kpi': {
+            'total_specialties': total_specialties,
+            'active_specialties': active_specialties,
+            'total_budget': total_budget_places,
+            'total_paid': total_paid_places,
+            'total_kcp': total_kcp,
+            'total_programs': total_programs_count,
+            'filtered_count': specialties_qs.count(),
+        },
+        'search_query': search_query,
+        'faculty_filter': int(faculty_filter) if faculty_filter.isdigit() else '',
+        'level_filter': level_filter,
+        'status_filter': status_filter,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'admin/specialties_manage.html', context)
+
+
+
 
 
