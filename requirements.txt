@@ -4,3 +4,4 @@ pillow
 openpyxl
 python-docx
 whitenoise
+gunicorn
