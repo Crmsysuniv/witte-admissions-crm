@@ -287,6 +287,13 @@
                     <span class="flex-1">Аналитический дашборд</span>
                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/30 text-indigo-200">KPI</span>
                 </a>
+
+                <!-- 13.1 Управление учетными записями -->
+                <a href="/admin/users/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/users/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-people-fill text-lg text-blue-400"></i>
+                    <span class="flex-1">Управление пользователями</span>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-500/30 text-blue-200">Роли</span>
+                </a>
                 {% endif %}
 
                 <!-- 14. Панель администратора Django -->

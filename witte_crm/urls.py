@@ -49,6 +49,7 @@ urlpatterns = [
     path('feedback/', include('feedback.urls')),
     path('admissions/', include('admissions.urls')),
     path('admin/dashboard/', core_views.admin_dashboard_view, name='admin_dashboard'),
+    path('admin/users/', core_views.admin_users_list_view, name='admin_users_list'),
     path('admin/', admin.site.urls),
 ]
 

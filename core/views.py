@@ -1,6 +1,8 @@
-from django.shortcuts import render
-from django.db.models import Sum
-from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.contrib import messages
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Sum, Count, Avg, Q, F
 
 
 def home(request):
@@ -607,6 +609,143 @@ def admin_dashboard_view(request):
     }
 
     return render(request, 'admin/dashboard.html', context)
+ 
+ 
+@admin_required
+def admin_users_list_view(request):
+    """
+    Страница управления учетными записями пользователей (admin/users_list.html).
+    Позволяет администратору:
+    - Просматривать реестр пользователей с ролями, статусом активности и датами регистрации;
+    - Выполнять полнотекстовый поиск по логину, ФИО, email, телефону и СНИЛС;
+    - Фильтровать по роли (ADMIN, OFFICER, APPLICANT) и статусу активности (активен / заблокирован);
+    - Назначать и изменять роли пользователей (с автосозданием профиля сотрудника);
+    - Блокировать и разблокировать учетные записи (с защитой от самоблокировки);
+    - Анализировать сводные показатели учетных записей в системе.
+    """
+    # Обработка POST-действий (смена роли, блокировка/разблокировка)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        user_id = request.POST.get('user_id')
+        target_user = get_object_or_404(User, id=user_id)
+
+        if action == 'update_role':
+            new_role = request.POST.get('new_role')
+            if new_role in [User.Role.ADMIN, User.Role.OFFICER, User.Role.APPLICANT]:
+                if target_user == request.user and new_role != User.Role.ADMIN:
+                    messages.error(request, "Вы не можете понизить роль собственной учетной записи администратора.")
+                else:
+                    old_role_display = target_user.get_role_display()
+                    target_user.role = new_role
+                    if new_role == User.Role.ADMIN:
+                        target_user.is_staff = True
+                    elif new_role == User.Role.OFFICER:
+                        OfficerProfile.objects.get_or_create(user=target_user)
+                    target_user.save()
+                    messages.success(
+                        request,
+                        f"Роль пользователя {target_user.get_full_name() or target_user.username} успешно изменена с «{old_role_display}» на «{target_user.get_role_display()}»."
+                    )
+            else:
+                messages.error(request, "Указана недопустимая роль пользователя.")
+
+        elif action == 'toggle_active':
+            if target_user == request.user:
+                messages.error(request, "Вы не можете заблокировать собственную учетную запись администратора.")
+            else:
+                target_user.is_active = not target_user.is_active
+                target_user.save()
+                status_text = "активирована" if target_user.is_active else "заблокирована"
+                messages.success(
+                    request,
+                    f"Учетная запись {target_user.get_full_name() or target_user.username} успешно {status_text}."
+                )
+
+        redirect_url = request.META.get('HTTP_REFERER') or reverse('admin_users_list')
+        return redirect(redirect_url)
+
+    # GET-параметры фильтрации и поиска
+    search_query = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    sort_by = request.GET.get('sort', '-date_joined').strip()
+
+    # Сводные счетчики по всей базе
+    total_users_count = User.objects.count()
+    admin_count = User.objects.filter(role=User.Role.ADMIN).count()
+    officer_count = User.objects.filter(role=User.Role.OFFICER).count()
+    applicant_count = User.objects.filter(role=User.Role.APPLICANT).count()
+    active_count = User.objects.filter(is_active=True).count()
+    inactive_count = User.objects.filter(is_active=False).count()
+
+    # Базовый QuerySet с оптимизацией
+    users_qs = User.objects.select_related('applicant_profile', 'officer_profile').prefetch_related('applications').all()
+
+    # 1. Полнотекстовый поиск
+    if search_query:
+        users_qs = users_qs.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(applicant_profile__snils__icontains=search_query)
+        ).distinct()
+
+    # 2. Фильтр по роли
+    if role_filter in [User.Role.ADMIN, User.Role.OFFICER, User.Role.APPLICANT]:
+        users_qs = users_qs.filter(role=role_filter)
+
+    # 3. Фильтр по статусу активности
+    if status_filter == 'active':
+        users_qs = users_qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users_qs = users_qs.filter(is_active=False)
+
+    # 4. Сортировка
+    valid_sorts = ['-date_joined', 'date_joined', 'username', '-username', 'role', '-role', 'last_login', '-last_login']
+    if sort_by in valid_sorts:
+        users_qs = users_qs.order_by(sort_by)
+    else:
+        users_qs = users_qs.order_by('-date_joined')
+
+    total_filtered_count = users_qs.count()
+
+    # 5. Пагинация (15 записей на страницу)
+    paginator = Paginator(users_qs, 15)
+    page_number = request.GET.get('page', 1)
+    try:
+        users_page = paginator.get_page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        users_page = paginator.get_page(1)
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Панель администратора', 'url': '/admin/dashboard/'},
+        {'title': 'Управление учетными записями', 'is_active': True},
+    ]
+
+    context = {
+        'users_page': users_page,
+        'roles': User.Role.choices,
+        'kpi': {
+            'total': total_users_count,
+            'admin': admin_count,
+            'officer': officer_count,
+            'applicant': applicant_count,
+            'active': active_count,
+            'inactive': inactive_count,
+            'filtered': total_filtered_count,
+        },
+        'search_query': search_query,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'sort_by': sort_by,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'admin/users_list.html', context)
+
 
 
 

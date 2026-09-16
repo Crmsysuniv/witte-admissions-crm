@@ -1,0 +1,744 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Управление учетными записями и ролями | МУ им. С.Ю. Витте CRM{% endblock %}
+
+{% block header_breadcrumb %}Управление пользователями & ролями{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    roleModalOpen: false,
+    activeModalOpen: false,
+    detailModalOpen: false,
+
+    activeUserId: null,
+    activeUsername: '',
+    activeFullName: '',
+    activeRole: '',
+    activeRoleDisplay: '',
+    selectedNewRole: '',
+    activeIsActive: true,
+    activeDetail: {},
+
+    openRoleModal(id, username, fullName, role, roleDisplay) {
+        this.activeUserId = id;
+        this.activeUsername = username;
+        this.activeFullName = fullName || username;
+        this.activeRole = role;
+        this.activeRoleDisplay = roleDisplay;
+        this.selectedNewRole = role;
+        this.roleModalOpen = true;
+    },
+
+    openActiveModal(id, username, fullName, isActive) {
+        this.activeUserId = id;
+        this.activeUsername = username;
+        this.activeFullName = fullName || username;
+        this.activeIsActive = isActive;
+        this.activeModalOpen = true;
+    },
+
+    openDetailModal(detail) {
+        this.activeDetail = detail;
+        this.detailModalOpen = true;
+    }
+}">
+
+    <!-- 1. Executive Header Banner -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-witte-950 via-witte-900 to-indigo-950 p-6 sm:p-8 text-white shadow-2xl border border-witte-800/50">
+        <div class="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute right-1/3 -bottom-20 w-60 h-60 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl space-y-2.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider shadow-xs">
+                        <i class="bi bi-shield-lock-fill text-indigo-400"></i>
+                        Администрирование CRM
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Учетные записи: {{ kpi.total }}
+                    </span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                    Управление учетными записями и ролями
+                </h1>
+                <p class="text-xs sm:text-sm text-blue-100/80 leading-relaxed">
+                    Централизованный реестр пользователей CRM приемной комиссии МУ им. С.Ю. Витте: назначение ролей (Администратор, Сотрудник комиссии, Абитуриент), управление доступом и статусом активности.
+                </p>
+            </div>
+
+            <!-- Quick Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a href="{% url 'admin_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/30">
+                    <i class="bi bi-speedometer2 text-sm"></i>
+                    <span>Аналитический дашборд</span>
+                </a>
+                <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30">
+                    <i class="bi bi-card-checklist text-sm"></i>
+                    <span>Реестр заявлений</span>
+                </a>
+                <a href="/admin/accounts/user/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                    <i class="bi bi-gear-wide-connected text-sm"></i>
+                    <span>Django Admin</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Info stats bar -->
+        <div class="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-blue-200/70">
+            <div class="flex flex-wrap items-center gap-4">
+                <span><strong class="text-white">Администраторов:</strong> {{ kpi.admin }}</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Сотрудников комиссии:</strong> {{ kpi.officer }}</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Абитуриентов:</strong> {{ kpi.applicant }}</span>
+            </div>
+            <div class="text-[11px] text-blue-300/80">
+                <i class="bi bi-person-check-fill text-emerald-400"></i> Активных: {{ kpi.active }} | <i class="bi bi-person-x-fill text-rose-400"></i> Заблокировано: {{ kpi.inactive }}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. KPI Status Overview Cards (5 Columns) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        
+        <!-- Total -->
+        <a href="?role={% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="bg-white p-4 sm:p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between {% if not role_filter %}border-slate-900 ring-2 ring-slate-800/10 bg-slate-50/50{% else %}border-slate-200/80 hover:border-slate-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Всего в базе</span>
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-slate-900">{{ kpi.total }}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Все пользователи CRM</div>
+            </div>
+        </a>
+
+        <!-- Admins -->
+        <a href="?role=ADMIN{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="bg-white p-4 sm:p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between {% if role_filter == 'ADMIN' %}border-purple-600 ring-2 ring-purple-500/20 bg-purple-50/30{% else %}border-slate-200/80 hover:border-purple-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-purple-700">Администраторы</span>
+                <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-purple-950">{{ kpi.admin }}</div>
+                <div class="text-[11px] text-purple-600 mt-0.5">Полный доступ к системе</div>
+            </div>
+        </a>
+
+        <!-- Officers -->
+        <a href="?role=OFFICER{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="bg-white p-4 sm:p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between {% if role_filter == 'OFFICER' %}border-blue-600 ring-2 ring-blue-500/20 bg-blue-50/30{% else %}border-slate-200/80 hover:border-blue-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700">Сотрудники</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-person-badge-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-blue-950">{{ kpi.officer }}</div>
+                <div class="text-[11px] text-blue-600 mt-0.5">Операторы комиссии</div>
+            </div>
+        </a>
+
+        <!-- Applicants -->
+        <a href="?role=APPLICANT{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="bg-white p-4 sm:p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between {% if role_filter == 'APPLICANT' %}border-emerald-600 ring-2 ring-emerald-500/20 bg-emerald-50/30{% else %}border-slate-200/80 hover:border-emerald-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Абитуриенты</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-emerald-950">{{ kpi.applicant }}</div>
+                <div class="text-[11px] text-emerald-600 mt-0.5">Личные кабинеты</div>
+            </div>
+        </a>
+
+        <!-- Inactive (Blocked) -->
+        <a href="?status=inactive{% if role_filter %}&role={{ role_filter }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}"
+           class="bg-white p-4 sm:p-5 rounded-2xl border transition-all shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1 {% if status_filter == 'inactive' %}border-rose-600 ring-2 ring-rose-500/20 bg-rose-50/30{% else %}border-slate-200/80 hover:border-rose-300{% endif %}">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-rose-700">Заблокировано</span>
+                <div class="w-8 h-8 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-sm">
+                    <i class="bi bi-slash-circle-fill"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div class="text-2xl font-black text-rose-950">{{ kpi.inactive }}</div>
+                <div class="text-[11px] text-rose-600 mt-0.5">Доступ ограничен</div>
+            </div>
+        </a>
+
+    </div>
+
+    <!-- 3. Search & Filters Panel -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <form method="GET" action="{% url 'admin_users_list' %}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+            
+            <!-- Search Query (5 cols) -->
+            <div class="lg:col-span-5 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Поиск пользователя
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <input type="text" name="q" value="{{ search_query }}"
+                           placeholder="Логин, ФИО, Email, телефон, СНИЛС..."
+                           class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                </div>
+            </div>
+
+            <!-- Role Filter (2 cols) -->
+            <div class="lg:col-span-2 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Роль
+                </label>
+                <select name="role" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="">Все роли</option>
+                    {% for r_code, r_name in roles %}
+                    <option value="{{ r_code }}" {% if role_filter == r_code %}selected{% endif %}>{{ r_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter (2 cols) -->
+            <div class="lg:col-span-2 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Активность
+                </label>
+                <select name="status" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="">Все статусы</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Только активные</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Заблокированные</option>
+                </select>
+            </div>
+
+            <!-- Sort By (2 cols) -->
+            <div class="lg:col-span-2 space-y-1.5">
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Сортировка
+                </label>
+                <select name="sort" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none">
+                    <option value="-date_joined" {% if sort_by == '-date_joined' %}selected{% endif %}>Сначала новые</option>
+                    <option value="date_joined" {% if sort_by == 'date_joined' %}selected{% endif %}>Сначала старые</option>
+                    <option value="username" {% if sort_by == 'username' %}selected{% endif %}>По логину (А-Я)</option>
+                    <option value="-username" {% if sort_by == '-username' %}selected{% endif %}>По логину (Я-А)</option>
+                    <option value="role" {% if sort_by == 'role' %}selected{% endif %}>По роли</option>
+                    <option value="-last_login" {% if sort_by == '-last_login' %}selected{% endif %}>По посл. входу</option>
+                </select>
+            </div>
+
+            <!-- Filter Action Buttons (1 col) -->
+            <div class="lg:col-span-1 flex items-center gap-1.5">
+                <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center shadow-xs" title="Применить фильтр">
+                    <i class="bi bi-funnel-fill text-sm"></i>
+                </button>
+                {% if search_query or role_filter or status_filter or sort_by != '-date_joined' %}
+                <a href="{% url 'admin_users_list' %}" class="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs transition-colors flex items-center justify-center shrink-0" title="Сбросить фильтры">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+
+        </form>
+
+        <!-- Active Filter Indicator Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
+            <div>
+                Найдено записей: <strong class="text-slate-900 font-bold">{{ kpi.filtered }}</strong> из {{ kpi.total }}
+            </div>
+            {% if search_query %}
+            <div class="flex items-center gap-1.5">
+                <span>Поиск по запросу:</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200/60">
+                    «{{ search_query }}»
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 4. Users Table Registry -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 divide-y divide-slate-100">
+                <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <tr>
+                        <th class="px-5 py-4">Пользователь</th>
+                        <th class="px-4 py-4">Роль в системе</th>
+                        <th class="px-3 py-4 text-center">Статус</th>
+                        <th class="px-4 py-4">Профиль / Данные</th>
+                        <th class="px-4 py-4">Регистрация / Вход</th>
+                        <th class="px-5 py-4 text-right">Действия</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for u in users_page %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        
+                        <!-- 1. Пользователь (Аватар, логин, имя, email, телефон) -->
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 shadow-xs {% if u.role == 'ADMIN' %}bg-gradient-to-br from-purple-500 to-indigo-600 text-white{% elif u.role == 'OFFICER' %}bg-gradient-to-br from-blue-500 to-indigo-500 text-white{% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
+                                    {{ u.username|first|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="font-bold text-slate-900 text-sm truncate">{{ u.get_full_name|default:u.username }}</span>
+                                        {% if u.is_superuser %}
+                                        <span class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-300" title="Суперпользователь Django">
+                                            Superuser
+                                        </span>
+                                        {% endif %}
+                                        {% if u == request.user %}
+                                        <span class="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 text-[10px] font-bold border border-blue-200">
+                                            Вы
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                                        <span class="font-mono text-indigo-600 font-semibold">@{{ u.username }}</span>
+                                        {% if u.email %}
+                                        <span>•</span>
+                                        <span class="text-slate-500 truncate" title="{{ u.email }}">{{ u.email }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if u.phone %}
+                                    <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                        <i class="bi bi-telephone text-[10px]"></i>
+                                        <span>{{ u.phone }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 2. Роль в системе (Бейдж) -->
+                        <td class="px-4 py-4">
+                            {% if u.role == 'ADMIN' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200/80 shadow-xs">
+                                <i class="bi bi-shield-lock-fill text-purple-600"></i>
+                                <span>Администратор</span>
+                            </span>
+                            {% elif u.role == 'OFFICER' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200/80 shadow-xs">
+                                <i class="bi bi-person-badge-fill text-blue-600"></i>
+                                <span>Сотрудник комиссии</span>
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs">
+                                <i class="bi bi-mortarboard text-emerald-600"></i>
+                                <span>Абитуриент</span>
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 3. Статус активности -->
+                        <td class="px-3 py-4 text-center">
+                            {% if u.is_active %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Активен
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200/60">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Заблокирован
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 4. Профиль / Связанные данные -->
+                        <td class="px-4 py-4">
+                            {% if u.role == 'APPLICANT' %}
+                                {% if u.applicant_profile %}
+                                <div class="space-y-0.5 text-xs">
+                                    {% if u.applicant_profile.snils %}
+                                    <div class="text-slate-700"><span class="text-slate-400">СНИЛС:</span> <span class="font-mono font-semibold">{{ u.applicant_profile.snils }}</span></div>
+                                    {% endif %}
+                                    <div class="text-slate-500 text-[11px]">
+                                        Заявлений: <strong class="text-slate-800">{{ u.applications.count }}</strong>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-xs text-slate-400 italic">Профиль не заполнен</span>
+                                {% endif %}
+                            {% elif u.role == 'OFFICER' %}
+                                {% if u.officer_profile %}
+                                <div class="space-y-0.5 text-xs">
+                                    <div class="font-semibold text-slate-800">{{ u.officer_profile.position|default:"Сотрудник ПК" }}</div>
+                                    {% if u.officer_profile.cabinet %}
+                                    <div class="text-[11px] text-slate-500">Каб. {{ u.officer_profile.cabinet }}</div>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-xs text-slate-400">Приемная комиссия</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs text-purple-700 font-semibold">Администрирование & Аналитика</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 5. Регистрация и вход -->
+                        <td class="px-4 py-4">
+                            <div class="space-y-0.5 text-xs">
+                                <div class="text-slate-700">
+                                    <span class="text-slate-400 text-[10px] uppercase">Рег:</span> {{ u.date_joined|date:"d.m.Y H:i" }}
+                                </div>
+                                <div class="text-[11px] text-slate-500">
+                                    <span class="text-slate-400 text-[10px] uppercase">Вход:</span> {{ u.last_login|date:"d.m.Y H:i"|default:"Не входил" }}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 6. Действия (Кнопки) -->
+                        <td class="px-5 py-4 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                
+                                <!-- Изменить роль -->
+                                <button type="button"
+                                        @click="openRoleModal({{ u.id }}, '{{ u.username|escapejs }}', '{{ u.get_full_name|escapejs }}', '{{ u.role }}', '{{ u.get_role_display|escapejs }}')"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/60 transition-colors"
+                                        title="Назначить / изменить роль">
+                                    <i class="bi bi-shield-gear text-sm"></i>
+                                </button>
+
+                                <!-- Заблокировать / Активировать -->
+                                {% if u != request.user %}
+                                <button type="button"
+                                        @click="openActiveModal({{ u.id }}, '{{ u.username|escapejs }}', '{{ u.get_full_name|escapejs }}', {{ u.is_active|yesno:'true,false' }})"
+                                        class="p-2 rounded-xl transition-colors border {% if u.is_active %}bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border-slate-200/60{% else %}bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200{% endif %}"
+                                        title="{% if u.is_active %}Заблокировать пользователя{% else %}Разблокировать пользователя{% endif %}">
+                                    <i class="bi {% if u.is_active %}bi-slash-circle{% else %}bi-check-circle{% endif %} text-sm"></i>
+                                </button>
+                                {% endif %}
+
+                                <!-- Карточка / Детали -->
+                                <button type="button"
+                                        @click="openDetailModal({
+                                            id: {{ u.id }},
+                                            username: '{{ u.username|escapejs }}',
+                                            fullName: '{{ u.get_full_name|escapejs }}',
+                                            email: '{{ u.email|escapejs }}',
+                                            phone: '{{ u.phone|escapejs }}',
+                                            role: '{{ u.role }}',
+                                            roleDisplay: '{{ u.get_role_display|escapejs }}',
+                                            isActive: {{ u.is_active|yesno:'true,false' }},
+                                            dateJoined: '{{ u.date_joined|date:'d.m.Y H:i' }}',
+                                            lastLogin: '{{ u.last_login|date:'d.m.Y H:i'|default:'Не входил' }}',
+                                            isSuperuser: {{ u.is_superuser|yesno:'true,false' }},
+                                            isStaff: {{ u.is_staff|yesno:'true,false' }},
+                                            {% if u.role == 'APPLICANT' and u.applicant_profile %}
+                                            snils: '{{ u.applicant_profile.snils|escapejs }}',
+                                            passport: '{{ u.applicant_profile.passport_series|escapejs }} {{ u.applicant_profile.passport_number|escapejs }}',
+                                            birthDate: '{{ u.applicant_profile.birth_date|date:'d.m.Y'|default:'—' }}',
+                                            address: '{{ u.applicant_profile.address|escapejs }}',
+                                            appsCount: {{ u.applications.count }},
+                                            {% elif u.role == 'OFFICER' and u.officer_profile %}
+                                            position: '{{ u.officer_profile.position|escapejs }}',
+                                            cabinet: '{{ u.officer_profile.cabinet|escapejs }}',
+                                            {% endif %}
+                                        })"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200/60 transition-colors"
+                                        title="Просмотр карточки пользователя">
+                                    <i class="bi bi-info-circle text-sm"></i>
+                                </button>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-5 py-12 text-center text-slate-400">
+                            <div class="max-w-sm mx-auto space-y-3">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+                                    <i class="bi bi-person-x"></i>
+                                </div>
+                                <div class="text-sm font-bold text-slate-700">Пользователи не найдены</div>
+                                <p class="text-xs text-slate-400">Попробуйте изменить параметры поискового запроса или сбросить фильтры.</p>
+                                <a href="{% url 'admin_users_list' %}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Сбросить фильтры
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. Pagination Footer -->
+        {% if users_page.has_other_pages %}
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <div>
+                Показаны записи <strong>{{ users_page.start_index }}–{{ users_page.end_index }}</strong> из <strong>{{ kpi.filtered }}</strong>
+            </div>
+
+            <div class="flex items-center gap-1">
+                {% if users_page.has_previous %}
+                <a href="?page={{ users_page.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-semibold text-slate-700 transition-colors">
+                    <i class="bi bi-chevron-left"></i> Назад
+                </a>
+                {% endif %}
+
+                {% for p in users_page.paginator.page_range %}
+                    {% if p == users_page.number %}
+                    <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">{{ p }}</span>
+                    {% elif p >= users_page.number|add:"-2" and p <= users_page.number|add:"2" %}
+                    <a href="?page={{ p }}{% if search_query %}&q={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                       class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-semibold text-slate-700 transition-colors">
+                        {{ p }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if users_page.has_next %}
+                <a href="?page={{ users_page.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                   class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 font-semibold text-slate-700 transition-colors">
+                    Вперед <i class="bi bi-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 6. Modal: Назначение / Смена роли пользователя -->
+    <div x-show="roleModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="roleModalOpen = false"
+             class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">
+                        <i class="bi bi-shield-gear"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Назначение роли пользователя</h3>
+                        <p class="text-xs text-slate-500" x-text="activeFullName + ' (@' + activeUsername + ')'"></p>
+                    </div>
+                </div>
+                <button @click="roleModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form method="POST" action="{% url 'admin_users_list' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_role">
+                <input type="hidden" name="user_id" :value="activeUserId">
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Выберите новую роль в системе:
+                    </label>
+
+                    <!-- Option 1: ADMIN -->
+                    <label class="flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all"
+                           :class="selectedNewRole === 'ADMIN' ? 'border-purple-600 bg-purple-50/50 ring-2 ring-purple-500/20' : 'border-slate-200 hover:border-slate-300'">
+                        <input type="radio" name="new_role" value="ADMIN" x-model="selectedNewRole" class="mt-1 text-purple-600 focus:ring-purple-500">
+                        <div class="flex-1 text-xs">
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span class="text-purple-700">Администратор (ADMIN)</span>
+                            </div>
+                            <p class="text-slate-500 text-[11px] mt-0.5 leading-relaxed">
+                                Полный доступ к управленческому дашборду, финансовой аналитике, распределению ролей пользователей и системным журналам.
+                            </p>
+                        </div>
+                    </label>
+
+                    <!-- Option 2: OFFICER -->
+                    <label class="flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all"
+                           :class="selectedNewRole === 'OFFICER' ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-500/20' : 'border-slate-200 hover:border-slate-300'">
+                        <input type="radio" name="new_role" value="OFFICER" x-model="selectedNewRole" class="mt-1 text-blue-600 focus:ring-blue-500">
+                        <div class="flex-1 text-xs">
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span class="text-blue-700">Сотрудник приемной комиссии (OFFICER)</span>
+                            </div>
+                            <p class="text-slate-500 text-[11px] mt-0.5 leading-relaxed">
+                                Доступ к рабочему месту оператора, проверке документов абитуриентов, изменению статусов, формированию приказов и обработке обращений.
+                            </p>
+                        </div>
+                    </label>
+
+                    <!-- Option 3: APPLICANT -->
+                    <label class="flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all"
+                           :class="selectedNewRole === 'APPLICANT' ? 'border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20' : 'border-slate-200 hover:border-slate-300'">
+                        <input type="radio" name="new_role" value="APPLICANT" x-model="selectedNewRole" class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                        <div class="flex-1 text-xs">
+                            <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                                <span class="text-emerald-700">Абитуриент (APPLICANT)</span>
+                            </div>
+                            <p class="text-slate-500 text-[11px] mt-0.5 leading-relaxed">
+                                Доступ к персональному личному кабинету, подаче заявлений, загрузке сканов документов и просмотру конкурсных списков.
+                            </p>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Action Footer -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button type="button" @click="roleModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/20">
+                        Сохранить роль
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. Modal: Блокировка / Разблокировка учетной записи -->
+    <div x-show="activeModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="activeModalOpen = false"
+             class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center gap-3 pb-4 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg"
+                     :class="activeIsActive ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'">
+                    <i class="bi" :class="activeIsActive ? 'bi-slash-circle' : 'bi-check-circle'"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900" x-text="activeIsActive ? 'Блокировка доступа' : 'Разблокировка доступа'"></h3>
+                    <p class="text-xs text-slate-500" x-text="activeFullName + ' (@' + activeUsername + ')'"></p>
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed" x-text="activeIsActive ? 'Вы уверены, что хотите заблокировать эту учетную запись? Пользователь не сможет авторизоваться в личном кабинете CRM до момента повторной активации.' : 'Вы уверены, что хотите активировать учетную запись и восстановить доступ пользователя к системе?'">
+            </p>
+
+            <form method="POST" action="{% url 'admin_users_list' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_active">
+                <input type="hidden" name="user_id" :value="activeUserId">
+
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" @click="activeModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit"
+                            class="px-5 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-md"
+                            :class="activeIsActive ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/20' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/20'"
+                            x-text="activeIsActive ? 'Заблокировать' : 'Активировать'">
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 8. Modal: Карточка пользователя (Детальный просмотр) -->
+    <div x-show="detailModalOpen" x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        
+        <div @click.away="detailModalOpen = false"
+             class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 space-y-6 relative"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                        <i class="bi bi-person-vcard"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" x-text="activeDetail.fullName || activeDetail.username"></h3>
+                        <p class="text-xs text-slate-500" x-text="'@' + activeDetail.username + ' • ID #' + activeDetail.id"></p>
+                    </div>
+                </div>
+                <button @click="detailModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Details List -->
+            <div class="space-y-3 text-xs">
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 grid grid-cols-2 gap-2">
+                    <div>
+                        <span class="text-[11px] text-slate-400 uppercase">Роль в CRM:</span>
+                        <div class="font-bold text-slate-900 mt-0.5" x-text="activeDetail.roleDisplay"></div>
+                    </div>
+                    <div>
+                        <span class="text-[11px] text-slate-400 uppercase">Статус:</span>
+                        <div class="font-bold mt-0.5" :class="activeDetail.isActive ? 'text-emerald-600' : 'text-rose-600'" x-text="activeDetail.isActive ? 'Активен' : 'Заблокирован'"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500">Email:</span>
+                        <span class="font-semibold text-slate-800" x-text="activeDetail.email || '—'"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500">Телефон:</span>
+                        <span class="font-semibold text-slate-800" x-text="activeDetail.phone || '—'"></span>
+                    </div>
+                    <template x-if="activeDetail.snils">
+                        <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                            <span class="text-slate-500">СНИЛС:</span>
+                            <span class="font-mono font-semibold text-indigo-700" x-text="activeDetail.snils"></span>
+                        </div>
+                    </template>
+                    <template x-if="activeDetail.position">
+                        <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                            <span class="text-slate-500">Должность:</span>
+                            <span class="font-semibold text-slate-800" x-text="activeDetail.position"></span>
+                        </div>
+                    </template>
+                    <template x-if="activeDetail.cabinet">
+                        <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                            <span class="text-slate-500">Кабинет:</span>
+                            <span class="font-semibold text-slate-800" x-text="activeDetail.cabinet"></span>
+                        </div>
+                    </template>
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500">Дата регистрации:</span>
+                        <span class="text-slate-700" x-text="activeDetail.dateJoined"></span>
+                    </div>
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500">Последний вход:</span>
+                        <span class="text-slate-700" x-text="activeDetail.lastLogin"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end">
+                <button type="button" @click="detailModalOpen = false" class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

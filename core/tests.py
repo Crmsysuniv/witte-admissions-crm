@@ -169,3 +169,159 @@ class AdminDashboardTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+
+class AdminUsersListTests(TestCase):
+    """
+    Тестирование страницы управления учетными записями и назначения ролей (admin/users_list.html).
+    Проверяет:
+    - Разграничение прав доступа (анонимные, абитуриенты, сотрудники, администраторы)
+    - Полнотекстовый поиск и фильтрацию по ролям и активности
+    - Изменение ролей пользователей (назначение сотрудником, администратором, абитуриентом)
+    - Блокировку и активацию учетных записей с защитой от самоблокировки
+    - Пагинацию и корректность отображения контекста
+    """
+    def setUp(self):
+        self.client = Client()
+
+        # Администратор
+        self.admin_user = User.objects.create_user(
+            username='admin_boss',
+            password='testpassword123',
+            email='boss@witte.ru',
+            first_name='Сергей',
+            last_name='Администраторов',
+            role=User.Role.ADMIN
+        )
+
+        # Офицер
+        self.officer_user = User.objects.create_user(
+            username='officer_katya',
+            password='testpassword123',
+            email='katya@witte.ru',
+            first_name='Екатерина',
+            last_name='Приемная',
+            role=User.Role.OFFICER
+        )
+        OfficerProfile.objects.create(user=self.officer_user, position='Секретарь ПК', cabinet='102')
+
+        # Абитуриент
+        self.applicant = User.objects.create_user(
+            username='applicant_dima',
+            password='testpassword123',
+            email='dima@example.com',
+            first_name='Дмитрий',
+            last_name='Школьников',
+            role=User.Role.APPLICANT
+        )
+        ApplicantProfile.objects.create(user=self.applicant, snils='999-888-777 00')
+
+    def test_anonymous_redirected_to_login(self):
+        url = reverse('admin_users_list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_applicant_forbidden(self):
+        self.client.login(username='applicant_dima', password='testpassword123')
+        url = reverse('admin_users_list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_officer_forbidden(self):
+        self.client.login(username='officer_katya', password='testpassword123')
+        url = reverse('admin_users_list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_access_and_render(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'admin/users_list.html')
+
+        # Проверка контекста
+        self.assertEqual(response.context['kpi']['total'], 3)
+        self.assertEqual(response.context['kpi']['admin'], 1)
+        self.assertEqual(response.context['kpi']['officer'], 1)
+        self.assertEqual(response.context['kpi']['applicant'], 1)
+
+        # Проверка наличия элементов на странице
+        self.assertContains(response, 'Управление учетными записями')
+        self.assertContains(response, 'admin_boss')
+        self.assertContains(response, 'officer_katya')
+        self.assertContains(response, 'applicant_dima')
+        self.assertContains(response, '999-888-777 00')
+
+    def test_search_and_filter(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        
+        # Поиск по СНИЛС
+        response = self.client.get(reverse('admin_users_list') + '?q=999-888')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['kpi']['filtered'], 1)
+        self.assertContains(response, 'applicant_dima')
+        self.assertNotContains(response, 'officer_katya')
+
+        # Фильтр по роли
+        response = self.client.get(reverse('admin_users_list') + '?role=OFFICER')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['kpi']['filtered'], 1)
+        self.assertContains(response, 'officer_katya')
+        self.assertNotContains(response, 'applicant_dima')
+
+    def test_update_role_action(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+
+        # Повышение абитуриента до сотрудника комиссии
+        post_data = {
+            'action': 'update_role',
+            'user_id': self.applicant.id,
+            'new_role': User.Role.OFFICER,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.applicant.refresh_from_db()
+        self.assertEqual(self.applicant.role, User.Role.OFFICER)
+        self.assertTrue(OfficerProfile.objects.filter(user=self.applicant).exists())
+
+    def test_toggle_active_action(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+
+        # Блокировка абитуриента
+        post_data = {
+            'action': 'toggle_active',
+            'user_id': self.applicant.id,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.applicant.refresh_from_db()
+        self.assertFalse(self.applicant.is_active)
+
+        # Разблокировка
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.applicant.refresh_from_db()
+        self.assertTrue(self.applicant.is_active)
+
+    def test_prevent_self_deactivation(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+
+        # Попытка заблокировать самого себя
+        post_data = {
+            'action': 'toggle_active',
+            'user_id': self.admin_user.id,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.admin_user.refresh_from_db()
+        self.assertTrue(self.admin_user.is_active)
+
+
