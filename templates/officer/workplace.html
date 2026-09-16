@@ -523,10 +523,17 @@
                                 </form>
                                 {% endif %}
 
+                                <!-- Подробная проверка заявления -->
+                                <a href="{% url 'officer:application_detail' app.id %}"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors">
+                                    <i class="bi bi-shield-check text-indigo-600"></i>
+                                    <span>Проверка карточки</span>
+                                </a>
+
                                 <!-- Модальное окно изменения статуса с комментарием -->
                                 <button @click="openStatusModal({{ app.id }}, '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}')"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">
-                                    <i class="bi bi-pencil-square text-indigo-600"></i>
+                                    <i class="bi bi-pencil-square text-slate-500"></i>
                                     <span>Сменить статус...</span>
                                 </button>
 

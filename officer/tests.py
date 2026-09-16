@@ -202,3 +202,133 @@ class OfficerApplicationsListTests(TestCase):
         # Проверка создания Notification
         notification = Notification.objects.filter(user=self.applicant_user).latest('created_at')
         self.assertIn(self.app1.get_status_display(), notification.message)
+
+
+class OfficerApplicationDetailTests(TestCase):
+    """
+    Тестирование экрана детальной проверки заявления (officer:application_detail).
+    Проверяет права доступа, отображение реквизитов, баллов и документов,
+    смену статусов («Принято», «Отклонено», «Требуются правки») и верификацию файлов.
+    """
+    def setUp(self):
+        self.client = Client()
+
+        self.officer_user = User.objects.create_user(
+            username='officer_reviewer',
+            password='testpassword123',
+            email='reviewer@witte.ru',
+            first_name='Светлана',
+            last_name='Романова',
+            role=User.Role.OFFICER
+        )
+        OfficerProfile.objects.create(
+            user=self.officer_user,
+            position='Ведущий специалист',
+            cabinet='102'
+        )
+
+        self.applicant_user = User.objects.create_user(
+            username='applicant_ivan',
+            password='testpassword123',
+            email='ivan@example.com',
+            first_name='Иван',
+            last_name='Петров',
+            role=User.Role.APPLICANT
+        )
+        self.profile = ApplicantProfile.objects.create(
+            user=self.applicant_user,
+            snils='222-333-444 55',
+            passport_series='4510',
+            passport_number='123456',
+            passport_issued_by='ОВД г. Москвы',
+            address='г. Москва, ул. Ленина, д. 1'
+        )
+
+        self.faculty = Faculty.objects.create(name='Юридический факультет', code='ЮФ')
+        self.specialty = Specialty.objects.create(
+            faculty=self.faculty,
+            code='40.03.01',
+            name='Юриспруденция',
+            education_level=Specialty.EducationLevel.BACHELOR
+        )
+        self.program = EducationProgram.objects.create(
+            specialty=self.specialty,
+            study_form=EducationProgram.StudyForm.FULL_TIME,
+            tuition_fee=160000.00,
+            duration='4 года'
+        )
+
+        self.application = Application.objects.create(
+            applicant=self.applicant_user,
+            program=self.program,
+            status=Application.Status.SUBMITTED,
+            financing_type=Application.FinancingType.BUDGET
+        )
+
+    def test_anonymous_redirected_to_login(self):
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_applicant_cannot_access_detail(self):
+        self.client.login(username='applicant_ivan', password='testpassword123')
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_officer_can_view_detail(self):
+        self.client.login(username='officer_reviewer', password='testpassword123')
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'officer/application_detail.html')
+        self.assertContains(response, 'Иван')
+        self.assertContains(response, 'Петров')
+        self.assertContains(response, 'Юриспруденция')
+        self.assertContains(response, '222-333-444 55')
+
+    def test_change_status_to_approved(self):
+        self.client.login(username='officer_reviewer', password='testpassword123')
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.post(url, {
+            'action': 'change_status',
+            'new_status': Application.Status.APPROVED,
+            'officer_comment': 'Заявление одобрено'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, Application.Status.APPROVED)
+        self.assertEqual(self.application.officer_comment, 'Заявление одобрено')
+
+        # Проверка StatusLog
+        log = StatusLog.objects.filter(application=self.application).latest('changed_at')
+        self.assertEqual(log.new_status, Application.Status.APPROVED)
+        self.assertEqual(log.changed_by, self.officer_user)
+
+    def test_change_status_to_documents_required(self):
+        self.client.login(username='officer_reviewer', password='testpassword123')
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.post(url, {
+            'action': 'change_status',
+            'new_status': Application.Status.DOCUMENTS_REQUIRED,
+            'officer_comment': 'Прикрепите четкий скан паспорта'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, Application.Status.DOCUMENTS_REQUIRED)
+        self.assertEqual(self.application.officer_comment, 'Прикрепите четкий скан паспорта')
+
+    def test_change_status_to_rejected(self):
+        self.client.login(username='officer_reviewer', password='testpassword123')
+        url = reverse('officer:application_detail', kwargs={'pk': self.application.pk})
+        response = self.client.post(url, {
+            'action': 'change_status',
+            'new_status': Application.Status.REJECTED,
+            'officer_comment': 'Отказ в приеме документов'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.status, Application.Status.REJECTED)
+        self.assertEqual(self.application.officer_comment, 'Отказ в приеме документов')
+

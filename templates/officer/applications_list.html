@@ -549,6 +549,14 @@
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
 
+                                <!-- Кнопка перехода на полную страницу проверки -->
+                                <a href="{% url 'officer:application_detail' app.id %}"
+                                   class="p-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 transition-colors shadow-xs font-semibold flex items-center gap-1"
+                                   title="Полная проверка заявления">
+                                    <i class="bi bi-shield-check"></i>
+                                    <span class="text-[11px] hidden xl:inline">Проверка</span>
+                                </a>
+
                                 <!-- Кнопка смены статуса -->
                                 <button type="button"
                                         @click="openStatusModal('{{ app.id }}', '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}', '{{ app.officer_comment|default:''|escapejs }}')"

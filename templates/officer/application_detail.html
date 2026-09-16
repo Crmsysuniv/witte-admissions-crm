@@ -1,0 +1,783 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Проверка заявления №{{ application.id }} — {{ applicant.get_full_name|default:applicant.username }} | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Проверка заявления №{{ application.id }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    selectedStatus: '{{ application.status }}',
+    officerComment: '{{ application.officer_comment|default:''|escapejs }}',
+    previewModalOpen: false,
+    previewUrl: '',
+    previewTitle: '',
+    previewIsPdf: false,
+    previewDocId: null,
+    previewDocVerified: false,
+
+    setQuickStatus(status, comment) {
+        this.selectedStatus = status;
+        this.officerComment = comment;
+        // Прокрутка к форме статуса на мобильных устройствах
+        const formEl = document.getElementById('status-change-form');
+        if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    },
+
+    openPreview(url, title, isPdf, docId = null, docVerified = false) {
+        this.previewUrl = url;
+        this.previewTitle = title;
+        this.previewIsPdf = isPdf;
+        this.previewDocId = docId;
+        this.previewDocVerified = docVerified;
+        this.previewModalOpen = true;
+    }
+}">
+
+    <!-- 1. HERO HEADER: ДЕТАЛЬНАЯ ПРОВЕРКА ЗАЯВЛЕНИЯ -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-2xl border border-white/10 p-6 sm:p-8 lg:p-10">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div class="max-w-3xl space-y-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200">
+                        <i class="bi bi-file-earmark-person-fill text-sky-400"></i>
+                        <span>Проверка заявления №{{ application.id }}</span>
+                    </span>
+                    <span class="text-xs text-blue-200/70">
+                        Подано: <strong>{{ application.submission_date|date:"d.m.Y в H:i" }}</strong>
+                    </span>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">
+                    {{ applicant.get_full_name|default:applicant.username }}
+                </h1>
+
+                <div class="flex flex-wrap items-center gap-4 text-xs text-blue-100/90 pt-1">
+                    {% if applicant.phone %}
+                    <div class="flex items-center gap-1.5">
+                        <i class="bi bi-telephone-fill text-emerald-400"></i>
+                        <a href="tel:{{ applicant.phone }}" class="hover:underline font-medium text-white">{{ applicant.phone }}</a>
+                    </div>
+                    {% endif %}
+                    {% if applicant.email %}
+                    <div class="flex items-center gap-1.5">
+                        <i class="bi bi-envelope-fill text-cyan-300"></i>
+                        <a href="mailto:{{ applicant.email }}" class="hover:underline font-medium text-white">{{ applicant.email }}</a>
+                    </div>
+                    {% endif %}
+                    {% if applicant_profile.snils %}
+                    <div class="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
+                        <span class="text-blue-200">СНИЛС:</span>
+                        <strong class="text-white">{{ applicant_profile.snils }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Правый блок: Текущий статус и навигация -->
+            <div class="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 shrink-0">
+                <!-- Статус бейдж -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-blue-200/80">Текущий статус:</span>
+                    {% if application.status == 'SUBMITTED' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-400 text-amber-950 shadow-md">
+                        <span class="w-2 h-2 rounded-full bg-amber-900 animate-pulse"></span>
+                        Подано (Новое)
+                    </span>
+                    {% elif application.status == 'UNDER_REVIEW' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-md">
+                        <i class="bi bi-search"></i>
+                        На рассмотрении
+                    </span>
+                    {% elif application.status == 'DOCUMENTS_REQUIRED' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-500 text-white shadow-md">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Требуются правки
+                    </span>
+                    {% elif application.status == 'APPROVED' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-md">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Принято (Одобрено)
+                    </span>
+                    {% elif application.status == 'ENROLLED' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-purple-500 text-white shadow-md">
+                        <i class="bi bi-mortarboard-fill"></i>
+                        Зачислен
+                    </span>
+                    {% elif application.status == 'REJECTED' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-700 text-slate-200 shadow-md">
+                        <i class="bi bi-x-circle-fill"></i>
+                        Отклонено
+                    </span>
+                    {% elif application.status == 'WITHDRAWN' %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-zinc-700 text-zinc-300 shadow-md">
+                        <i class="bi bi-arrow-return-left"></i>
+                        Отозвано
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-slate-800 text-slate-300">
+                        {{ application.get_status_display }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Быстрые кнопки навигации -->
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/15">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>К реестру</span>
+                    </a>
+                    <a href="{% url 'officer:workplace' %}" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/15">
+                        <i class="bi bi-inbox-fill text-amber-300"></i>
+                        <span>В очередь</span>
+                    </a>
+                    <a href="/admin/admissions/application/{{ application.id }}/change/" target="_blank" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/15">
+                        <i class="bi bi-sliders text-indigo-300"></i>
+                        <span>Admin</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. БЫСТРЫЕ ДЕЙСТВИЯ ПРОВЕРКИ (КНОПКИ В ОДИН КЛИК) -->
+        <div class="relative z-10 mt-6 pt-6 border-t border-white/10 flex flex-wrap items-center gap-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-200/80 mr-1">Быстрый статус:</span>
+            
+            <!-- Принять (APPROVED) -->
+            <button type="button" 
+                    @click="setQuickStatus('APPROVED', 'Заявление проверено, документы соответствуют требованиям, абитуриент допущен к участию в конкурсе.')"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Принять заявление</span>
+            </button>
+
+            <!-- Требуются правки (DOCUMENTS_REQUIRED) -->
+            <button type="button" 
+                    @click="setQuickStatus('DOCUMENTS_REQUIRED', 'В предоставленных документах обнаружены неточности. Пожалуйста, загрузите недостающие или более четкие скан-копии.')"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>Требуются правки</span>
+            </button>
+
+            <!-- Отклонить (REJECTED) -->
+            <button type="button" 
+                    @click="setQuickStatus('REJECTED', 'Заявление отклонено приемной комиссией по причине несоответствия правилам приема.')"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]">
+                <i class="bi bi-x-circle-fill"></i>
+                <span>Отклонить</span>
+            </button>
+
+            <!-- Взять на рассмотрение (UNDER_REVIEW) -->
+            <button type="button" 
+                    @click="setQuickStatus('UNDER_REVIEW', 'Заявление принято на рассмотрение ответственным специалистом приемной комиссии.')"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]">
+                <i class="bi bi-hourglass-split"></i>
+                <span>На рассмотрение</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. ОСНОВНОЙ КОНТЕНТ: СЕТКА (2 КОЛОНКИ) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- ЛЕВАЯ КОЛОНКА: ДАННЫЕ АБИТУРИЕНТА, ПРОГРАММА, БАЛЛЫ, ДОКУМЕНТЫ (8 колонок) -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <!-- 3.1 КАРТОЧКА АБИТУРИЕНТА И ПАСПОРТНЫЕ ДАННЫЕ -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg font-black">
+                            <i class="bi bi-person-vcard-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Персональные и паспортные данные</h2>
+                            <p class="text-xs text-slate-500">Сведения профиля абитуриента для проверки личности</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs">
+                    <div>
+                        <span class="block text-slate-400 font-medium">ФИО абитуриента:</span>
+                        <span class="font-bold text-slate-800 text-sm mt-0.5 block">
+                            {{ applicant.get_full_name|default:applicant.username }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-slate-400 font-medium">Логин в системе:</span>
+                        <span class="font-bold text-slate-800 text-sm mt-0.5 block font-mono">
+                            {{ applicant.username }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-slate-400 font-medium">Контактный телефон:</span>
+                        <span class="font-semibold text-slate-800 mt-0.5 block">
+                            {{ applicant.phone|default:"Не указан" }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-slate-400 font-medium">Адрес эл. почты:</span>
+                        <span class="font-semibold text-slate-800 mt-0.5 block">
+                            {{ applicant.email|default:"Не указан" }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-slate-400 font-medium">Номер СНИЛС:</span>
+                        <span class="font-bold text-indigo-700 font-mono mt-0.5 block">
+                            {{ applicant_profile.snils|default:"Не указан" }}
+                        </span>
+                    </div>
+
+                    <div>
+                        <span class="block text-slate-400 font-medium">Дата рождения:</span>
+                        <span class="font-semibold text-slate-800 mt-0.5 block">
+                            {{ applicant_profile.birth_date|date:"d.m.Y"|default:"Не указана" }}
+                        </span>
+                    </div>
+
+                    <div class="sm:col-span-2 pt-3 border-t border-slate-100">
+                        <span class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Паспорт гражданина РФ / Иного государства:</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
+                            <div>
+                                <span class="block text-slate-400 text-[11px]">Серия и номер:</span>
+                                <span class="font-mono font-bold text-slate-800 text-xs">
+                                    {% if applicant_profile.passport_series or applicant_profile.passport_number %}
+                                        {{ applicant_profile.passport_series }} {{ applicant_profile.passport_number }}
+                                    {% else %}
+                                        Не заполнены
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div>
+                                <span class="block text-slate-400 text-[11px]">Дата выдачи:</span>
+                                <span class="font-semibold text-slate-800 text-xs">
+                                    {{ applicant_profile.passport_issue_date|date:"d.m.Y"|default:"—" }}
+                                </span>
+                            </div>
+
+                            <div>
+                                <span class="block text-slate-400 text-[11px]">Код подразделения:</span>
+                                <span class="font-mono font-semibold text-slate-800 text-xs">
+                                    {{ applicant_profile.passport_department_code|default:"—" }}
+                                </span>
+                            </div>
+
+                            <div class="sm:col-span-3 pt-2">
+                                <span class="block text-slate-400 text-[11px]">Кем выдан:</span>
+                                <span class="font-medium text-slate-800 text-xs">
+                                    {{ applicant_profile.passport_issued_by|default:"Не указано" }}
+                                </span>
+                            </div>
+
+                            <div class="sm:col-span-3 pt-2">
+                                <span class="block text-slate-400 text-[11px]">Адрес регистрации / проживания:</span>
+                                <span class="font-medium text-slate-800 text-xs">
+                                    {{ applicant_profile.address|default:"Не указан" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.2 ВЫБРАННАЯ ОБРАЗОВАТЕЛЬНАЯ ПРОГРАММА -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-black">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Выбранная программа обучения</h2>
+                            <p class="text-xs text-slate-500">Направление подготовки и условия зачисления</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div class="sm:col-span-2 p-4 rounded-2xl bg-blue-50/40 border border-blue-100">
+                        <span class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Факультет / Институт</span>
+                        <div class="text-sm font-bold text-slate-900 mt-0.5">
+                            {{ application.program.specialty.faculty.name }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Направление подготовки:</span>
+                        <div class="font-bold text-slate-900 text-sm mt-0.5">
+                            <span class="font-mono text-indigo-600 font-black">{{ application.program.specialty.code }}</span>
+                            {{ application.program.specialty.name }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Уровень образования:</span>
+                        <div class="font-semibold text-slate-800 mt-0.5">
+                            {{ application.program.specialty.get_education_level_display }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Форма обучения:</span>
+                        <div class="font-semibold text-slate-800 mt-0.5">
+                            {{ application.program.get_study_form_display }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Основа обучения:</span>
+                        <div class="mt-0.5">
+                            {% if application.financing_type == 'BUDGET' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Бюджетная основа
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                Платная основа (договор)
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Срок обучения:</span>
+                        <div class="font-semibold text-slate-800 mt-0.5">
+                            {{ application.program.duration }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="text-slate-400 font-medium">Стоимость обучения в год:</span>
+                        <div class="font-bold text-slate-900 mt-0.5">
+                            {% if application.program.tuition_fee > 0 %}
+                                {{ application.program.tuition_fee|floatformat:0 }} руб./год
+                            {% else %}
+                                Бесплатно (бюджет)
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3.3 БАЛЛЫ ВСТУПИТЕЛЬНЫХ ИСПЫТАНИЙ И ЕГЭ -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg font-black">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Баллы вступительных испытаний и ЕГЭ</h2>
+                            <p class="text-xs text-slate-500">Результаты экзаменов для рейтингового списка</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="px-3.5 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+                            Сумма баллов: <strong class="text-indigo-700 text-sm font-black">{{ total_score }} б.</strong>
+                        </div>
+                    </div>
+                </div>
+
+                {% if exam_scores %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200/80 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th class="py-3 px-4">Предмет</th>
+                                <th class="py-3 px-4 text-center">Балл</th>
+                                <th class="py-3 px-4 text-center">Мин. балл</th>
+                                <th class="py-3 px-4">Тип испытания</th>
+                                <th class="py-3 px-4 text-center">Статус</th>
+                                <th class="py-3 px-4 text-right">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for score in exam_scores %}
+                            <tr class="hover:bg-slate-50/60 transition-colors">
+                                <td class="py-3.5 px-4 font-bold text-slate-800">
+                                    {{ score.subject.name }}
+                                    {% if score.year %}
+                                    <span class="text-[10px] text-slate-400 font-normal block">Год сдачи: {{ score.year }}</span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="py-3.5 px-4 text-center">
+                                    <span class="font-black text-sm {% if score.is_passing %}text-slate-900{% else %}text-rose-600{% endif %}">
+                                        {{ score.score }}
+                                    </span>
+                                </td>
+
+                                <td class="py-3.5 px-4 text-center text-slate-500 font-medium">
+                                    {{ score.subject.min_score }}
+                                </td>
+
+                                <td class="py-3.5 px-4 text-slate-600">
+                                    {{ score.get_exam_type_display }}
+                                </td>
+
+                                <td class="py-3.5 px-4 text-center">
+                                    {% if score.is_verified %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                        <i class="bi bi-check-circle-fill"></i> Подтвержден
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                        <i class="bi bi-hourglass-split"></i> Не подтвержден
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="py-3.5 px-4 text-right">
+                                    <form method="post" class="inline-block">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="toggle_score_verification">
+                                        <input type="hidden" name="score_id" value="{{ score.id }}">
+                                        <button type="submit" 
+                                                class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors {% if score.is_verified %}bg-slate-100 hover:bg-slate-200 text-slate-600{% else %}bg-indigo-50 hover:bg-indigo-100 text-indigo-700{% endif %}"
+                                                title="{% if score.is_verified %}Снять подтверждение балла{% else %}Подтвердить балл по предмету{% endif %}">
+                                            {% if score.is_verified %}
+                                                Снять
+                                            {% else %}
+                                                Подтвердить
+                                            {% endif %}
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+                    Результаты вступительных испытаний или ЕГЭ еще не внесены в систему.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 3.4 ЭЛЕКТРОННЫЕ ДОКУМЕНТЫ И ПРОСМОТР ФАЙЛОВ (FILE VIEWER) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center text-lg font-black">
+                            <i class="bi bi-file-earmark-check-fill"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base font-bold text-slate-900">Загруженные документы заявления</h2>
+                            <p class="text-xs text-slate-500">Проверка скан-копий, паспорта, аттестатов и дипломов</p>
+                        </div>
+                    </div>
+
+                    <!-- Кнопка подтверждения всех файлов -->
+                    {% if total_docs > 0 and verified_docs < total_docs %}
+                    <form method="post" class="shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="verify_all_docs">
+                        <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs">
+                            <i class="bi bi-check2-all"></i>
+                            <span>Подтвердить все файлы</span>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <!-- Статистика документов -->
+                <div class="flex items-center gap-4 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-500">Всего файлов:</span>
+                        <strong class="text-slate-800 font-bold">{{ total_docs }}</strong>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-500">Подтверждено:</span>
+                        <strong class="text-emerald-700 font-bold">{{ verified_docs }} из {{ total_docs }}</strong>
+                    </div>
+                </div>
+
+                {% if documents %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for doc in documents %}
+                    <div class="p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 {% if doc.is_verified %}bg-emerald-50/30 border-emerald-200/80{% else %}bg-white border-slate-200/80 hover:border-indigo-300 shadow-xs{% endif %}">
+                        
+                        <!-- Верхняя часть карточки документа -->
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xl shrink-0">
+                                    {% if '.pdf' in doc.file.name|lower %}
+                                    <i class="bi bi-file-earmark-pdf-fill text-rose-500"></i>
+                                    {% else %}
+                                    <i class="bi bi-file-earmark-image-fill text-blue-500"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-bold text-slate-900 leading-snug">
+                                        {{ doc.get_document_type_display }}
+                                    </h3>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">
+                                        Загружен: {{ doc.uploaded_at|date:"d.m.Y H:i" }}
+                                    </p>
+                                    {% if doc.comment %}
+                                    <p class="text-[11px] text-slate-600 italic mt-1 bg-slate-100 px-2 py-0.5 rounded">
+                                        {{ doc.comment }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Статус верификации документа -->
+                            <div>
+                                {% if doc.is_verified %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <i class="bi bi-check-circle-fill"></i> Проверен
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                    <i class="bi bi-hourglass-split"></i> Ожидает
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Нижняя часть: Действия с документом -->
+                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            
+                            <!-- Кнопка интерактивного предпросмотра -->
+                            <button type="button" 
+                                    @click="openPreview('{{ doc.file.url }}', '{{ doc.get_document_type_display|escapejs }}', {{ doc.file.name|lower|slice:'-4:'|yesno:'false,false'|default:'false' }}{% if '.pdf' in doc.file.name|lower %}true{% else %}false{% endif %}, '{{ doc.id }}', {{ doc.is_verified|yesno:'true,false' }})"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors">
+                                <i class="bi bi-eye-fill"></i>
+                                <span>Просмотр</span>
+                            </button>
+
+                            <div class="flex items-center gap-2">
+                                <!-- Открыть файл напрямую в новой вкладке -->
+                                <a href="{{ doc.file.url }}" target="_blank" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs transition-colors" title="Открыть в новой вкладке">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+
+                                <!-- Кнопка подтверждения документа -->
+                                <form method="post" class="inline-block">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_doc_verification">
+                                    <input type="hidden" name="document_id" value="{{ doc.id }}">
+                                    <button type="submit" 
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all {% if doc.is_verified %}bg-slate-100 hover:bg-slate-200 text-slate-700{% else %}bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs{% endif %}">
+                                        {% if doc.is_verified %}
+                                            <i class="bi bi-x"></i> <span>Снять</span>
+                                        {% else %}
+                                            <i class="bi bi-check-lg"></i> <span>Подтвердить</span>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </div>
+
+                        </div>
+
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-xs">
+                    <i class="bi bi-folder-x text-2xl text-slate-400 block mb-2"></i>
+                    К заявлению пока не прикреплено ни одного электронного документа.
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: СМЕНА СТАТУСА, КОММЕНТАРИЙ И АУДИТ (4 колонки) -->
+        <div class="lg:col-span-4 space-y-6">
+
+            <!-- 3.5 ФОРМА СМЕНЫ СТАТУСА И КОММЕНТАРИЯ -->
+            <div id="status-change-form" class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm space-y-5 sticky top-24 z-10">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900">Решение комиссии</h2>
+                        <p class="text-[11px] text-slate-500">Установка официального статуса</p>
+                    </div>
+                </div>
+
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_status">
+
+                    <!-- Селектор статуса -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Статус заявления</label>
+                        <select name="new_status" x-model="selectedStatus" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                            {% for s_code, s_title in status_choices %}
+                            <option value="{{ s_code }}">{{ s_title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Шаблоны типовых комментариев -->
+                    <div>
+                        <span class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Быстрые шаблоны комментария:</span>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" 
+                                    @click="officerComment = 'Документы успешно проверены и верифицированы. Заявление допущено к конкурсу.'"
+                                    class="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60 transition-colors text-left">
+                                Все документы в порядке
+                            </button>
+                            <button type="button" 
+                                    @click="officerComment = 'Необходимо прикрепить качественный скан паспорта (главный разворот и страница с регистрацией).'"
+                                    class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60 transition-colors text-left">
+                                Запрос скана паспорта
+                            </button>
+                            <button type="button" 
+                                    @click="officerComment = 'Пожалуйста, прикрепите приложение с оценками к аттестату / диплому об образовании.'"
+                                    class="text-[11px] px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/60 transition-colors text-left">
+                                Приложение к аттестату
+                            </button>
+                            <button type="button" 
+                                    @click="officerComment = 'Баллы вступительных испытаний ниже минимально допустимого порогового значения.'"
+                                    class="text-[11px] px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60 transition-colors text-left">
+                                Баллы ниже порога
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Текстовое поле комментария -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Служебный комментарий / замечания</label>
+                        <textarea name="officer_comment" 
+                                  x-model="officerComment"
+                                  rows="4" 
+                                  placeholder="Укажите замечания или пояснения к решению приемной комиссии..."
+                                  class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                        <p class="text-[10px] text-slate-400 mt-1">Текст будет отправлен абитуриенту в уведомлении и сохранен в аудит-логе.</p>
+                    </div>
+
+                    <!-- Кнопка сохранения -->
+                    <button type="submit" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2">
+                        <i class="bi bi-check2-circle text-base"></i>
+                        <span>Сохранить решение комиссии</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- 3.6 ИСТОРИЯ ИЗМЕНЕНИЙ СТАТУСОВ (STATUS AUDIT LOG) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm space-y-4">
+                <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <i class="bi bi-clock-history text-indigo-600 text-sm"></i>
+                    <h3 class="text-sm font-bold text-slate-900">История изменений статусов</h3>
+                </div>
+
+                {% if status_logs %}
+                <div class="space-y-3 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-slate-200">
+                    {% for log in status_logs %}
+                    <div class="relative pl-7 text-xs space-y-1">
+                        <!-- Маркер таймлайна -->
+                        <div class="absolute left-2 top-1.5 w-2.5 h-2.5 rounded-full bg-indigo-600 -translate-x-1/2 ring-4 ring-white"></div>
+                        
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-bold text-slate-800">
+                                {{ log.new_status }}
+                            </span>
+                            <span class="text-slate-400">
+                                {{ log.changed_at|date:"d.m.Y H:i" }}
+                            </span>
+                        </div>
+
+                        <div class="text-[11px] text-slate-500">
+                            Сотрудник: <strong class="text-slate-700">{{ log.changed_by.get_full_name|default:log.changed_by.username|default:"Система" }}</strong>
+                        </div>
+
+                        {% if log.comment %}
+                        <p class="text-[11px] text-slate-700 italic bg-slate-50 p-2 rounded-xl border border-slate-200/60 mt-1">
+                            «{{ log.comment }}»
+                        </p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-xs text-slate-400 text-center py-3">История изменений пока пуста.</p>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 4. МОДАЛЬНОЕ ОКНО ПРЕДПРОСМОТРА ДОКУМЕНТА (FILE PREVIEW MODAL) -->
+    <div x-show="previewModalOpen" 
+         x-cloak 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden border border-slate-200"
+             @click.away="previewModalOpen = false">
+            
+            <!-- Шапка окна предпросмотра -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white" x-text="previewTitle"></h3>
+                        <p class="text-[11px] text-slate-300">Предпросмотр электронного документа</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <a :href="previewUrl" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span class="hidden sm:inline">Открыть отдельно</span>
+                    </a>
+                    <button @click="previewModalOpen = false" class="text-slate-400 hover:text-white transition-colors p-1">
+                        <i class="bi bi-x-lg text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Тело просмотра файла (Iframe для PDF или Img для изображений) -->
+            <div class="flex-1 bg-slate-100 p-4 overflow-auto flex items-center justify-center">
+                <template x-if="previewIsPdf">
+                    <iframe :src="previewUrl" class="w-full h-full rounded-2xl border border-slate-300 bg-white"></iframe>
+                </template>
+                <template x-if="!previewIsPdf">
+                    <img :src="previewUrl" alt="Превью документа" class="max-w-full max-h-full object-contain rounded-2xl shadow-md border border-slate-300 bg-white">
+                </template>
+            </div>
+
+            <!-- Подвал окна предпросмотра с быстрым подтверждением -->
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                <div class="text-xs text-slate-500">
+                    <span x-text="previewIsPdf ? 'Документ в формате PDF' : 'Графическое изображение (скан)'"></span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="previewModalOpen = false" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-colors">
+                        Закрыть окно
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

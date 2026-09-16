@@ -6,7 +6,7 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 
 from .decorators import officer_required
-from admissions.models import Application, ApplicationDocument, Faculty, EducationProgram
+from admissions.models import Application, ApplicationDocument, Faculty, EducationProgram, ExamScore
 from audit.models import StatusLog, Notification
 from accounts.models import OfficerProfile
 
@@ -431,4 +431,142 @@ def applications_list_view(request):
     }
 
     return render(request, 'officer/applications_list.html', context)
+
+
+@login_required
+@officer_required
+def application_detail_view(request, pk):
+    """
+    Детальная карточка проверки заявления абитуриента.
+    Позволяет сотруднику приемной комиссии просмотреть все персональные данные,
+    выбранную образовательную программу, баллы вступительных испытаний,
+    прикрепленные электронные документы с возможностью их предпросмотра,
+    а также изменить статус заявления («Принято» / Одобрено, «Отклонено»,
+    «Требуются правки» / Требуются документы) с отправкой уведомления и фиксацией в аудит-логе.
+    """
+    application = get_object_or_404(
+        Application.objects.select_related(
+            'applicant',
+            'applicant__applicant_profile',
+            'program',
+            'program__specialty',
+            'program__specialty__faculty'
+        ).prefetch_related(
+            'documents',
+            'exam_scores',
+            'exam_scores__subject',
+            'status_logs',
+            'status_logs__changed_by'
+        ),
+        pk=pk
+    )
+
+    officer_profile = getattr(request.user, 'officer_profile', None)
+
+    # Обработка действий проверки и изменения статуса
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'change_status':
+            new_status = request.POST.get('new_status')
+            officer_comment = request.POST.get('officer_comment', '').strip()
+            valid_statuses = dict(Application.Status.choices)
+
+            if new_status in valid_statuses:
+                old_status = application.status
+                old_status_display = application.get_status_display()
+                application.status = new_status
+                if officer_comment:
+                    application.officer_comment = officer_comment
+                application.save()
+
+                new_status_display = application.get_status_display()
+
+                # Аудит изменения статуса
+                StatusLog.objects.create(
+                    application=application,
+                    old_status=old_status,
+                    new_status=new_status,
+                    changed_by=request.user,
+                    comment=officer_comment or f'Статус изменен сотрудником {request.user.get_full_name() or request.user.username} в карточке проверки заявления.'
+                )
+
+                # Уведомление абитуриенту
+                Notification.objects.create(
+                    user=application.applicant,
+                    title=f'Статус заявления №{application.id} обновлен',
+                    message=(
+                        f'Статус вашего заявления изменен на «{new_status_display}». '
+                        + (f'Комментарий приемной комиссии: {officer_comment}' if officer_comment else '')
+                    ),
+                    notification_type=Notification.NotificationType.STATUS_CHANGE,
+                    application=application
+                )
+
+                messages.success(
+                    request,
+                    f'Статус заявления №{application.id} успешно изменен на «{new_status_display}».'
+                )
+                return redirect('officer:application_detail', pk=application.pk)
+            else:
+                messages.error(request, 'Указан некорректный статус заявления.')
+
+        elif action == 'toggle_doc_verification':
+            doc_id = request.POST.get('document_id')
+            doc = get_object_or_404(ApplicationDocument, pk=doc_id, application=application)
+            doc.is_verified = not doc.is_verified
+            doc.save()
+            status_text = "подтвержден" if doc.is_verified else "снято подтверждение"
+            messages.success(request, f'Документ «{doc.get_document_type_display()}» {status_text}.')
+            return redirect('officer:application_detail', pk=application.pk)
+
+        elif action == 'verify_all_docs':
+            updated_count = application.documents.filter(is_verified=False).update(is_verified=True)
+            messages.success(request, f'Все прикрепленные документы ({updated_count} шт.) успешно подтверждены.')
+            return redirect('officer:application_detail', pk=application.pk)
+
+        elif action == 'toggle_score_verification':
+            score_id = request.POST.get('score_id')
+            score = get_object_or_404(ExamScore, pk=score_id, application=application)
+            score.is_verified = not score.is_verified
+            score.save()
+            status_text = "подтвержден" if score.is_verified else "снято подтверждение"
+            messages.success(request, f'Балл по предмету «{score.subject.name}» {status_text}.')
+            return redirect('officer:application_detail', pk=application.pk)
+
+    documents = application.documents.all()
+    exam_scores = application.exam_scores.all()
+    status_logs = application.status_logs.all().order_by('-changed_at')
+
+    # Сводные показатели заявления
+    total_docs = documents.count()
+    verified_docs = sum(1 for d in documents if d.is_verified)
+    total_score = sum(s.score for s in exam_scores)
+    all_scores_passing = all(s.is_passing for s in exam_scores) if exam_scores else False
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Рабочий стол сотрудника', 'url': '/officer/workplace/'},
+        {'title': 'Реестр заявлений', 'url': '/officer/applications/'},
+        {'title': f'Заявление №{application.id}', 'is_active': True},
+    ]
+
+    context = {
+        'application': application,
+        'applicant': application.applicant,
+        'applicant_profile': getattr(application.applicant, 'applicant_profile', None),
+        'documents': documents,
+        'exam_scores': exam_scores,
+        'status_logs': status_logs,
+        'total_docs': total_docs,
+        'verified_docs': verified_docs,
+        'total_score': total_score,
+        'all_scores_passing': all_scores_passing,
+        'officer_profile': officer_profile,
+        'status_choices': Application.Status.choices,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'officer/application_detail.html', context)
+
 
