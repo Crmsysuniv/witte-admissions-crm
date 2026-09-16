@@ -274,18 +274,59 @@ class AdminUsersListTests(TestCase):
         self.client.login(username='admin_boss', password='testpassword123')
         url = reverse('admin_users_list')
 
-        # Повышение абитуриента до сотрудника комиссии
+        # Повышение абитуриента до сотрудника комиссии с указанием должности и кабинета
         post_data = {
             'action': 'update_role',
             'user_id': self.applicant.id,
             'new_role': User.Role.OFFICER,
+            'officer_position': 'Старший секретарь ПК',
+            'officer_cabinet': 'Главный кампус, каб. 204',
         }
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, 302)
 
         self.applicant.refresh_from_db()
         self.assertEqual(self.applicant.role, User.Role.OFFICER)
+        self.assertTrue(self.applicant.is_staff)
         self.assertTrue(OfficerProfile.objects.filter(user=self.applicant).exists())
+        self.assertEqual(self.applicant.officer_profile.position, 'Старший секретарь ПК')
+        self.assertEqual(self.applicant.officer_profile.cabinet, 'Главный кампус, каб. 204')
+
+        # Проверка создания уведомления
+        self.assertTrue(Notification.objects.filter(user=self.applicant).exists())
+
+    def test_revoke_role_to_applicant(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+
+        # Снятие прав сотрудника комиссии
+        post_data = {
+            'action': 'update_role',
+            'user_id': self.officer_user.id,
+            'new_role': User.Role.APPLICANT,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.officer_user.refresh_from_db()
+        self.assertEqual(self.officer_user.role, User.Role.APPLICANT)
+        self.assertFalse(self.officer_user.is_staff)
+
+    def test_prevent_self_demotion(self):
+        self.client.login(username='admin_boss', password='testpassword123')
+        url = reverse('admin_users_list')
+
+        # Попытка понизить роль самого себя
+        post_data = {
+            'action': 'update_role',
+            'user_id': self.admin_user.id,
+            'new_role': User.Role.APPLICANT,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.admin_user.refresh_from_db()
+        self.assertEqual(self.admin_user.role, User.Role.ADMIN)
 
     def test_toggle_active_action(self):
         self.client.login(username='admin_boss', password='testpassword123')
@@ -323,5 +364,6 @@ class AdminUsersListTests(TestCase):
 
         self.admin_user.refresh_from_db()
         self.assertTrue(self.admin_user.is_active)
+
 
 

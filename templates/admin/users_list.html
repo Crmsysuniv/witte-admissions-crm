@@ -17,16 +17,20 @@
     activeRole: '',
     activeRoleDisplay: '',
     selectedNewRole: '',
+    officerPosition: '',
+    officerCabinet: '',
     activeIsActive: true,
     activeDetail: {},
 
-    openRoleModal(id, username, fullName, role, roleDisplay) {
+    openRoleModal(id, username, fullName, role, roleDisplay, position = '', cabinet = '') {
         this.activeUserId = id;
         this.activeUsername = username;
         this.activeFullName = fullName || username;
         this.activeRole = role;
         this.activeRoleDisplay = roleDisplay;
         this.selectedNewRole = role;
+        this.officerPosition = position || '';
+        this.officerCabinet = cabinet || '';
         this.roleModalOpen = true;
     },
 
@@ -408,11 +412,11 @@
                         <td class="px-5 py-4 text-right">
                             <div class="flex items-center justify-end gap-1.5">
                                 
-                                <!-- Изменить роль -->
+                                <!-- Изменить роль / Делегирование прав -->
                                 <button type="button"
-                                        @click="openRoleModal({{ u.id }}, '{{ u.username|escapejs }}', '{{ u.get_full_name|escapejs }}', '{{ u.role }}', '{{ u.get_role_display|escapejs }}')"
+                                        @click="openRoleModal({{ u.id }}, '{{ u.username|escapejs }}', '{{ u.get_full_name|escapejs }}', '{{ u.role }}', '{{ u.get_role_display|escapejs }}', '{{ u.officer_profile.position|default:''|escapejs }}', '{{ u.officer_profile.cabinet|default:''|escapejs }}')"
                                         class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200/60 transition-colors"
-                                        title="Назначить / изменить роль">
+                                        title="Назначить / изменить роль (делегирование прав)">
                                     <i class="bi bi-shield-gear text-sm"></i>
                                 </button>
 
@@ -591,12 +595,62 @@
                         <div class="flex-1 text-xs">
                             <div class="font-bold text-slate-900 flex items-center gap-1.5">
                                 <span class="text-emerald-700">Абитуриент (APPLICANT)</span>
+                                <span x-show="activeRole === 'OFFICER' || activeRole === 'ADMIN'" class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                    Снятие прав
+                                </span>
                             </div>
                             <p class="text-slate-500 text-[11px] mt-0.5 leading-relaxed">
-                                Доступ к персональному личному кабинету, подаче заявлений, загрузке сканов документов и просмотру конкурсных списков.
+                                Доступ к персональному кабинету абитуриента, подаче заявлений, загрузке сканов документов и просмотру конкурсных списков.
                             </p>
                         </div>
                     </label>
+                </div>
+
+                <!-- Dynamic Officer Parameters Section -->
+                <div x-show="selectedNewRole === 'OFFICER'" x-transition class="p-4 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-3">
+                    <div class="flex items-center gap-2 text-xs font-bold text-blue-900">
+                        <i class="bi bi-person-badge-fill text-blue-600"></i>
+                        <span>Параметры профиля сотрудника приемной комиссии</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-600">Должность в комиссии</label>
+                            <input type="text" name="officer_position" x-model="officerPosition"
+                                   placeholder="Например: Секретарь ПК"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-semibold text-slate-600">Рабочий кабинет</label>
+                            <input type="text" name="officer_cabinet" x-model="officerCabinet"
+                                   placeholder="Например: Каб. 102"
+                                   class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-blue-700/80">
+                        Сотрудник получит доступ к рабочему столу оператора, реестру заявлений, верификации документов и приказам.
+                    </p>
+                </div>
+
+                <!-- Dynamic Admin Privileges Alert -->
+                <div x-show="selectedNewRole === 'ADMIN'" x-transition class="p-3.5 rounded-2xl bg-purple-50 border border-purple-200/80 text-xs text-purple-900 flex items-start gap-2.5">
+                    <i class="bi bi-shield-lock-fill text-purple-600 text-base shrink-0 mt-0.5"></i>
+                    <div>
+                        <div class="font-bold">Права администратора CRM</div>
+                        <div class="text-[11px] text-purple-700 mt-0.5 leading-relaxed">
+                            Пользователю будет открыт полный доступ к аналитическому дашборду руководителя, журналу аудита и управлению учетными записями всех пользователей.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Revocation Warning Alert -->
+                <div x-show="selectedNewRole === 'APPLICANT' && (activeRole === 'OFFICER' || activeRole === 'ADMIN')" x-transition class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+                    <i class="bi bi-exclamation-triangle-fill text-amber-600 text-base shrink-0 mt-0.5"></i>
+                    <div>
+                        <div class="font-bold">Снятие служебных прав и привилегий</div>
+                        <div class="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                            Учетная запись будет переведена в статус обычного абитуриента. Все служебные доступы к модерации заявлений, приказам и закрытым журналам будут аннулированы.
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Footer -->
@@ -604,8 +658,11 @@
                     <button type="button" @click="roleModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
                         Отмена
                     </button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/20">
-                        Сохранить роль
+                    <button type="submit"
+                            class="px-5 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-md"
+                            :class="selectedNewRole === 'APPLICANT' && (activeRole === 'OFFICER' || activeRole === 'ADMIN') ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/20' : (selectedNewRole === 'ADMIN' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-900/20' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-900/20')">
+                        <span x-show="selectedNewRole === 'APPLICANT' && (activeRole === 'OFFICER' || activeRole === 'ADMIN')">Отозвать права и сохранить</span>
+                        <span x-show="!(selectedNewRole === 'APPLICANT' && (activeRole === 'OFFICER' || activeRole === 'ADMIN'))">Делегировать права & сохранить</span>
                     </button>
                 </div>
             </form>

@@ -631,21 +631,53 @@ def admin_users_list_view(request):
 
         if action == 'update_role':
             new_role = request.POST.get('new_role')
+            officer_position = request.POST.get('officer_position', '').strip()
+            officer_cabinet = request.POST.get('officer_cabinet', '').strip()
+
             if new_role in [User.Role.ADMIN, User.Role.OFFICER, User.Role.APPLICANT]:
                 if target_user == request.user and new_role != User.Role.ADMIN:
                     messages.error(request, "Вы не можете понизить роль собственной учетной записи администратора.")
                 else:
                     old_role_display = target_user.get_role_display()
                     target_user.role = new_role
+
                     if new_role == User.Role.ADMIN:
                         target_user.is_staff = True
                     elif new_role == User.Role.OFFICER:
-                        OfficerProfile.objects.get_or_create(user=target_user)
+                        target_user.is_staff = True
+                        profile, _ = OfficerProfile.objects.get_or_create(user=target_user)
+                        if officer_position:
+                            profile.position = officer_position
+                        if officer_cabinet:
+                            profile.cabinet = officer_cabinet
+                        profile.save()
+                    elif new_role == User.Role.APPLICANT:
+                        if not target_user.is_superuser:
+                            target_user.is_staff = False
+
                     target_user.save()
-                    messages.success(
-                        request,
-                        f"Роль пользователя {target_user.get_full_name() or target_user.username} успешно изменена с «{old_role_display}» на «{target_user.get_role_display()}»."
+
+                    # Отправка системного уведомления пользователю
+                    Notification.objects.create(
+                        user=target_user,
+                        title="Изменение роли и прав доступа в CRM",
+                        message=(
+                            f"Администратор {request.user.get_full_name() or request.user.username} "
+                            f"установил для вашей учетной записи роль «{target_user.get_role_display()}»."
+                        ),
+                        notification_type=Notification.NotificationType.INFO,
                     )
+
+                    if new_role == User.Role.APPLICANT and old_role_display != target_user.get_role_display():
+                        messages.warning(
+                            request,
+                            f"Служебные права пользователя {target_user.get_full_name() or target_user.username} успешно отозваны (роль переведена в «Абитуриент»)."
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            f"Роль пользователя {target_user.get_full_name() or target_user.username} успешно обновлена: «{target_user.get_role_display()}»."
+                        )
             else:
                 messages.error(request, "Указана недопустимая роль пользователя.")
 
