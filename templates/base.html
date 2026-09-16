@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CRM Приемной комиссии | МУ им. С.Ю. Витте{% endblock %}</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -116,212 +119,228 @@
             <!-- Sidebar Navigation Links (13 items) -->
             <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
                 
-                <!-- Section 1 -->
-                <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Основное меню</div>
-                
-                <!-- 1. Панель управления -->
-                <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-grid-1x2-fill text-lg text-blue-400"></i>
-                    <span>Панель управления</span>
-                </a>
+                <!-- Section 1: Главное / Ролевые разделы -->
+                {% if not user.is_authenticated %}
+                    <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Навигация для абитуриентов</div>
+                    
+                    <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-house-door-fill text-lg text-blue-400"></i>
+                        <span>Главная страница</span>
+                    </a>
+                    <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/programs/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-journal-bookmark-fill text-lg text-cyan-400"></i>
+                        <span>Каталог программ</span>
+                    </a>
+                    <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faculties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-buildings-fill text-lg text-amber-400"></i>
+                        <span>Факультеты и институты</span>
+                    </a>
+                    <a href="/rules/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rules/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-file-earmark-ruled-fill text-lg text-emerald-400"></i>
+                        <span>Правила приема 2026</span>
+                    </a>
+                    <a href="/calculator/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/calculator/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-calculator-fill text-lg text-purple-400"></i>
+                        <span>Калькулятор ЕГЭ</span>
+                    </a>
+                    <a href="/rating/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-trophy-fill text-lg text-amber-400"></i>
+                        <span>Списки поступающих</span>
+                    </a>
+                    <a href="/tuition/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/tuition/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-tag-fill text-lg text-teal-400"></i>
+                        <span>Стоимость и скидки</span>
+                    </a>
+                    <a href="/dormitory/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/dormitory/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-houses-fill text-lg text-amber-400"></i>
+                        <span>Общежитие и кампус</span>
+                    </a>
+                    <a href="/faq/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faq/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-question-circle-fill text-lg text-rose-400"></i>
+                        <span>Вопросы и ответы (FAQ)</span>
+                    </a>
+                    <a href="/contacts/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/contacts/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-geo-alt-fill text-lg text-cyan-400"></i>
+                        <span>Контакты</span>
+                    </a>
+                    <a href="/feedback/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/feedback/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-chat-left-dots-fill text-lg text-teal-400"></i>
+                        <span>Задать вопрос</span>
+                    </a>
+                    
+                    <div class="pt-4 border-t border-white/10">
+                        <a href="/login/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all">
+                            <i class="bi bi-box-arrow-in-right text-lg"></i>
+                            <span>Войти в личный кабинет</span>
+                        </a>
+                        <a href="/register/" class="mt-2 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-all">
+                            <i class="bi bi-person-plus text-lg text-emerald-400"></i>
+                            <span>Регистрация</span>
+                        </a>
+                    </div>
 
-                <!-- 1.1 Кабинет абитуриента -->
-                <a href="/student/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/dashboard/' or request.path == '/student/' or request.path == '/dashboard/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-person-workspace text-lg text-emerald-400"></i>
-                    <span class="flex-1">Кабинет абитуриента</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">ЛК</span>
-                </a>
+                {% elif user.role == 'APPLICANT' %}
+                    <!-- APPLICANT SECTION: 5 unique pages -->
+                    <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-300/70">Личный кабинет абитуриента</div>
 
-                <!-- 1.2 Персональные данные -->
-                <a href="/student/profile/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/profile/' or request.path == '/profile/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-person-vcard-fill text-lg text-cyan-400"></i>
-                    <span>Персональные данные</span>
-                </a>
+                    <!-- 1. Дашборд абитуриента -->
+                    <a href="/student/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/dashboard/' or request.path == '/student/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-speedometer2 text-lg text-emerald-400"></i>
+                        <span class="flex-1">Мой дашборд</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">Главная</span>
+                    </a>
 
-                <!-- 1.3 Рабочий стол сотрудника (для сотрудников и админов) -->
-                {% if user.is_authenticated and user.role == 'OFFICER' or user.is_staff or user.is_superuser %}
-                <a href="/officer/workplace/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/officer/workplace/' or request.path == '/officer/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-inbox-fill text-lg text-amber-400"></i>
-                    <span class="flex-1">Рабочий стол сотрудника</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/30 text-amber-200">Очередь</span>
-                </a>
+                    <!-- 2. Персональные данные -->
+                    <a href="/student/profile/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/profile/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-person-vcard-fill text-lg text-cyan-400"></i>
+                        <span>Персональные данные</span>
+                    </a>
 
-                <!-- 1.4 Реестр поданных заявлений -->
-                <a href="{% url 'officer:applications_list' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/applications/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-card-checklist text-lg text-sky-400"></i>
-                    <span class="flex-1">Реестр заявлений</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-500/30 text-sky-200">База</span>
-                </a>
+                    <!-- 3. Подать заявление -->
+                    <a href="/student/apply/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/apply/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-plus-circle-fill text-lg text-emerald-400"></i>
+                        <span>Подать заявление</span>
+                    </a>
 
-                <!-- 1.5 Обращения с формы связи -->
-                <a href="{% url 'officer:inquiries' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/inquiries/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-chat-left-dots-fill text-lg text-rose-400"></i>
-                    <span class="flex-1">Обращения граждан</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/30 text-rose-200">Тикеты</span>
-                </a>
+                    <!-- 4. Документы и сканы -->
+                    <a href="/student/documents/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/documents/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-folder-check text-lg text-sky-400"></i>
+                        <span>Документы и сканы</span>
+                    </a>
 
-                <!-- 1.6 Приказы и протоколы зачисления -->
-                <a href="{% url 'officer:protocols' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/protocols/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-file-earmark-check-fill text-lg text-emerald-400"></i>
-                    <span class="flex-1">Приказы и протоколы</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">Приказы</span>
-                </a>
+                    <!-- 5. Рейтинг и конкурсные списки -->
+                    <a href="/student/rating/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-trophy-fill text-lg text-amber-400"></i>
+                        <span>Рейтинг и конкурсы</span>
+                    </a>
+
+                    <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Справочная информация</div>
+                    <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/programs/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-journal-bookmark-fill text-lg text-cyan-400"></i>
+                        <span>Программы обучения</span>
+                    </a>
+                    <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faculties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-buildings-fill text-lg text-amber-400"></i>
+                        <span>Факультеты</span>
+                    </a>
+                    <a href="/calculator/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/calculator/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-calculator-fill text-lg text-purple-400"></i>
+                        <span>Калькулятор ЕГЭ</span>
+                    </a>
+                    <a href="/faq/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faq/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-question-circle-fill text-lg text-rose-400"></i>
+                        <span>Вопросы и ответы (FAQ)</span>
+                    </a>
+                    <a href="/feedback/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/feedback/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-chat-left-dots-fill text-lg text-teal-400"></i>
+                        <span>Поддержка и связь</span>
+                    </a>
+
+                {% elif user.role == 'OFFICER' %}
+                    <!-- OFFICER SECTION: 5 unique pages -->
+                    <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-amber-300/70">Приемная комиссия</div>
+
+                    <!-- 1. Рабочий стол сотрудника (Очередь) -->
+                    <a href="/officer/workplace/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/officer/workplace/' or request.path == '/officer/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-inbox-fill text-lg text-amber-400"></i>
+                        <span class="flex-1">Рабочий стол</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/30 text-amber-200">Очередь</span>
+                    </a>
+
+                    <!-- 2. Реестр поданных заявлений -->
+                    <a href="{% url 'officer:applications_list' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/applications/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-card-checklist text-lg text-sky-400"></i>
+                        <span class="flex-1">Реестр заявлений</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-500/30 text-sky-200">База</span>
+                    </a>
+
+                    <!-- 3. Обращения граждан -->
+                    <a href="{% url 'officer:inquiries' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/inquiries/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-chat-left-dots-fill text-lg text-rose-400"></i>
+                        <span class="flex-1">Обращения граждан</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/30 text-rose-200">Тикеты</span>
+                    </a>
+
+                    <!-- 4. Приказы и протоколы зачисления -->
+                    <a href="{% url 'officer:protocols' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/officer/protocols/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-file-earmark-check-fill text-lg text-emerald-400"></i>
+                        <span class="flex-1">Приказы & Протоколы</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">Приказы</span>
+                    </a>
+
+                    <!-- 5. Рейтинг и конкурсные списки (общие) -->
+                    <a href="/rating/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-trophy-fill text-lg text-yellow-400"></i>
+                        <span>Конкурсные списки</span>
+                    </a>
+
+                    <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Справочники</div>
+                    <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/programs/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-journal-bookmark-fill text-lg text-cyan-400"></i>
+                        <span>Программы обучения</span>
+                    </a>
+                    <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faculties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-buildings-fill text-lg text-amber-400"></i>
+                        <span>Факультеты</span>
+                    </a>
+
+                {% elif user.role == 'ADMIN' or user.is_superuser %}
+                    <!-- ADMIN SECTION: 5 unique pages -->
+                    <div class="px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-indigo-300/70">Администрирование CRM</div>
+
+                    <!-- 1. Главный аналитический дашборд (KPI) -->
+                    <a href="/admin/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/admin/dashboard/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-speedometer2 text-lg text-indigo-400"></i>
+                        <span class="flex-1">Аналитический дашборд</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/30 text-indigo-200">KPI</span>
+                    </a>
+
+                    <!-- 2. Управление пользователями & ролями -->
+                    <a href="/admin/users/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/admin/users/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-people-fill text-lg text-blue-400"></i>
+                        <span class="flex-1">Управление пользователями</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-500/30 text-blue-200">Роли</span>
+                    </a>
+
+                    <!-- 3. Направления подготовки и квоты КЦП -->
+                    <a href="/admin/specialties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/admin/specialties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-mortarboard-fill text-lg text-emerald-400"></i>
+                        <span class="flex-1">Направления & КЦП</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">План</span>
+                    </a>
+
+                    <!-- 4. Журнал аудита и логов безопасности -->
+                    <a href="/admin/audit/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/admin/audit/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-shield-check text-lg text-cyan-400"></i>
+                        <span class="flex-1">Журнал аудита</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-cyan-500/30 text-cyan-200">Логи</span>
+                    </a>
+
+                    <!-- 5. Системные настройки кампании -->
+                    <a href="/admin/settings/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/admin/settings/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                        <i class="bi bi-sliders text-lg text-amber-400"></i>
+                        <span class="flex-1">Настройки кампании</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/30 text-amber-200">Опции</span>
+                    </a>
+
+                    <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Операционная работа</div>
+                    <a href="/officer/workplace/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                        <i class="bi bi-inbox-fill text-lg text-amber-400"></i>
+                        <span>Очередь заявлений</span>
+                    </a>
+                    <a href="{% url 'officer:applications_list' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                        <i class="bi bi-card-checklist text-lg text-sky-400"></i>
+                        <span>Реестр заявлений</span>
+                    </a>
+                    <a href="{% url 'officer:protocols' %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                        <i class="bi bi-file-earmark-check-fill text-lg text-emerald-400"></i>
+                        <span>Приказы & Протоколы</span>
+                    </a>
+                    <a href="/admin/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                        <i class="bi bi-shield-lock-fill text-lg text-indigo-400"></i>
+                        <span>Django Admin</span>
+                    </a>
                 {% endif %}
-
-                <!-- 2. Все заявления -->
-                <a href="/admin/admissions/application/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-file-earmark-person-fill text-lg text-indigo-400"></i>
-                    <span class="flex-1">Заявления абитуриентов</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/30 text-indigo-200">CRM</span>
-                </a>
-
-                <!-- 3. Подать заявление -->
-                <a href="/student/apply/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/apply/' or request.path == '/apply/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-plus-circle-fill text-lg text-emerald-400"></i>
-                    <span>Подать заявление</span>
-                </a>
-
-                <!-- Section 2 -->
-                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Академическая база & Сервисы</div>
-
-                <!-- 4. Факультеты -->
-                <a href="/faculties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faculties/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-buildings-fill text-lg text-amber-400"></i>
-                    <span>Факультеты и институты</span>
-                </a>
-
-                <!-- 5. Каталог программ -->
-                <a href="/programs/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/programs/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-journal-bookmark-fill text-lg text-cyan-400"></i>
-                    <span>Программы обучения</span>
-                </a>
-
-                <!-- 6. Правила приема и нормативные документы -->
-                <a href="/rules/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/rules/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-file-earmark-ruled-fill text-lg text-emerald-400"></i>
-                    <span>Правила приема и документы</span>
-                </a>
-
-                <!-- 7. Калькулятор баллов ЕГЭ -->
-                <a href="/calculator/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/calculator/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-calculator-fill text-lg text-purple-400"></i>
-                    <span>Калькулятор баллов ЕГЭ</span>
-                </a>
-
-                <!-- 8. Стоимость и скидки -->
-                <a href="/tuition/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/tuition/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-tag-fill text-lg text-teal-400"></i>
-                    <span>Стоимость и скидки</span>
-                </a>
-
-                <!-- 9. Общежитие и кампус -->
-                <a href="/dormitory/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/dormitory/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-houses-fill text-lg text-amber-400"></i>
-                    <span>Общежитие и кампус</span>
-                </a>
-
-                <!-- 10. Вопросы и ответы (FAQ) -->
-                <a href="/faq/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/faq/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-question-circle-fill text-lg text-rose-400"></i>
-                    <span>Вопросы и ответы (FAQ)</span>
-                </a>
-
-                <!-- 11. Контакты и схема проезда -->
-                <a href="/contacts/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/contacts/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-geo-alt-fill text-lg text-cyan-400"></i>
-                    <span>Контакты и схема проезда</span>
-                </a>
-
-                <!-- 12. Предметы и баллы ЕГЭ -->
-                <a href="/admin/admissions/examsubject/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-card-checklist text-lg text-emerald-400"></i>
-                    <span>Минимальные баллы ЕГЭ</span>
-                </a>
-
-                <!-- Section 3 -->
-                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Работа с заявками</div>
-
-                <!-- 8. Документы заявлений -->
-                <a href="{% if user.is_authenticated and not user.is_staff %}/student/documents/{% else %}/admin/admissions/applicationdocument/{% endif %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/documents/' or request.path == '/documents/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-folder-check text-lg text-sky-400"></i>
-                    <span>Документы и сканы</span>
-                </a>
-
-                <!-- 9. Баллы испытаний -->
-                <a href="/admin/admissions/examscore/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-award-fill text-lg text-yellow-400"></i>
-                    <span>Баллы испытаний</span>
-                </a>
-
-                <!-- 10. Конкурсные списки и рейтинг -->
-                <a href="{% if user.is_authenticated and not user.is_staff %}/student/rating/{% else %}/rating/{% endif %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/rating/' or request.path == '/rating/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-trophy-fill text-lg text-amber-400"></i>
-                    <span>Конкурсные списки и рейтинг</span>
-                </a>
-
-                <!-- 11. Обратная связь -->
-                <a href="/feedback/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/feedback/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-chat-left-dots-fill text-lg text-teal-400"></i>
-                    <span>Обратная связь</span>
-                </a>
-
-                <!-- 11. История статусов (Аудит) -->
-                <a href="/admin/audit/statuslog/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-clock-history text-lg text-blue-400"></i>
-                    <span>Журнал аудита статусов</span>
-                </a>
-
-                <!-- 12. Уведомления -->
-                <a href="/admin/audit/notification/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-bell-fill text-lg text-orange-400"></i>
-                    <span>Уведомления</span>
-                </a>
-
-                <!-- Section 4 -->
-                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Администрирование</div>
-                
-                <!-- 13. Аналитический дашборд руководителя -->
-                {% if user.is_authenticated and user.role == 'ADMIN' or user.is_staff or user.is_superuser %}
-                <a href="/admin/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/dashboard/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-speedometer2 text-lg text-indigo-400"></i>
-                    <span class="flex-1">Аналитический дашборд</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/30 text-indigo-200">KPI</span>
-                </a>
-
-                <!-- 13.1 Управление учетными записями -->
-                <a href="/admin/users/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/users/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-people-fill text-lg text-blue-400"></i>
-                    <span class="flex-1">Управление пользователями</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-500/30 text-blue-200">Роли</span>
-                </a>
-
-                <!-- 13.2 Направления подготовки и квоты КЦП -->
-                <a href="/admin/specialties/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/specialties/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-mortarboard-fill text-lg text-emerald-400"></i>
-                    <span class="flex-1">Направления & КЦП</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">План</span>
-                </a>
-
-                <!-- 13.3 Журнал аудита и логов безопасности -->
-                <a href="/admin/audit/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/audit/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-shield-check text-lg text-cyan-400"></i>
-                    <span class="flex-1">Журнал аудита</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-cyan-500/30 text-cyan-200">Логи</span>
-                </a>
-
-                <!-- 13.4 Системные настройки кампании -->
-                <a href="/admin/settings/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/settings/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
-                    <i class="bi bi-sliders text-lg text-amber-400"></i>
-                    <span class="flex-1">Настройки кампании</span>
-                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/30 text-amber-200">Опции</span>
-                </a>
-                {% endif %}
-
-                <!-- 14. Панель администратора Django -->
-                <a href="/admin/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
-                    <i class="bi bi-shield-lock-fill text-lg text-indigo-400"></i>
-                    <span>Панель администратора</span>
-                </a>
             </nav>
 
             <!-- User Info Footer inside Sidebar -->

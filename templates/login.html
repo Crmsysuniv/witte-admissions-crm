@@ -212,10 +212,8 @@
                         Логин или Email <span class="text-rose-500">*</span>
                     </label>
                     <div class="relative">
-                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
-                        <div class="pl-2">
-                            {{ form.username }}
-                        </div>
+                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base z-10"></i>
+                        {{ form.username }}
                     </div>
                     {% if form.username.errors %}
                         <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.username.errors.0 }}</p>

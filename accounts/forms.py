@@ -217,7 +217,7 @@ class LoginForm(forms.Form):
         required=True,
         widget=forms.TextInput(attrs={
             'placeholder': 'ivanov_2026 или applicant@example.ru',
-            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+            'class': 'w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
             'autocomplete': 'username',
             'autofocus': 'true',
         })
