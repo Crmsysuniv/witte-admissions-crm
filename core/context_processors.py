@@ -11,6 +11,7 @@ PATH_TITLES = {
     'password_change': 'Смена пароля',
     'student': 'Кабинет абитуриента',
     'dashboard': 'Дашборд',
+    'profile': 'Персональные данные',
     
     # Admissions
     'admissions': 'Приемная комиссия',

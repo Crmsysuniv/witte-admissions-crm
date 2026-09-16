@@ -126,10 +126,16 @@
                 </a>
 
                 <!-- 1.1 Кабинет абитуриента -->
-                <a href="/student/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/student/' in request.path or '/dashboard/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                <a href="/student/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/dashboard/' or request.path == '/student/' or request.path == '/dashboard/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                     <i class="bi bi-person-workspace text-lg text-emerald-400"></i>
                     <span class="flex-1">Кабинет абитуриента</span>
                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/30 text-emerald-200">ЛК</span>
+                </a>
+
+                <!-- 1.2 Персональные данные -->
+                <a href="/student/profile/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/profile/' or request.path == '/profile/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-person-vcard-fill text-lg text-cyan-400"></i>
+                    <span>Персональные данные</span>
                 </a>
 
                 <!-- 2. Все заявления -->
@@ -342,6 +348,10 @@
                                 <a href="/student/dashboard/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-workspace text-slate-400"></i>
                                     <span>Кабинет абитуриента</span>
+                                </a>
+                                <a href="/student/profile/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                    <i class="bi bi-person-vcard-fill text-slate-400"></i>
+                                    <span>Персональные данные</span>
                                 </a>
                                 <a href="/password_change/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-key-fill text-slate-400"></i>

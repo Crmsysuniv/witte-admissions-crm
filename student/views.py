@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from accounts.models import ApplicantProfile
 from admissions.models import Application, ApplicationDocument, ExamScore, Specialty, EducationProgram
 from audit.models import Notification
+from .forms import StudentProfileForm
 
 
 @login_required
@@ -62,6 +64,7 @@ def dashboard_view(request):
             'completed': step1_account,
             'current': not step2_profile,
             'icon': 'bi-person-check-fill',
+            'url': '/student/dashboard/',
         },
         {
             'num': 2,
@@ -70,6 +73,7 @@ def dashboard_view(request):
             'completed': step2_profile,
             'current': step1_account and not step2_profile,
             'icon': 'bi-card-text',
+            'url': '/student/profile/',
         },
         {
             'num': 3,
@@ -78,6 +82,7 @@ def dashboard_view(request):
             'completed': step3_application,
             'current': step2_profile and not step3_application,
             'icon': 'bi-file-earmark-plus-fill',
+            'url': '/programs/',
         },
         {
             'num': 4,
@@ -86,6 +91,7 @@ def dashboard_view(request):
             'completed': step4_documents,
             'current': step3_application and not step4_documents,
             'icon': 'bi-folder-check',
+            'url': '/admin/admissions/applicationdocument/',
         },
         {
             'num': 5,
@@ -94,6 +100,7 @@ def dashboard_view(request):
             'completed': step5_scores,
             'current': step4_documents and not step5_scores,
             'icon': 'bi-award-fill',
+            'url': '/calculator/',
         },
         {
             'num': 6,
@@ -102,6 +109,7 @@ def dashboard_view(request):
             'completed': step6_approval,
             'current': step5_scores and not step6_approval,
             'icon': 'bi-patch-check-fill',
+            'url': '/rules/',
         },
     ]
 
@@ -172,18 +180,25 @@ def dashboard_view(request):
     # Быстрые ссылки для абитуриента
     quick_links = [
         {
+            'title': 'Анкета и личные данные',
+            'desc': 'Паспортные данные, СНИЛС и адрес регистрации',
+            'url': '/student/profile/',
+            'icon': 'bi-person-vcard-fill',
+            'color': 'indigo',
+        },
+        {
             'title': 'Каталог программ 2026',
             'desc': 'Специальности бакалавриата, специалитета и колледжа',
             'url': '/programs/',
             'icon': 'bi-journal-bookmark-fill',
-            'color': 'indigo',
+            'color': 'blue',
         },
         {
             'title': 'Калькулятор баллов ЕГЭ',
             'desc': 'Проверьте шансы на бюджет и платное обучение',
             'url': '/calculator/',
             'icon': 'bi-calculator-fill',
-            'color': 'blue',
+            'color': 'cyan',
         },
         {
             'title': 'Правила приема и квоты',
@@ -218,7 +233,7 @@ def dashboard_view(request):
             'desc': 'Управление доступом и смена пароля учетной записи',
             'url': '/password_change/',
             'icon': 'bi-shield-lock-fill',
-            'color': 'cyan',
+            'color': 'purple',
         },
     ]
 
@@ -241,3 +256,53 @@ def dashboard_view(request):
         'quick_links': quick_links,
     }
     return render(request, 'student/dashboard.html', context)
+
+
+@login_required
+def profile_view(request):
+    """
+    Страница заполнения и редактирования персональных данных профиля абитуриента (student/profile.html).
+    Позволяет актуализировать:
+    - Фамилию, Имя, Отчество, Email, Телефон;
+    - Дату рождения, СНИЛС;
+    - Паспортные данные гражданина РФ (серия, номер, кем и когда выдан, код подразделения);
+    - Адрес постоянной регистрации и фактического проживания.
+    """
+    user = request.user
+    profile, _ = ApplicantProfile.objects.get_or_create(user=user)
+
+    if request.method == 'POST':
+        form = StudentProfileForm(request.POST, user=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Персональные данные профиля успешно сохранены и обновлены!')
+            return redirect('student:profile')
+        else:
+            messages.error(request, 'Пожалуйста, проверьте правильность заполнения обязательных полей.')
+    else:
+        form = StudentProfileForm(user=user)
+
+    # Расчет прогресса заполненности профиля
+    sections = {
+        'contacts': bool(user.first_name and user.last_name and user.email and user.phone),
+        'identity': bool(profile.birth_date and profile.snils),
+        'passport': bool(profile.passport_series and profile.passport_number and profile.passport_issued_by and profile.passport_issue_date and profile.passport_department_code),
+        'address': bool(profile.address),
+    }
+
+    # Вес секций в %: контакты 25%, СНИЛС/дата 25%, паспорт 35%, адрес 15%
+    completion_percentage = (
+        (25 if sections['contacts'] else 0) +
+        (25 if sections['identity'] else 0) +
+        (35 if sections['passport'] else 0) +
+        (15 if sections['address'] else 0)
+    )
+
+    context = {
+        'form': form,
+        'applicant_profile': profile,
+        'sections': sections,
+        'completion_percentage': completion_percentage,
+    }
+    return render(request, 'student/profile.html', context)
+

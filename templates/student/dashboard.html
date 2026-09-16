@@ -37,6 +37,9 @@
                 <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
                     <i class="bi bi-card-heading text-emerald-400"></i>
                     <span>СНИЛС: {{ applicant_profile.snils|default:"Не указан в анкете" }}</span>
+                    <a href="/student/profile/" class="text-xs text-amber-300 hover:text-amber-200 underline font-semibold ml-1">
+                        {% if applicant_profile.snils %}Изменить{% else %}Заполнить →{% endif %}
+                    </a>
                 </div>
                 <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
                     <i class="bi bi-shield-check text-amber-300"></i>
@@ -158,12 +161,12 @@
             <!-- Step Pipeline Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2">
                 {% for step in steps %}
-                <div class="p-3.5 rounded-2xl border transition-all text-xs space-y-1.5 {% if step.completed %}bg-emerald-50/60 border-emerald-200 text-emerald-950{% elif step.current %}bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 text-blue-950{% else %}bg-slate-50 border-slate-200 text-slate-400{% endif %}">
+                <a href="{{ step.url }}" class="p-3.5 rounded-2xl border transition-all text-xs space-y-1.5 hover:shadow-md block group {% if step.completed %}bg-emerald-50/60 border-emerald-200 text-emerald-950 hover:border-emerald-300{% elif step.current %}bg-blue-50/70 border-blue-300 ring-2 ring-blue-500/20 text-blue-950 hover:border-blue-400{% else %}bg-slate-50 border-slate-200 text-slate-400 hover:border-slate-300{% endif %}">
                     <div class="flex items-center justify-between">
                         <span class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] {% if step.completed %}bg-emerald-500 text-white{% elif step.current %}bg-blue-600 text-white animate-pulse{% else %}bg-slate-200 text-slate-500{% endif %}">
                             {% if step.completed %}<i class="bi bi-check-lg"></i>{% else %}{{ step.num }}{% endif %}
                         </span>
-                        <i class="bi {{ step.icon }} text-base {% if step.completed %}text-emerald-500{% elif step.current %}text-blue-600{% else %}text-slate-300{% endif %}"></i>
+                        <i class="bi {{ step.icon }} text-base transition-transform group-hover:scale-110 {% if step.completed %}text-emerald-500{% elif step.current %}text-blue-600{% else %}text-slate-300{% endif %}"></i>
                     </div>
                     <div>
                         <strong class="font-bold block leading-tight text-xs {% if step.completed %}text-emerald-950{% elif step.current %}text-blue-900{% else %}text-slate-600{% endif %}">
@@ -173,7 +176,7 @@
                             {{ step.desc }}
                         </span>
                     </div>
-                </div>
+                </a>
                 {% endfor %}
             </div>
         </div>

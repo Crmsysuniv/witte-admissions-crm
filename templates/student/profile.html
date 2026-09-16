@@ -1,0 +1,548 @@
+{% extends 'base.html' %}
+
+{% block title %}Персональные данные абитуриента | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Персональные данные{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12" x-data="profileEditor()">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-person-vcard text-emerald-400"></i>
+                <span>Приемная кампания 2026/2027 • Анкета абитуриента</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Персональные данные абитуриента
+            </h1>
+
+            <p class="mt-3 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Заполните анкетные данные, паспортные реквизиты и номер СНИЛС. Эти сведения необходимы для автоматического формирования заявлений на поступление, заключения договоров на обучение и передачи сведений в федеральную систему ФИС ГИА и Приема.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-person-badge-fill text-cyan-300"></i>
+                    <span>ID абитуриента: #{{ user.id|stringformat:"05d" }}</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-person-circle text-blue-300"></i>
+                    <span>Логин: {{ user.username }}</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-shield-check text-emerald-400"></i>
+                    <span>152-ФЗ: Защита персональных данных активна</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. READINESS & SECTION COMPLETION STATS -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 uppercase tracking-wider">
+                        Профиль абитуриента
+                    </span>
+                    <span class="text-xs text-slate-400">Степень готовности досье</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Заполненность персональной анкеты
+                </h2>
+            </div>
+
+            <!-- Readiness Badge with Percentage -->
+            <div class="flex items-center gap-3 bg-slate-50 p-2.5 sm:px-4 rounded-2xl border border-slate-200">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br {% if completion_percentage >= 80 %}from-emerald-600 to-teal-600{% elif completion_percentage >= 50 %}from-blue-600 to-indigo-600{% else %}from-amber-500 to-rose-500{% endif %} text-white flex items-center justify-center font-black text-base shadow-sm">
+                    {{ completion_percentage }}%
+                </div>
+                <div class="text-left">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Статус готовности</span>
+                    <strong class="text-xs font-bold text-slate-800">
+                        {% if completion_percentage == 100 %}
+                            Анкета полностью заполнена
+                        {% elif completion_percentage >= 70 %}
+                            Высокая степень готовности
+                        {% elif completion_percentage >= 40 %}
+                            Требуются паспортные данные
+                        {% else %}
+                            Анкета требует заполнения
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Progress Bar -->
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden flex shadow-inner">
+            <div class="h-3 bg-gradient-to-r {% if completion_percentage >= 80 %}from-blue-600 via-indigo-600 to-emerald-500{% else %}from-amber-500 to-blue-600{% endif %} rounded-full transition-all duration-500 shadow-sm"
+                 style="width: {{ completion_percentage }}%">
+            </div>
+        </div>
+
+        <!-- 4 Subsections Status Pills -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <!-- 1. Contacts -->
+            <div class="p-3.5 rounded-2xl border text-xs flex items-center justify-between {% if sections.contacts %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-amber-50/70 border-amber-200 text-amber-950{% endif %}">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm {% if sections.contacts %}bg-emerald-500 text-white{% else %}bg-amber-500 text-white{% endif %}">
+                        <i class="bi {% if sections.contacts %}bi-check-lg{% else %}bi-exclamation{% endif %}"></i>
+                    </div>
+                    <div>
+                        <strong class="block font-bold">ФИО и контакты</strong>
+                        <span class="text-[10px] {% if sections.contacts %}text-emerald-700{% else %}text-amber-700{% endif %}">
+                            {% if sections.contacts %}Заполнено{% else %}Требуются данные{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if sections.contacts %}bg-emerald-200/60 text-emerald-800{% else %}bg-amber-200/60 text-amber-800{% endif %}">
+                    25%
+                </span>
+            </div>
+
+            <!-- 2. Identity / SNILS -->
+            <div class="p-3.5 rounded-2xl border text-xs flex items-center justify-between {% if sections.identity %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-slate-50 border-slate-200 text-slate-600{% endif %}">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm {% if sections.identity %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+                        <i class="bi {% if sections.identity %}bi-check-lg{% else %}bi-card-heading{% endif %}"></i>
+                    </div>
+                    <div>
+                        <strong class="block font-bold">СНИЛС и дата рождения</strong>
+                        <span class="text-[10px] {% if sections.identity %}text-emerald-700{% else %}text-slate-400{% endif %}">
+                            {% if sections.identity %}Заполнено{% else %}Не заполнено{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if sections.identity %}bg-emerald-200/60 text-emerald-800{% else %}bg-slate-200 text-slate-600{% endif %}">
+                    25%
+                </span>
+            </div>
+
+            <!-- 3. Passport -->
+            <div class="p-3.5 rounded-2xl border text-xs flex items-center justify-between {% if sections.passport %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-slate-50 border-slate-200 text-slate-600{% endif %}">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm {% if sections.passport %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+                        <i class="bi {% if sections.passport %}bi-check-lg{% else %}bi-file-earmark-person{% endif %}"></i>
+                    </div>
+                    <div>
+                        <strong class="block font-bold">Паспортные данные РФ</strong>
+                        <span class="text-[10px] {% if sections.passport %}text-emerald-700{% else %}text-slate-400{% endif %}">
+                            {% if sections.passport %}Заполнено{% else %}Не заполнено{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if sections.passport %}bg-emerald-200/60 text-emerald-800{% else %}bg-slate-200 text-slate-600{% endif %}">
+                    35%
+                </span>
+            </div>
+
+            <!-- 4. Address -->
+            <div class="p-3.5 rounded-2xl border text-xs flex items-center justify-between {% if sections.address %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-slate-50 border-slate-200 text-slate-600{% endif %}">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm {% if sections.address %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+                        <i class="bi {% if sections.address %}bi-check-lg{% else %}bi-geo-alt{% endif %}"></i>
+                    </div>
+                    <div>
+                        <strong class="block font-bold">Адрес регистрации</strong>
+                        <span class="text-[10px] {% if sections.address %}text-emerald-700{% else %}text-slate-400{% endif %}">
+                            {% if sections.address %}Заполнено{% else %}Не заполнено{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if sections.address %}bg-emerald-200/60 text-emerald-800{% else %}bg-slate-200 text-slate-600{% endif %}">
+                    15%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PROFILE FORM CONTAINER -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/80 shadow-xs">
+        
+        <form method="post" action="{% url 'student:profile' %}" novalidate class="space-y-10">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1">
+                <div class="font-bold flex items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Ошибки в форме:</span>
+                </div>
+                {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- SECTION 1: BASIC INFO & CONTACTS -->
+            <div class="space-y-6">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg font-bold">
+                        1
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                            Основные персональные и контактные данные
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            ФИО в строгом соответствии с документом, удостоверяющим личность
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <!-- Last Name -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.last_name.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- First Name -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.first_name.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Patronymic -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.patronymic.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.patronymic.label }}
+                        </label>
+                        {{ form.patronymic }}
+                        {% if form.patronymic.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.patronymic.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-1">
+                    <!-- Email -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.email.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="bi bi-envelope-fill"></i>
+                            </div>
+                            <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default:'' }}" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" placeholder="applicant@example.ru" required autocomplete="email">
+                        </div>
+                        {% if form.email.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">Используется для отправки уведомлений о зачислении</span>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.phone.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="bi bi-telephone-fill"></i>
+                            </div>
+                            <input type="text" name="{{ form.phone.name }}" id="{{ form.phone.id_for_label }}" value="{{ form.phone.value|default:'' }}" @input="formatPhone($event)" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" placeholder="+7 (999) 000-00-00" required autocomplete="tel">
+                        </div>
+                        {% if form.phone.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.phone.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">Для оперативной связи куратора приемной комиссии</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: BIRTH DATE & SNILS -->
+            <div class="space-y-6 pt-4 border-t border-slate-100">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg font-bold">
+                        2
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                            Дата рождения и идентификационный номер СНИЛС
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            СНИЛС является уникальным ключом для ранжированных конкурсных списков
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <!-- Birth Date -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.birth_date.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.birth_date.label }}
+                        </label>
+                        {{ form.birth_date }}
+                        {% if form.birth_date.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.birth_date.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">Минимальный возраст абитуриента — 14 лет</span>
+                    </div>
+
+                    <!-- SNILS -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.snils.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.snils.label }}
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="bi bi-card-heading"></i>
+                            </div>
+                            <input type="text" name="{{ form.snils.name }}" id="{{ form.snils.id_for_label }}" value="{{ form.snils.value|default:'' }}" @input="formatSnils($event)" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono" placeholder="000-000-000 00">
+                        </div>
+                        {% if form.snils.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.snils.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">{{ form.snils.help_text }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: PASSPORT DATA -->
+            <div class="space-y-6 pt-4 border-t border-slate-100">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg font-bold">
+                        3
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                            Паспортные данные гражданина Российской Федерации
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            Данные паспорта РФ для заключения договора и внесения в федеральную базу
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <!-- Series -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.passport_series.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.passport_series.label }}
+                        </label>
+                        <input type="text" name="{{ form.passport_series.name }}" id="{{ form.passport_series.id_for_label }}" value="{{ form.passport_series.value|default:'' }}" @input="formatPassportSeries($event)" maxlength="5" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono" placeholder="45 15">
+                        {% if form.passport_series.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.passport_series.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">4 цифры серии</span>
+                    </div>
+
+                    <!-- Number -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.passport_number.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.passport_number.label }}
+                        </label>
+                        <input type="text" name="{{ form.passport_number.name }}" id="{{ form.passport_number.id_for_label }}" value="{{ form.passport_number.value|default:'' }}" @input="formatDigitsOnly($event, 6)" maxlength="6" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono" placeholder="123456">
+                        {% if form.passport_number.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.passport_number.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">6 цифр номера</span>
+                    </div>
+
+                    <!-- Issue Date -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.passport_issue_date.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.passport_issue_date.label }}
+                        </label>
+                        {{ form.passport_issue_date }}
+                        {% if form.passport_issue_date.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.passport_issue_date.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">Дата из паспорта</span>
+                    </div>
+
+                    <!-- Department Code -->
+                    <div class="space-y-1.5">
+                        <label for="{{ form.passport_department_code.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                            {{ form.passport_department_code.label }}
+                        </label>
+                        <input type="text" name="{{ form.passport_department_code.name }}" id="{{ form.passport_department_code.id_for_label }}" value="{{ form.passport_department_code.value|default:'' }}" @input="formatDepartmentCode($event)" maxlength="7" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-mono" placeholder="770-001">
+                        {% if form.passport_department_code.errors %}
+                        <p class="text-xs text-rose-600 font-medium">{{ form.passport_department_code.errors.0 }}</p>
+                        {% endif %}
+                        <span class="text-[11px] text-slate-400 block">Формат: 770-001</span>
+                    </div>
+                </div>
+
+                <!-- Issued By -->
+                <div class="space-y-1.5 pt-1">
+                    <label for="{{ form.passport_issued_by.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                        {{ form.passport_issued_by.label }}
+                    </label>
+                    {{ form.passport_issued_by }}
+                    {% if form.passport_issued_by.errors %}
+                    <p class="text-xs text-rose-600 font-medium">{{ form.passport_issued_by.errors.0 }}</p>
+                    {% endif %}
+                    <span class="text-[11px] text-slate-400 block">Точное наименование органа, выдавшего паспорт (как в документе)</span>
+                </div>
+            </div>
+
+            <!-- SECTION 4: ADDRESS -->
+            <div class="space-y-6 pt-4 border-t border-slate-100">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg font-bold">
+                        4
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-slate-900">
+                            Адрес регистрации и фактического проживания
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            Укажите полный почтовый адрес с индексом для оформления личного дела студента
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="{{ form.address.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                        {{ form.address.label }}
+                    </label>
+                    {{ form.address }}
+                    {% if form.address.errors %}
+                    <p class="text-xs text-rose-600 font-medium">{{ form.address.errors.0 }}</p>
+                    {% endif %}
+                    <span class="text-[11px] text-slate-400 block">Например: 115432, г. Москва, 2-й Кожуховский проезд, д. 12, стр. 1, кв. 45</span>
+                </div>
+            </div>
+
+            <!-- SECTION 5: SECURITY & PRIVACY CALLOUT (152-FZ) -->
+            <div class="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 flex flex-col sm:flex-row items-start justify-between gap-4 text-xs">
+                <div class="flex items-start gap-3.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-base shrink-0 mt-0.5">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <strong class="font-bold text-blue-950 block">
+                            Безопасность и защита персональных данных
+                        </strong>
+                        <p class="text-blue-900/80 leading-relaxed">
+                            Все персональные данные обрабатываются в строгом соответствии с требованиями Федерального закона от 27.07.2006 № 152-ФЗ «О персональных данных» и шифруются по ГОСТ Р 34.12-2015. Доступ имеют исключительно уполномоченные сотрудники приемной комиссии МУ им. С.Ю. Витте.
+                        </p>
+                    </div>
+                </div>
+                <a href="/password_change/" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold border border-slate-200 transition-colors shrink-0 shadow-xs">
+                    <i class="bi bi-key-fill text-slate-400"></i>
+                    <span>Сменить пароль</span>
+                </a>
+            </div>
+
+            <!-- ACTION BUTTONS BAR -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100">
+                <a href="/student/dashboard/" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Вернуться в дашборд</span>
+                </a>
+
+                <div class="w-full sm:w-auto flex items-center gap-3">
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/25 transition-all">
+                        <i class="bi bi-check2-circle text-base"></i>
+                        <span>Сохранить персональные данные</span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- 4. SUPPORT & HOTLINE BANNER -->
+    <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1.5 max-w-xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold uppercase tracking-wider">
+                <i class="bi bi-info-circle-fill"></i> Нужна помощь с заполнением?
+            </span>
+            <h3 class="text-lg sm:text-xl font-bold text-white">
+                Возникли трудности или сменился паспорт?
+            </h3>
+            <p class="text-xs text-blue-200/80 leading-relaxed">
+                Специалисты приемной комиссии Московского университета имени С.Ю. Витте помогут проверить корректность данных и обновить сведения в уже зарегистрированных заявлениях.
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+            <a href="tel:+74955000303" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+                <i class="bi bi-telephone-fill text-emerald-400"></i>
+                <span>+7 (495) 500-03-03</span>
+            </a>
+            <a href="/feedback/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-md">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Задать вопрос куратору</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Alpine.js Formatting Helper Methods -->
+<script>
+function profileEditor() {
+    return {
+        formatPhone(e) {
+            let input = e.target;
+            let digits = input.value.replace(/\D/g, '');
+            if (digits.startsWith('7') || digits.startsWith('8')) {
+                digits = digits.slice(1);
+            }
+            digits = digits.slice(0, 10);
+            let formatted = '+7';
+            if (digits.length > 0) formatted += ' (' + digits.slice(0, 3);
+            if (digits.length >= 4) formatted += ') ' + digits.slice(3, 6);
+            if (digits.length >= 7) formatted += '-' + digits.slice(6, 8);
+            if (digits.length >= 9) formatted += '-' + digits.slice(8, 10);
+            input.value = formatted;
+        },
+        formatSnils(e) {
+            let input = e.target;
+            let digits = input.value.replace(/\D/g, '').slice(0, 11);
+            let res = '';
+            if (digits.length > 0) res += digits.slice(0, 3);
+            if (digits.length >= 4) res += '-' + digits.slice(3, 6);
+            if (digits.length >= 7) res += '-' + digits.slice(6, 9);
+            if (digits.length >= 10) res += ' ' + digits.slice(9, 11);
+            input.value = res;
+        },
+        formatPassportSeries(e) {
+            let input = e.target;
+            let digits = input.value.replace(/\D/g, '').slice(0, 4);
+            if (digits.length > 2) {
+                input.value = digits.slice(0, 2) + ' ' + digits.slice(2, 4);
+            } else {
+                input.value = digits;
+            }
+        },
+        formatDigitsOnly(e, maxLen) {
+            let input = e.target;
+            input.value = input.value.replace(/\D/g, '').slice(0, maxLen);
+        },
+        formatDepartmentCode(e) {
+            let input = e.target;
+            let digits = input.value.replace(/\D/g, '').slice(0, 6);
+            if (digits.length > 3) {
+                input.value = digits.slice(0, 3) + '-' + digits.slice(3, 6);
+            } else {
+                input.value = digits;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}
