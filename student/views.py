@@ -105,12 +105,12 @@ def dashboard_view(request):
         },
         {
             'num': 6,
-            'title': 'Допуск к конкурсу',
-            'desc': 'Приказ о зачислении',
+            'title': 'Конкурс и рейтинг',
+            'desc': 'Списки и приказ о зачислении',
             'completed': step6_approval,
             'current': step5_scores and not step6_approval,
-            'icon': 'bi-patch-check-fill',
-            'url': '/rules/',
+            'icon': 'bi-trophy-fill',
+            'url': '/student/rating/',
         },
     ]
 
@@ -221,6 +221,13 @@ def dashboard_view(request):
             'url': '/dormitory/',
             'icon': 'bi-houses-fill',
             'color': 'teal',
+        },
+        {
+            'title': 'Конкурсные списки и рейтинг',
+            'desc': 'Отслеживайте позицию в реальном времени и проходной балл',
+            'url': '/student/rating/',
+            'icon': 'bi-trophy-fill',
+            'color': 'indigo',
         },
         {
             'title': 'Документы и сканы',
@@ -576,6 +583,231 @@ def documents_view(request):
         'applicant_profile': applicant_profile,
     }
     return render(request, 'student/documents.html', context)
+
+
+@login_required
+def rating_view(request):
+    """
+    Страница отслеживания конкурсных списков и позиций в рейтинге (student/rating.html):
+    - Персональная сводка конкурсных позиций текущего абитуриента;
+    - Официальные конкурсные списки поступающих с детализацией по баллам;
+    - Обезличенные идентификаторы абитуриентов (СНИЛС или номер заявления согласно ФЗ-152);
+    - Выделение черты контрольных цифр приема («зеленая зона» плана набора);
+    - Фильтрация по специальностям, форме финансирования (бюджет / договор), оригиналам документов;
+    - Подсчет текущего проходного балла, конкурса (человек на место) и прогноза шансов.
+    """
+    user = request.user
+
+    # 1. Поданные заявления текущего пользователя
+    user_applications = (
+        Application.objects.filter(applicant=user)
+        .select_related('program__specialty__faculty', 'program')
+        .prefetch_related('exam_scores__subject', 'documents')
+        .order_by('-submission_date')
+    )
+
+    # 2. Расчет персональных позиций пользователя в каждом конкурсе
+    user_rankings_summary = []
+    for app in user_applications:
+        app_financing = app.financing_type
+        app_program = app.program
+        specialty = app_program.specialty
+
+        places_count = specialty.budget_places if app_financing == Application.FinancingType.BUDGET else specialty.paid_places
+
+        # Конкурсные заявления по той же программе и основе
+        competing_qs = (
+            Application.objects.filter(
+                program=app_program,
+                financing_type=app_financing,
+            )
+            .exclude(status__in=[Application.Status.DRAFT, Application.Status.REJECTED, Application.Status.WITHDRAWN])
+            .prefetch_related('exam_scores')
+        )
+
+        # Вычисляем баллы каждого участника для определения точного ранга
+        ranked_apps = []
+        for c_app in competing_qs:
+            total_sc = sum(s.score for s in c_app.exam_scores.all())
+            ranked_apps.append((c_app.id, total_sc, c_app.submission_date))
+
+        # Сортировка: по убыванию баллов, затем по дате подачи
+        ranked_apps.sort(key=lambda x: (-x[1], x[2]))
+
+        # Поиск ранга заявления пользователя
+        user_rank = None
+        user_total_score = app.total_score
+        for idx, (c_id, c_score, _) in enumerate(ranked_apps, start=1):
+            if c_id == app.id:
+                user_rank = idx
+                user_total_score = c_score
+                break
+
+        total_in_comp = len(ranked_apps)
+        in_quota = (user_rank is not None and user_rank <= places_count) if places_count > 0 else False
+
+        user_rankings_summary.append({
+            'application': app,
+            'program': app_program,
+            'specialty': specialty,
+            'financing_type': app_financing,
+            'financing_display': app.get_financing_type_display(),
+            'user_rank': user_rank,
+            'total_applicants': total_in_comp,
+            'places_count': places_count,
+            'total_score': user_total_score,
+            'in_quota': in_quota,
+            'status': app.status,
+            'status_display': app.get_status_display(),
+        })
+
+    # 3. Фильтры для просмотра конкурсного списка
+    program_id = request.GET.get('program')
+    financing_type = request.GET.get('financing', Application.FinancingType.BUDGET)
+    only_originals = request.GET.get('originals') == '1'
+    search_query = request.GET.get('q', '').strip()
+
+    # Список всех активных программ для переключателя
+    all_programs = (
+        EducationProgram.objects.filter(is_active=True)
+        .select_related('specialty__faculty')
+        .order_by('specialty__faculty__name', 'specialty__name', 'study_form')
+    )
+
+    # Выбор активной программы
+    selected_program = None
+    if program_id:
+        selected_program = EducationProgram.objects.filter(id=program_id, is_active=True).first()
+
+    if not selected_program and user_applications.exists():
+        selected_program = user_applications.first().program
+
+    if not selected_program:
+        selected_program = all_programs.first()
+
+    # 4. Формирование конкурсного списка для выбранной программы
+    ranked_candidates = []
+    places_count = 0
+    competition_ratio = 0.0
+    passing_score = 0
+    user_in_list = None
+
+    if selected_program:
+        specialty = selected_program.specialty
+        places_count = specialty.budget_places if financing_type == Application.FinancingType.BUDGET else specialty.paid_places
+
+        base_candidates_qs = (
+            Application.objects.filter(
+                program=selected_program,
+                financing_type=financing_type,
+            )
+            .exclude(status__in=[Application.Status.DRAFT, Application.Status.REJECTED, Application.Status.WITHDRAWN])
+            .select_related('applicant', 'applicant__applicant_profile', 'program__specialty')
+            .prefetch_related('exam_scores__subject', 'documents')
+        )
+
+        temp_list = []
+        for c_app in base_candidates_qs:
+            applicant = c_app.applicant
+            profile = getattr(applicant, 'applicant_profile', None)
+
+            # Обезличенный идентификатор: СНИЛС или номер заявки
+            if profile and profile.snils:
+                raw_snils = profile.snils.strip()
+                snils_display = raw_snils
+            else:
+                snils_display = f"№ 2026-{c_app.id:04d}"
+
+            # Детализация экзаменационных баллов
+            scores = list(c_app.exam_scores.all())
+            scores_total = sum(s.score for s in scores)
+            scores_detail = [
+                {
+                    'subject': s.subject.name,
+                    'score': s.score,
+                    'is_passing': s.score >= s.subject.min_score,
+                    'is_verified': s.is_verified,
+                }
+                for s in scores
+            ]
+
+            # Наличие оригинала документа об образовании
+            has_original = c_app.documents.filter(
+                document_type__in=[ApplicationDocument.DocumentType.CERTIFICATE, ApplicationDocument.DocumentType.DIPLOMA]
+            ).exists()
+
+            is_current = (applicant.id == user.id)
+
+            temp_list.append({
+                'app_id': c_app.id,
+                'applicant_name': applicant.get_full_name() or applicant.username,
+                'snils': snils_display,
+                'total_score': scores_total,
+                'scores_detail': scores_detail,
+                'has_original': has_original,
+                'is_current_user': is_current,
+                'submission_date': c_app.submission_date,
+                'status': c_app.status,
+                'status_display': c_app.get_status_display(),
+            })
+
+        # Ранжирование по баллам (убывание), затем дате
+        temp_list.sort(key=lambda x: (-x['total_score'], x['submission_date']))
+
+        # Присваиваем ранги и флаг попадания в контрольные цифры приема
+        for idx, item in enumerate(temp_list, start=1):
+            item['rank'] = idx
+            item['in_quota'] = (idx <= places_count) if places_count > 0 else False
+            if item['is_current_user']:
+                user_in_list = item
+            ranked_candidates.append(item)
+
+        total_applicants = len(ranked_candidates)
+        originals_count = sum(1 for c in ranked_candidates if c['has_original'])
+        competition_ratio = round(total_applicants / places_count, 2) if places_count > 0 else 0.0
+
+        # Текущий проходной балл
+        if total_applicants > 0:
+            if places_count > 0 and total_applicants >= places_count:
+                passing_score = ranked_candidates[places_count - 1]['total_score']
+            else:
+                passing_score = ranked_candidates[-1]['total_score']
+        else:
+            passing_score = 0
+    else:
+        total_applicants = 0
+        originals_count = 0
+
+    # 5. Применение клиентских фильтров к списку
+    displayed_candidates = ranked_candidates
+
+    if only_originals:
+        displayed_candidates = [c for c in displayed_candidates if c['has_original']]
+
+    if search_query:
+        sq = search_query.lower()
+        displayed_candidates = [
+            c for c in displayed_candidates
+            if sq in c['snils'].lower() or sq in str(c['app_id']) or (c['is_current_user'] and sq in 'вы')
+        ]
+
+    context = {
+        'user_rankings_summary': user_rankings_summary,
+        'all_programs': all_programs,
+        'selected_program': selected_program,
+        'selected_financing': financing_type,
+        'only_originals': only_originals,
+        'search_query': search_query,
+        'places_count': places_count,
+        'total_applicants': total_applicants,
+        'originals_count': originals_count,
+        'competition_ratio': competition_ratio,
+        'passing_score': passing_score,
+        'user_in_list': user_in_list,
+        'displayed_candidates': displayed_candidates,
+    }
+    return render(request, 'student/rating.html', context)
+
 
 
 

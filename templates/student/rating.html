@@ -1,0 +1,551 @@
+{% extends 'base.html' %}
+
+{% block title %}Конкурсные списки и позиции в рейтинге | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Конкурсные списки и рейтинг{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12" x-data="{ rankingRulesModal: false, searchQueryClient: '' }">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Приемная кампания 2026/2027 • Официальные конкурсные списки онлайн</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Конкурсные списки и рейтинг поступающих
+            </h1>
+
+            <p class="mt-3 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Отслеживайте свое положение в конкурсных списках, динамику подачи оригиналов документов и актуальный проходной балл в режиме реального времени. Списки ранжируются строго в соответствии с Порядком приема в вузы РФ и обновляются автоматически.
+            </p>
+
+            <!-- Real-time badges -->
+            <div class="mt-6 flex flex-wrap items-center gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-clock-history text-cyan-300"></i>
+                    <span>Списки обновлены: <strong class="text-white font-bold">в реальном времени</strong></span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-shield-check text-emerald-400"></i>
+                    <span>Обезличенные данные по СНИЛС (ФЗ-152)</span>
+                </div>
+                <button type="button" @click="rankingRulesModal = true" class="flex items-center gap-2 bg-indigo-500/30 hover:bg-indigo-500/50 text-white px-3.5 py-1.5 rounded-xl border border-indigo-400/40 transition-colors">
+                    <i class="bi bi-info-circle text-amber-300"></i>
+                    <span>Правила ранжирования</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. PERSONALIZED STUDENT COMPETITIONS OVERVIEW -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 uppercase tracking-wider">
+                    Личный мониторинг
+                </span>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                    Ваши позиции в конкурсных списках
+                </h2>
+            </div>
+            <a href="/student/apply/" class="hidden sm:inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl transition-colors">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>Подать еще заявление</span>
+            </a>
+        </div>
+
+        {% if user_rankings_summary %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for item in user_rankings_summary %}
+            <div class="bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 hover:shadow-lg flex flex-col justify-between gap-4 {% if item.in_quota %}border-emerald-200 bg-gradient-to-b from-emerald-50/20 to-white shadow-xs{% else %}border-slate-200/80 shadow-xs{% endif %}">
+                <div>
+                    <!-- Header with Specialty Code & Financing -->
+                    <div class="flex items-start justify-between gap-3 mb-2">
+                        <span class="text-xs font-bold font-mono px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
+                            {{ item.specialty.code }}
+                        </span>
+                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-lg {% if item.financing_type == 'BUDGET' %}bg-purple-100 text-purple-800 border border-purple-200{% else %}bg-amber-100 text-amber-800 border border-amber-200{% endif %}">
+                            {{ item.financing_display }}
+                        </span>
+                    </div>
+
+                    <!-- Program Title -->
+                    <h3 class="text-base font-black text-slate-900 leading-snug line-clamp-2">
+                        {{ item.specialty.name }}
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-1">
+                        {{ item.program.get_study_form_display }} форма • {{ item.program.duration }}
+                    </p>
+
+                    <!-- Key Ranking Indicator Card -->
+                    <div class="mt-4 p-4 rounded-2xl border {% if item.in_quota %}bg-emerald-50/80 border-emerald-200 text-emerald-950{% else %}bg-slate-50 border-slate-200 text-slate-900{% endif %}">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] uppercase tracking-wider font-bold {% if item.in_quota %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                                Текущий статус в конкурсе
+                            </span>
+                            <span class="text-xs font-black px-2 py-0.5 rounded-md {% if item.in_quota %}bg-emerald-200 text-emerald-900{% else %}bg-slate-200 text-slate-800{% endif %}">
+                                {% if item.in_quota %}В зоне зачисления{% else %}В резерве{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="flex items-baseline justify-between">
+                            <div class="space-y-0.5">
+                                <span class="text-[11px] text-slate-500 block">Позиция в рейтинге:</span>
+                                <div class="text-2xl font-black {% if item.in_quota %}text-emerald-600{% else %}text-slate-800{% endif %}">
+                                    {% if item.user_rank %}
+                                        № {{ item.user_rank }} <span class="text-xs font-semibold text-slate-400">из {{ item.total_applicants }}</span>
+                                    {% else %}
+                                        — <span class="text-xs font-semibold text-slate-400">в очереди</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-right space-y-0.5">
+                                <span class="text-[11px] text-slate-500 block">Ваш суммарный балл:</span>
+                                <div class="text-xl font-black text-indigo-600">
+                                    {{ item.total_score }} б.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Line of quota -->
+                        <div class="mt-3 pt-3 border-t {% if item.in_quota %}border-emerald-200/60{% else %}border-slate-200{% endif %} flex items-center justify-between text-[11px]">
+                            <span class="text-slate-500">План приема: <strong class="text-slate-700">{{ item.places_count }} мест</strong></span>
+                            {% if item.in_quota %}
+                                <span class="text-emerald-700 font-bold flex items-center gap-1">
+                                    <i class="bi bi-check-circle-fill"></i> Проходите по баллам
+                                </span>
+                            {% else %}
+                                <span class="text-amber-700 font-medium">
+                                    Лист ожидания
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Action -->
+                <a href="?program={{ item.program.id }}&financing={{ item.financing_type }}#competitive-table" 
+                   class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all {% if selected_program.id == item.program.id and selected_financing == item.financing_type %}bg-blue-600 text-white shadow-md shadow-blue-500/20{% else %}bg-slate-100 hover:bg-slate-200 text-slate-700{% endif %}">
+                    <i class="bi bi-list-ol"></i>
+                    <span>Смотреть этот конкурсный список</span>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-blue-50/70 rounded-3xl p-8 border border-blue-200 text-center space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center mx-auto text-2xl">
+                <i class="bi bi-file-earmark-person"></i>
+            </div>
+            <h3 class="text-lg font-bold text-blue-950">У вас пока нет поданных заявлений на поступление</h3>
+            <p class="text-xs sm:text-sm text-blue-800/80 max-w-md mx-auto">
+                Подайте заявление на интересующую специальность, чтобы занять место в конкурсном списке и отслеживать шансы на зачисление.
+            </p>
+            <div class="pt-2">
+                <a href="/student/apply/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-md">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Перейти к подаче заявления</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 3. COMPETITIVE LIST VIEWER & FILTERS -->
+    <div id="competitive-table" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        
+        <!-- Header & Program Information -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-200 uppercase tracking-wider">
+                        Ранжированный список
+                    </span>
+                    <span class="text-xs text-slate-400">МУ им. С.Ю. Витте</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    {% if selected_program %}
+                        {{ selected_program.specialty.code }} {{ selected_program.specialty.name }}
+                    {% else %}
+                        Конкурсный список
+                    {% endif %}
+                </h2>
+                {% if selected_program %}
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                    Факультет: <strong class="text-slate-700">{{ selected_program.specialty.faculty.name }}</strong> • 
+                    Форма: <strong class="text-slate-700">{{ selected_program.get_study_form_display }}</strong> • 
+                    Основа: <strong class="text-slate-700">{% if selected_financing == 'BUDGET' %}Бюджетные места{% else %}Платная основа{% endif %}</strong>
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Print / Export and Rules Buttons -->
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                    <i class="bi bi-printer-fill"></i>
+                    <span>Распечатать список</span>
+                </button>
+                <button type="button" @click="rankingRulesModal = true" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors border border-indigo-200">
+                    <i class="bi bi-question-circle-fill"></i>
+                    <span>Как считаются баллы?</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Form -->
+        <form method="GET" action="#competitive-table" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+                
+                <!-- 1. Program Selector -->
+                <div class="lg:col-span-6 space-y-1.5">
+                    <label for="id_program_select" class="block text-xs font-bold text-slate-700">
+                        Направление подготовки и программа:
+                    </label>
+                    <select id="id_program_select" name="program" onchange="this.form.submit()"
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm font-medium text-slate-800 bg-white transition-all">
+                        {% for prog in all_programs %}
+                        <option value="{{ prog.id }}" {% if selected_program and selected_program.id == prog.id %}selected{% endif %}>
+                            {{ prog.specialty.code }} {{ prog.specialty.name }} ({{ prog.get_study_form_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- 2. Financing Type Toggle -->
+                <div class="lg:col-span-3 space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-700">
+                        Основа обучения:
+                    </label>
+                    <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
+                        <button type="submit" name="financing" value="BUDGET"
+                                class="py-2 rounded-lg transition-all {% if selected_financing == 'BUDGET' %}bg-white text-purple-700 shadow-sm border border-slate-200{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                            Бюджет
+                        </button>
+                        <button type="submit" name="financing" value="PAID"
+                                class="py-2 rounded-lg transition-all {% if selected_financing == 'PAID' %}bg-white text-amber-800 shadow-sm border border-slate-200{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                            Договор
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Search by SNILS / ID -->
+                <div class="lg:col-span-3 space-y-1.5">
+                    <label for="id_search_input" class="block text-xs font-bold text-slate-700">
+                        Поиск по СНИЛС или номеру:
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="id_search_input" name="q" value="{{ search_query }}" placeholder="Например: 123-456-789 00"
+                               class="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition-all">
+                        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        {% if search_query %}
+                        <a href="?program={{ selected_program.id }}&financing={{ selected_financing }}#competitive-table" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                            <i class="bi bi-x-circle-fill text-xs"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Additional Checkbox Filter -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-100 text-xs">
+                <label class="inline-flex items-center gap-2 text-slate-700 cursor-pointer font-medium select-none">
+                    <input type="checkbox" name="originals" value="1" onchange="this.form.submit()" {% if only_originals %}checked{% endif %}
+                           class="rounded text-blue-600 focus:ring-blue-500/20 border-slate-300 w-4 h-4">
+                    <span>Показывать только абитуриентов с <strong class="text-slate-900">оригиналами документов</strong></span>
+                </label>
+
+                <div class="text-slate-400 text-[11px]">
+                    Найдено в списке: <strong class="text-slate-700">{{ displayed_candidates|length }}</strong> из {{ total_applicants }} абитуриентов
+                </div>
+            </div>
+        </form>
+
+        <!-- KPI Metrics Grid of Selected Competition -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">План приема</span>
+                <strong class="text-lg font-black text-slate-800">{{ places_count }}</strong>
+                <span class="text-[11px] text-slate-500 block">контрольных мест</span>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Подано заявлений</span>
+                <strong class="text-lg font-black text-slate-800">{{ total_applicants }}</strong>
+                <span class="text-[11px] text-slate-500 block">человек в конкурсе</span>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">С оригиналами</span>
+                <strong class="text-lg font-black text-emerald-600">{{ originals_count }}</strong>
+                <span class="text-[11px] text-slate-500 block">аттестатов/дипломов</span>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Конкурс</span>
+                <strong class="text-lg font-black text-indigo-600">{{ competition_ratio }}</strong>
+                <span class="text-[11px] text-slate-500 block">чел. на 1 место</span>
+            </div>
+
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 col-span-2 sm:col-span-1">
+                <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Проходной балл</span>
+                <strong class="text-lg font-black text-blue-600">
+                    {% if passing_score > 0 %}{{ passing_score }}{% else %}—{% endif %}
+                </strong>
+                <span class="text-[11px] text-slate-500 block">по границе мест</span>
+            </div>
+        </div>
+
+        <!-- 4. MAIN RANKING TABLE -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-inner">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-100/90 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                        <th class="py-3 px-4 text-center w-14">№ п/п</th>
+                        <th class="py-3 px-4">СНИЛС / Идентификатор</th>
+                        <th class="py-3 px-4 text-center">Сумма баллов</th>
+                        <th class="py-3 px-4">Баллы по предметам</th>
+                        <th class="py-3 px-4 text-center">Оригинал</th>
+                        <th class="py-3 px-4 text-center">Приоритет</th>
+                        <th class="py-3 px-4 text-right">Статус допуска</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for candidate in displayed_candidates %}
+                    <tr class="transition-colors hover:bg-slate-50/80 {% if candidate.is_current_user %}bg-blue-50/90 font-semibold border-l-4 border-l-blue-600{% elif candidate.in_quota %}bg-emerald-50/20{% endif %}">
+                        
+                        <!-- Rank Number / Medal -->
+                        <td class="py-3.5 px-4 text-center">
+                            {% if candidate.rank == 1 %}
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-black text-xs shadow-xs border border-amber-300" title="1 место">🥇 1</span>
+                            {% elif candidate.rank == 2 %}
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-200 text-slate-800 font-black text-xs shadow-xs border border-slate-300" title="2 место">🥈 2</span>
+                            {% elif candidate.rank == 3 %}
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/15 text-amber-900 font-black text-xs shadow-xs border border-amber-600/30" title="3 место">🥉 3</span>
+                            {% else %}
+                                <span class="text-xs font-bold {% if candidate.in_quota %}text-emerald-700{% else %}text-slate-500{% endif %}">
+                                    {{ candidate.rank }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- SNILS / Identifier -->
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-slate-900 text-xs">
+                                    {{ candidate.snils }}
+                                </span>
+                                {% if candidate.is_current_user %}
+                                <span class="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                    Это вы
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Total Score -->
+                        <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                            <span class="inline-flex items-center justify-center px-3 py-1 rounded-xl text-sm font-black {% if candidate.in_quota %}bg-emerald-100 text-emerald-900 border border-emerald-300{% else %}bg-slate-100 text-slate-800 border border-slate-200{% endif %}">
+                                {{ candidate.total_score }}
+                            </span>
+                        </td>
+
+                        <!-- Subjects Breakdown -->
+                        <td class="py-3.5 px-4">
+                            <div class="flex flex-wrap gap-1.5 max-w-sm">
+                                {% for score_item in candidate.scores_detail %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-medium border border-slate-200/60" title="{{ score_item.subject }}: {{ score_item.score }} б.">
+                                    <span class="text-slate-500">{{ score_item.subject|truncatechars:12 }}:</span>
+                                    <strong class="text-slate-900 font-bold">{{ score_item.score }}</strong>
+                                </span>
+                                {% empty %}
+                                <span class="text-slate-400 text-[11px] italic">Баллы проверяются</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+
+                        <!-- Original Document -->
+                        <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                            {% if candidate.has_original %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-200">
+                                <i class="bi bi-check-circle-fill text-emerald-600"></i> Оригинал
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[11px]">
+                                <i class="bi bi-file-earmark"></i> Копия
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Priority -->
+                        <td class="py-3.5 px-4 text-center whitespace-nowrap text-slate-600 font-medium">
+                            <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-bold">
+                                1
+                            </span>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold {% if candidate.status == 'ENROLLED' %}bg-purple-100 text-purple-900 border border-purple-200{% elif candidate.status == 'APPROVED' %}bg-emerald-100 text-emerald-900 border border-emerald-200{% else %}bg-blue-100 text-blue-900 border border-blue-200{% endif %}">
+                                {{ candidate.status_display }}
+                            </span>
+                        </td>
+                    </tr>
+
+                    <!-- Cutoff Line Divider (Черта зачисления) -->
+                    {% if places_count > 0 and candidate.rank == places_count and forloop.revcounter0 > 0 and not only_originals and not search_query %}
+                    <tr class="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-700 text-white shadow-md">
+                        <td colspan="7" class="py-2.5 px-4 text-center font-bold text-xs sm:text-sm">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-4xl mx-auto">
+                                <div class="flex items-center gap-2">
+                                    <i class="bi bi-flag-fill text-amber-300"></i>
+                                    <span>ЧЕРТА КОНТРОЛЬНЫХ ЦИФР ПРИЕМА ({{ places_count }} МЕСТ)</span>
+                                </div>
+                                <div class="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full border border-white/20">
+                                    Проходной балл на данный момент: <strong class="text-amber-200">{{ passing_score }} б.</strong>
+                                </div>
+                                <div class="text-[11px] text-blue-100 font-normal">
+                                    Ниже черты — кандидаты в резервный список
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-500">
+                            <div class="space-y-3">
+                                <i class="bi bi-search text-3xl text-slate-300"></i>
+                                <p class="text-sm font-semibold text-slate-700">По заданным условиям заявлений не найдено</p>
+                                <p class="text-xs text-slate-400">Попробуйте изменить параметры поиска или сбросить фильтр оригиналов документов.</p>
+                                <a href="?program={{ selected_program.id }}&financing={{ selected_financing }}#competitive-table" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Сбросить фильтры
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- 5. RULES & GUIDELINES ACCORDION / BANNER -->
+    <div class="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="space-y-1">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold uppercase tracking-wider">
+                    <i class="bi bi-info-circle-fill"></i> Памятка абитуриента
+                </span>
+                <h3 class="text-lg sm:text-xl font-bold text-white">
+                    Как рассчитывается позиция в рейтинге и проходной балл?
+                </h3>
+            </div>
+            <a href="/feedback/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-md self-start md:self-center shrink-0">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Задать вопрос по зачислению</span>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div class="flex items-center gap-2 text-amber-400 font-bold">
+                    <i class="bi bi-1-circle-fill text-base"></i>
+                    <span>Ранжирование по баллам</span>
+                </div>
+                <p class="text-slate-400 leading-relaxed">
+                    Списки упорядочиваются по убыванию общей суммы конкурсных баллов (ЕГЭ, внутренние вступительные испытания и индивидуальные достижения до 10 баллов).
+                </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                    <i class="bi bi-2-circle-fill text-base"></i>
+                    <span>Преимущественное право</span>
+                </div>
+                <p class="text-slate-400 leading-relaxed">
+                    При равенстве общей суммы баллов преимущество отдается абитуриентам с более высоким баллом по профильному предмету направления.
+                </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div class="flex items-center gap-2 text-cyan-400 font-bold">
+                    <i class="bi bi-3-circle-fill text-base"></i>
+                    <span>Оригинал документа</span>
+                </div>
+                <p class="text-slate-400 leading-relaxed">
+                    Зачисление на бюджетные места осуществляется строго при наличии предоставленного оригинала документа об образовании до установленного дедлайна.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL: RULES OF RANKING -->
+    <div x-show="rankingRulesModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+         style="display: none;">
+        
+        <div @click.away="rankingRulesModal = false"
+             class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg">
+                        <i class="bi bi-journal-text"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-black text-slate-900">Порядок ранжирования списков</h4>
+                        <span class="text-xs text-slate-500">Приемная кампания 2026/2027</span>
+                    </div>
+                </div>
+                <button type="button" @click="rankingRulesModal = false" class="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-100">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p>
+                    В соответствии с Федеральным законом «Об образовании в РФ» № 273-ФЗ и Приказом Минобрнауки России конкурсные списки ранжируются по следующим критериям:
+                </p>
+                <ol class="list-decimal pl-5 space-y-2 text-slate-800 font-medium">
+                    <li>Абитуриенты, имеющие право на прием без вступительных испытаний (БВИ — победители и призеры Всероссийской олимпиады школьников).</li>
+                    <li>Абитуриенты, поступающие по целевой квоте и особой квоте (в пределах выделенных мест).</li>
+                    <li>Абитуриенты, участвующие в общем конкурсе, по убыванию суммы конкурсных баллов.</li>
+                    <li>При равенстве суммы баллов — по баллу вступительного испытания по профильному предмету.</li>
+                    <li>При равенстве баллов по профильному предмету — по баллам за индивидуальные достижения (ИД).</li>
+                </ol>
+                <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs space-y-1">
+                    <strong class="font-bold flex items-center gap-1.5 text-amber-900">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Важно для зачисления:
+                    </strong>
+                    <p>
+                        Для включения в приказ о зачислении на бюджетные места необходимо предоставить оригинал документа об образовании (аттестат или диплом) в приемную комиссию до установленного срока.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="button" @click="rankingRulesModal = false" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors">
+                    Понятно, закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

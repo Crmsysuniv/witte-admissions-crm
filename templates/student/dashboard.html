@@ -79,19 +79,19 @@
             </div>
         </a>
 
-        <!-- Metric 3: Exam Scores -->
-        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md">
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl shrink-0">
-                <i class="bi bi-award-fill"></i>
+        <!-- Metric 3: Exam Scores & Rating -->
+        <a href="/student/rating/" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md hover:border-amber-300 block group">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
+                <i class="bi bi-trophy-fill"></i>
             </div>
             <div class="min-w-0">
-                <span class="text-slate-400 text-xs font-semibold block uppercase tracking-wider">Сумма баллов ЕГЭ</span>
+                <span class="text-slate-400 text-xs font-semibold block uppercase tracking-wider group-hover:text-amber-700 transition-colors">Сумма баллов / Рейтинг</span>
                 <div class="flex items-baseline gap-1.5 mt-0.5">
                     <span class="text-2xl font-black text-slate-900">{{ total_score }}</span>
-                    <span class="text-xs text-slate-400 font-medium">баллов</span>
+                    <span class="text-xs text-amber-600 font-medium">баллов (списки)</span>
                 </div>
             </div>
-        </div>
+        </a>
 
         <!-- Metric 4: Notifications -->
         <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md">
