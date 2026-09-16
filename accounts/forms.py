@@ -2,6 +2,7 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 from django.contrib.auth import authenticate
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.password_validation import validate_password
 from .models import User, ApplicantProfile
 
@@ -270,3 +271,72 @@ class LoginForm(forms.Form):
 
     def get_user(self):
         return self.user_cache
+
+
+class CustomPasswordChangeForm(PasswordChangeForm):
+    """
+    Форма безопасной смены пароля для всех авторизованных пользователей CRM МУ им. С.Ю. Витте.
+    Включает валидацию действующего пароля, проверку на несовпадение с текущим
+    и комплексный контроль надежности нового пароля.
+    """
+    old_password = forms.CharField(
+        label='Текущий пароль',
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Введите действующий пароль учетной записи',
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11',
+            'autocomplete': 'current-password',
+            'autofocus': 'true',
+        })
+    )
+
+    new_password1 = forms.CharField(
+        label='Новый пароль',
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Придумайте новый надежный пароль',
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11',
+            'autocomplete': 'new-password',
+            '@input': 'calculateStrength($event.target.value)',
+        })
+    )
+
+    new_password2 = forms.CharField(
+        label='Повторите новый пароль',
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Повторите новый пароль для проверки',
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11',
+            'autocomplete': 'new-password',
+            '@input': 'checkMatch($event.target.value)',
+        })
+    )
+
+    def clean_old_password(self):
+        old_password = self.cleaned_data.get('old_password')
+        if not self.user.check_password(old_password):
+            raise ValidationError('Текущий пароль указан неверно. Пожалуйста, проверьте правильность ввода.')
+        return old_password
+
+    def clean_new_password1(self):
+        old_password = self.cleaned_data.get('old_password')
+        new_password1 = self.cleaned_data.get('new_password1')
+
+        if new_password1:
+            if old_password and old_password == new_password1:
+                raise ValidationError('Новый пароль не может совпадать с текущим действующим паролем.')
+
+            # Комплексная проверка надежности (длина не менее 8, заглавные, строчные, цифры, спецсимволы)
+            validate_password_strength(new_password1)
+
+            # Валидация стандартными правилами Django
+            validate_password(new_password1, user=self.user)
+
+        return new_password1
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('new_password1')
+        p2 = cleaned_data.get('new_password2')
+
+        if p1 and p2 and p1 != p2:
+            self.add_error('new_password2', 'Введенные новые пароли не совпадают.')
+
+        return cleaned_data

@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.utils.http import url_has_allowed_host_and_scheme
 from .models import User
-from .forms import ApplicantRegistrationForm, LoginForm
+from .forms import ApplicantRegistrationForm, LoginForm, CustomPasswordChangeForm
 
 
 def get_redirect_url_for_role(user, next_url=None, request=None):
@@ -162,4 +163,44 @@ def register_view(request):
         'form': form,
     }
     return render(request, 'register.html', context)
+
+
+@login_required
+def password_change_view(request):
+    """
+    Контроллер безопасной самостоятельной смены пароля для всех авторизованных пользователей CRM
+    (Абитуриенты, Сотрудники приемной комиссии, Администраторы).
+    
+    1. Проверяет корректность старого пароля учетной записи.
+    2. Выполняет комплексную проверку надежности нового пароля (длина, регистры, цифры, спецсимволы).
+    3. Проверяет несовпадение нового пароля со старым.
+    4. Сохраняет обновленный хеш пароля в базе данных.
+    5. Обновляет сессионный хеш аутентификации (update_session_auth_hash), предотвращая разлогинивание.
+    6. Выводит персонализированное Flash-сообщение об успехе.
+    """
+    if request.method == 'POST':
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Обновляем сессионный хеш, чтобы сессия пользователя оставалась активной
+            update_session_auth_hash(request, user)
+
+            messages.success(
+                request,
+                'Пароль вашей учетной записи успешно обновлен и защищен! '
+                'Сессия авторизации сохранена. Используйте новый пароль при следующем входе в систему.'
+            )
+            return redirect('password_change')
+        else:
+            messages.error(
+                request,
+                'Не удалось изменить пароль. Пожалуйста, проверьте правильность действующего пароля и требования к новому паролю.'
+            )
+    else:
+        form = CustomPasswordChangeForm(user=request.user)
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'password_change.html', context)
 

@@ -27,6 +27,7 @@ urlpatterns = [
     path('login/', accounts_views.login_view, name='login'),
     path('logout/', accounts_views.logout_view, name='logout'),
     path('register/', accounts_views.register_view, name='register'),
+    path('password_change/', accounts_views.password_change_view, name='password_change'),
     path('accounts/', include('accounts.urls')),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),
