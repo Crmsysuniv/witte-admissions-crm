@@ -1,7 +1,125 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import login
-from .forms import ApplicantRegistrationForm
+from django.contrib.auth import login, logout
+from django.utils.http import url_has_allowed_host_and_scheme
+from .models import User
+from .forms import ApplicantRegistrationForm, LoginForm
+
+
+def get_redirect_url_for_role(user, next_url=None, request=None):
+    """
+    Определяет целевой URL перенаправления после авторизации в зависимости от роли пользователя.
+    1. Администратор (ADMIN) -> Панель управления /admin/
+    2. Сотрудник приемной комиссии (OFFICER) -> Рабочее место со списком заявлений /admin/admissions/application/
+    3. Абитуриент (APPLICANT) -> Главная страница портала абитуриента /
+    """
+    # Если передан корректный и безопасный URL в параметре next, отдаем ему приоритет
+    if next_url and request and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        excluded_paths = ['/login/', '/logout/', '/register/', '/accounts/login/', '/accounts/logout/', '/accounts/register/']
+        if next_url not in excluded_paths:
+            return next_url
+
+    # Перенаправление по роли
+    if user.role == User.Role.ADMIN or user.is_superuser:
+        return '/admin/'
+    elif user.role == User.Role.OFFICER:
+        return '/admin/admissions/application/'
+    elif user.role == User.Role.APPLICANT:
+        return '/'
+
+    return '/'
+
+
+def login_view(request):
+    """
+    Контроллер авторизации пользователей с перенаправлением в зависимости от роли.
+    Поддерживает вход по логину или email, опцию «Запомнить меня» и возврат на исходную страницу (next).
+    """
+    next_url = request.POST.get('next') or request.GET.get('next', '')
+
+    if request.user.is_authenticated:
+        messages.info(
+            request,
+            f'Вы уже авторизованы в системе под именем {request.user.get_full_name() or request.user.username} '
+            f'(роль: {request.user.get_role_display()}).'
+        )
+        return redirect(get_redirect_url_for_role(request.user, next_url, request))
+
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+
+            # Настройка времени жизни сессии («Запомнить меня»)
+            if form.cleaned_data.get('remember_me'):
+                request.session.set_expiry(1209600)  # 2 недели
+            else:
+                request.session.set_expiry(0)  # До закрытия браузера
+
+            # Персонализированное приветственное Flash-сообщение в зависимости от роли
+            if user.role == User.Role.ADMIN or user.is_superuser:
+                messages.success(
+                    request,
+                    f'Добро пожаловать в панель администратора CRM, {user.get_full_name() or user.username}!'
+                )
+            elif user.role == User.Role.OFFICER:
+                messages.success(
+                    request,
+                    f'Здравствуйте, {user.get_full_name() or user.username}! '
+                    'Открыто рабочее место сотрудника приемной комиссии МУ им. С.Ю. Витте.'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Добро пожаловать в личный кабинет абитуриента, {user.get_full_name() or user.username}!'
+                )
+
+            redirect_target = get_redirect_url_for_role(user, next_url, request)
+            return redirect(redirect_target)
+        else:
+            messages.error(
+                request,
+                'Не удалось войти в систему. Пожалуйста, проверьте правильность введенного логина (или email) и пароля.'
+            )
+    else:
+        form = LoginForm()
+
+    context = {
+        'form': form,
+        'next': next_url,
+    }
+    return render(request, 'login.html', context)
+
+
+def logout_view(request):
+    """
+    Контроллер выхода из системы с перенаправлением и уведомлением в зависимости от роли.
+    - Сотрудники комиссии и Администраторы перенаправляются на страницу входа (/login/)
+    - Абитуриенты перенаправляются на главную страницу портала (/)
+    """
+    user_role = None
+    user_name = ''
+
+    if request.user.is_authenticated:
+        user_role = request.user.role
+        user_name = request.user.get_full_name() or request.user.username
+
+    logout(request)
+
+    # Ролевое перенаправление после завершения сеанса
+    if user_role in [User.Role.ADMIN, User.Role.OFFICER]:
+        messages.info(
+            request,
+            f'Сеанс работы сотрудника ({user_name}) успешно завершен. Для повторного доступа авторизуйтесь в системе.'
+        )
+        return redirect('login')
+    else:
+        messages.success(
+            request,
+            'Вы успешно вышли из личного кабинета абитуриента. Будем рады видеть вас снова!'
+        )
+        return redirect('home')
 
 
 def register_view(request):
@@ -44,3 +162,4 @@ def register_view(request):
         'form': form,
     }
     return render(request, 'register.html', context)
+

@@ -1,6 +1,7 @@
 import re
 from django import forms
 from django.core.exceptions import ValidationError
+from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from .models import User, ApplicantProfile
 
@@ -202,3 +203,70 @@ class ApplicantRegistrationForm(forms.ModelForm):
             ApplicantProfile.objects.get_or_create(user=user)
 
         return user
+
+
+class LoginForm(forms.Form):
+    """
+    Форма аутентификации пользователей CRM МУ им. С.Ю. Витте.
+    Поддерживает вход как по имени пользователя (username), так и по email.
+    """
+    username = forms.CharField(
+        label='Логин или Email',
+        max_length=150,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'ivanov_2026 или applicant@example.ru',
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+            'autocomplete': 'username',
+            'autofocus': 'true',
+        })
+    )
+
+    password = forms.CharField(
+        label='Пароль',
+        required=True,
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Введите пароль учетной записи',
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11',
+            'autocomplete': 'current-password',
+        })
+    )
+
+    remember_me = forms.BooleanField(
+        label='Запомнить меня на этом устройстве',
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-0.5',
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.user_cache = None
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        login_val = cleaned_data.get('username', '').strip()
+        password = cleaned_data.get('password')
+
+        if login_val and password:
+            auth_username = login_val
+            # Если пользователь ввел email, находим соответствующий username
+            if '@' in login_val:
+                user_by_email = User.objects.filter(email__iexact=login_val).first()
+                if user_by_email:
+                    auth_username = user_by_email.username
+
+            user = authenticate(username=auth_username, password=password)
+            if user is None:
+                raise ValidationError('Неверный логин (или email) либо пароль. Пожалуйста, проверьте правильность ввода.')
+            if not user.is_active:
+                raise ValidationError('Ваша учетная запись заблокирована или ожидает подтверждения администратора.')
+
+            self.user_cache = user
+
+        return cleaned_data
+
+    def get_user(self):
+        return self.user_cache

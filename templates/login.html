@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block title %}Вход в систему | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Вход в систему{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-12" x-data="{
+    showPassword: false,
+    isSubmitting: false
+}">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-shield-lock-fill text-emerald-400"></i>
+                <span>Единая авторизация CRM • Приемная кампания 2026</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Авторизация <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">в системе</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Войдите в личный кабинет для управления заявлением, проверки статуса документов или модерации конкурсных списков. Доступ к рабочим интерфейсам предоставляется автоматически в зависимости от назначенной роли.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-person-fill text-cyan-300"></i>
+                    <span>Вход по логину или email</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-shuffle text-emerald-400"></i>
+                    <span>Ролевая маршрутизация</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-shield-check text-amber-300"></i>
+                    <span>Защищенный TLS-канал</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN LAYOUT: 2 COLUMNS (INFO & DEMO CARDS + LOGIN FORM) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- LEFT COLUMN: ROLES OVERVIEW & DEMO ACCESS (5 COLS) -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Roles Navigation Guide Card -->
+            <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl space-y-6">
+                <div>
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-3">
+                        <i class="bi bi-diagram-3-fill"></i> Ролевой доступ
+                    </span>
+                    <h2 class="text-xl sm:text-2xl font-black text-white">
+                        Куда вы попадете после входа?
+                    </h2>
+                    <p class="text-xs text-blue-200/80 mt-1 leading-relaxed">
+                        Система автоматически определит вашу роль и откроет соответствующий раздел:
+                    </p>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <!-- Applicant -->
+                    <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-white text-sm flex items-center gap-2">
+                                <i class="bi bi-mortarboard-fill text-emerald-400"></i>
+                                <span>Абитуриент (APPLICANT)</span>
+                            </strong>
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">
+                                Портал приема
+                            </span>
+                        </div>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">
+                            Личный кабинет, подача заявлений, загрузка сканов документов, мониторинг рейтинга и оформление договора.
+                        </p>
+                    </div>
+
+                    <!-- Officer -->
+                    <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-white text-sm flex items-center gap-2">
+                                <i class="bi bi-person-workspace text-blue-400"></i>
+                                <span>Сотрудник комиссии (OFFICER)</span>
+                            </strong>
+                            <span class="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-text-[10px] font-mono font-bold">
+                                Журнал заявлений
+                            </span>
+                        </div>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">
+                            Верификация поданных заявлений, проверка баллов ЕГЭ, модерация документов и допуск к вступительным испытаниям.
+                        </p>
+                    </div>
+
+                    <!-- Admin -->
+                    <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                        <div class="flex items-center justify-between">
+                            <strong class="text-white text-sm flex items-center gap-2">
+                                <i class="bi bi-shield-lock-fill text-indigo-400"></i>
+                                <span>Администратор (ADMIN)</span>
+                            </strong>
+                            <span class="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono font-bold">
+                                Панель управления
+                            </span>
+                        </div>
+                        <p class="text-slate-300 text-[11px] leading-relaxed">
+                            Полный доступ к базе данных, аудиту системы, управлению правами пользователей и системным справочникам.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Registration Prompt -->
+                <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-200 flex items-center justify-between gap-3">
+                    <div>
+                        <strong class="text-white block font-bold">Впервые на портале?</strong>
+                        <span class="text-[11px] text-emerald-200/90">Создайте аккаунт за 2 минуты</span>
+                    </div>
+                    <a href="/register/" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs shadow-md transition-all shrink-0">
+                        Регистрация →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Demo Credentials Helper Box -->
+            <div class="p-5 rounded-3xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-3">
+                <div class="flex items-center gap-2 font-bold text-slate-800">
+                    <i class="bi bi-key-fill text-amber-500 text-base"></i>
+                    <span>Тестовые учетные записи системы:</span>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[11px]">
+                    <div class="p-2.5 rounded-xl bg-white border border-slate-200">
+                        <span class="text-slate-400 text-[10px] block font-sans">Абитуриент:</span>
+                        <strong class="text-slate-800">applicant1</strong>
+                        <span class="text-slate-500 text-[10px] block">applicant123</span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-white border border-slate-200">
+                        <span class="text-slate-400 text-[10px] block font-sans">Сотрудник:</span>
+                        <strong class="text-slate-800">officer1</strong>
+                        <span class="text-slate-500 text-[10px] block">officer123</span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-white border border-slate-200">
+                        <span class="text-slate-400 text-[10px] block font-sans">Администратор:</span>
+                        <strong class="text-slate-800">admin</strong>
+                        <span class="text-slate-500 text-[10px] block">admin123</span>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-slate-400 pt-1">
+                    Данные учетные записи подготовлены для демонстрации ролевой модели разграничения доступа.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: LOGIN FORM (7 COLS) -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/80 shadow-sm space-y-6">
+            
+            <div class="pb-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Вход в личный кабинет
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Введите учетные данные для авторизации в системе
+                    </p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold self-start sm:self-center">
+                    <i class="bi bi-shield-check text-blue-600"></i>
+                    <span>Безопасный вход</span>
+                </span>
+            </div>
+
+            <!-- Error Summary (If invalid credentials) -->
+            {% if form.errors %}
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5" role="alert">
+                <div class="flex items-center gap-2 font-bold text-rose-900">
+                    <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
+                    <span>Ошибка авторизации:</span>
+                </div>
+                <ul class="list-disc list-inside space-y-0.5 text-rose-700 pl-2">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}" @submit="isSubmitting = true" class="space-y-5" novalidate>
+                {% csrf_token %}
+
+                <!-- Hidden Next URL Parameter -->
+                {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <!-- 1. Username / Email Field -->
+                <div>
+                    <label for="{{ form.username.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Логин или Email <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <i class="bi bi-person absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                        <div class="pl-2">
+                            {{ form.username }}
+                        </div>
+                    </div>
+                    {% if form.username.errors %}
+                        <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- 2. Password Field with Show/Hide Toggle -->
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label for="{{ form.password.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Пароль <span class="text-rose-500">*</span>
+                        </label>
+                        <a href="/contacts/" class="text-xs text-blue-600 hover:text-blue-800 hover:underline">
+                            Забыли пароль?
+                        </a>
+                    </div>
+                    
+                    <div class="relative">
+                        <i class="bi bi-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-base"></i>
+                        <input :type="showPassword ? 'text' : 'password'"
+                               name="password"
+                               id="{{ form.password.id_for_label }}"
+                               placeholder="Введите пароль учетной записи"
+                               class="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                               autocomplete="current-password"
+                               required>
+                        <button type="button" 
+                                @click="showPassword = !showPassword" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors focus:outline-none"
+                                :title="showPassword ? 'Скрыть пароль' : 'Показать пароль'">
+                            <i class="bi" :class="showPassword ? 'bi-eye-slash-fill text-blue-600' : 'bi-eye-fill'"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- 3. Remember Me Checkbox -->
+                <div class="pt-1 flex items-center justify-between">
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                        {{ form.remember_me }}
+                        <span class="text-xs text-slate-600">
+                            Запомнить меня на этом устройстве
+                        </span>
+                    </label>
+                </div>
+
+                <!-- 4. Submit Button -->
+                <div class="pt-2">
+                    <button type="submit" 
+                            :disabled="isSubmitting"
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-witte-900 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60 text-white font-bold text-sm shadow-xl shadow-indigo-600/25 hover:scale-[1.01] active:scale-[0.99] transition-all">
+                        <i class="bi bi-box-arrow-in-right text-base" x-show="!isSubmitting"></i>
+                        <span class="spinner-border animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" x-show="isSubmitting" x-cloak></span>
+                        <span x-text="isSubmitting ? 'Выполняется вход...' : 'Войти в личный кабинет'"></span>
+                    </button>
+                </div>
+
+                <!-- 5. Register Link Card -->
+                <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                    <span class="text-slate-500">Еще нет личного кабинета абитуриента?</span>
+                    <a href="/register/" class="inline-flex items-center gap-1.5 font-bold text-blue-600 hover:text-blue-800 hover:underline">
+                        <span>Зарегистрироваться в CRM</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

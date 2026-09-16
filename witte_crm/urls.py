@@ -24,6 +24,8 @@ from accounts import views as accounts_views
 
 urlpatterns = [
     path('', core_views.home, name='home'),
+    path('login/', accounts_views.login_view, name='login'),
+    path('logout/', accounts_views.logout_view, name='logout'),
     path('register/', accounts_views.register_view, name='register'),
     path('accounts/', include('accounts.urls')),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
