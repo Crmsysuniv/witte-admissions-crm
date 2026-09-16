@@ -1,0 +1,710 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Главный аналитический дашборд | МУ им. С.Ю. Витте CRM{% endblock %}
+
+{% block header_breadcrumb %}Аналитический дашборд руководителя{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8" x-data="{ currentTab: 'overview' }">
+
+    <!-- 1. Executive Header Banner -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-witte-950 via-witte-900 to-indigo-950 p-6 sm:p-8 text-white shadow-2xl border border-witte-800/50">
+        <!-- Background decorative ambient circles -->
+        <div class="absolute -right-16 -top-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute right-1/3 -bottom-20 w-60 h-60 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl space-y-2.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/25 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider shadow-xs">
+                        <i class="bi bi-bar-chart-line-fill text-indigo-400"></i>
+                        Руководящий состав CRM
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Кампания 2026 активна
+                    </span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                    Главный аналитический дашборд
+                </h1>
+                <p class="text-xs sm:text-sm text-blue-100/80 leading-relaxed">
+                    Сводный стратегический мониторинг показателей приема: статус поданных заявлений, выполнение контрольных цифр приема (КЦП), воронка конверсии и финансовые показатели.
+                </p>
+            </div>
+
+            <!-- Quick Action Toolbar -->
+            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                <a href="{% url 'officer:export_rating_xlsx' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/30">
+                    <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
+                    <span>Экспорт в Excel</span>
+                </a>
+                <a href="{% url 'officer:protocols' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30">
+                    <i class="bi bi-file-earmark-check-fill text-sm"></i>
+                    <span>Приказы зачисления</span>
+                </a>
+                <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                    <i class="bi bi-card-checklist text-sm"></i>
+                    <span>Реестр заявлений</span>
+                </a>
+                <a href="/admin/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                    <i class="bi bi-gear-wide-connected text-sm"></i>
+                    <span>Django Admin</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Secondary Info Bar -->
+        <div class="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-blue-200/70">
+            <div class="flex flex-wrap items-center gap-4">
+                <span><strong class="text-white">Пользователей в базе:</strong> {{ operations.total_users }}</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Сотрудников комиссии:</strong> {{ operations.total_officers }}</span>
+                <span class="hidden sm:inline text-white/30">•</span>
+                <span><strong class="text-white">Обращений граждан:</strong> {{ operations.total_feedback }} (новых: {{ operations.new_feedback }})</span>
+            </div>
+            <div class="text-[11px] text-blue-300/80">
+                <i class="bi bi-clock-history"></i> Обновлено: {{ current_time|date:"d.m.Y H:i:s" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Primary KPI Executive Hero Cards (4 columns) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+        
+        <!-- KPI 1: Всего заявлений -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Всего заявлений</span>
+                    <div class="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-inner">
+                        <i class="bi bi-file-earmark-person-fill"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="text-3xl font-black text-slate-900 tracking-tight">{{ total_applications }}</div>
+                    <div class="flex items-center gap-2 mt-1.5 text-xs">
+                        <span class="inline-flex items-center gap-0.5 font-bold text-emerald-600">
+                            <i class="bi bi-arrow-up-right"></i> +{{ today_applications }}
+                        </span>
+                        <span class="text-slate-500">сегодня</span>
+                        <span class="text-slate-300">•</span>
+                        <span class="text-slate-500">+{{ week_applications }} за 7 дн.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">В обработке:</span>
+                <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200/60 text-[11px]">
+                    {{ status_counts.queue }} в очереди
+                </span>
+            </div>
+        </div>
+
+        <!-- KPI 2: Бюджетный набор -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Бюджетные места</span>
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner">
+                        <i class="bi bi-mortarboard-fill"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-black text-slate-900 tracking-tight">{{ budget_stats.enrolled }}</span>
+                        <span class="text-sm font-semibold text-slate-500">/ {{ budget_stats.places }} мест</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5 text-xs text-slate-600">
+                        <span>Заполнение КЦП:</span>
+                        <strong class="text-emerald-700 font-black">{{ budget_stats.fill_rate }}%</strong>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+                        <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: {{ budget_stats.fill_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Конкурс:</span>
+                <span class="font-bold text-slate-800">{{ budget_stats.competition }} чел./место ({{ budget_stats.applications }} заяв.)</span>
+            </div>
+        </div>
+
+        <!-- KPI 3: Платный набор (Договор) -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Платные места (Договор)</span>
+                    <div class="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shadow-inner">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-black text-slate-900 tracking-tight">{{ paid_stats.enrolled }}</span>
+                        <span class="text-sm font-semibold text-slate-500">/ {{ paid_stats.places }} мест</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1.5 text-xs text-slate-600">
+                        <span>Выполнение плана:</span>
+                        <strong class="text-indigo-700 font-black">{{ paid_stats.fill_rate }}%</strong>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-2 mt-2 overflow-hidden">
+                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: {{ paid_stats.fill_rate }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Конкурс:</span>
+                <span class="font-bold text-slate-800">{{ paid_stats.competition }} чел./место ({{ paid_stats.applications }} заяв.)</span>
+            </div>
+        </div>
+
+        <!-- KPI 4: Сквозная конверсия -->
+        <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Сквозная конверсия</span>
+                    <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl shadow-inner">
+                        <i class="bi bi-funnel-fill"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="text-3xl font-black text-slate-900 tracking-tight">{{ funnel.overall_conversion }}%</div>
+                    <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                        {{ funnel.stage_enrolled }} зачислено из {{ funnel.stage_registered }} зарегистрированных
+                    </p>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Допуск → Приказ:</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60 text-[11px]">
+                    {{ funnel.conv_appr_to_enr }}%
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Secondary Key Performance Row (Financials, Exam Scores, Originals, Verification) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100/70 text-emerald-700 flex items-center justify-center text-2xl shrink-0">
+                <i class="bi bi-currency-ruble"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Объем платного набора</div>
+                <div class="text-xl font-black text-slate-900 truncate mt-0.5">
+                    {{ financial.enrolled_paid_revenue|floatformat:0 }} ₽
+                </div>
+                <div class="text-[11px] text-slate-500 truncate">Потенциал: {{ financial.pipeline_paid_revenue|floatformat:0 }} ₽</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-2xl shrink-0">
+                <i class="bi bi-star-fill"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Средний балл абитуриента</div>
+                <div class="text-xl font-black text-slate-900 mt-0.5">
+                    {{ scores.avg_total }} <span class="text-xs font-normal text-slate-500">баллов</span>
+                </div>
+                <div class="text-[11px] text-slate-500">Бюджет: {{ scores.avg_budget }} • Платка: {{ scores.avg_paid }}</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100/70 text-amber-700 flex items-center justify-center text-2xl shrink-0">
+                <i class="bi bi-file-earmark-check-fill"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Оригиналы документов</div>
+                <div class="text-xl font-black text-slate-900 mt-0.5">
+                    {{ scores.originals_count }} <span class="text-xs font-semibold text-amber-600">({{ scores.originals_percentage }}%)</span>
+                </div>
+                <div class="text-[11px] text-slate-500">С соглачием на зачисление</div>
+            </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-purple-100/70 text-purple-700 flex items-center justify-center text-2xl shrink-0">
+                <i class="bi bi-patch-check-fill"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Верификация документов</div>
+                <div class="text-xl font-black text-slate-900 mt-0.5">
+                    {{ operations.verified_docs_percent }}% <span class="text-xs font-normal text-slate-500">проверено</span>
+                </div>
+                <div class="text-[11px] text-slate-500">Не проверено: {{ operations.unverified_docs }} файлов</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 4. Interactive Charts Grid (Timeline & Faculty Distribution) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Dynamic Timeline Chart (2 cols) -->
+        <div class="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="bi bi-graph-up text-blue-600"></i>
+                        Динамика подачи заявлений и приказов зачисления
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Ежедневный входящий поток абитуриентов за последние 14 дней</p>
+                </div>
+                <div class="flex items-center gap-3 text-xs font-medium">
+                    <span class="inline-flex items-center gap-1.5 text-blue-600">
+                        <span class="w-3 h-3 rounded-full bg-blue-600"></span> Подано заявлений
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 text-emerald-600">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Зачислено (приказы)
+                    </span>
+                </div>
+            </div>
+
+            <div class="h-72 sm:h-80 pt-4 relative">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: Faculty Breakdown Doughnut Chart (1 col) -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div class="pb-4 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="bi bi-pie-chart-fill text-indigo-600"></i>
+                    Распределение по факультетам
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Доли институтов в общем объеме заявлений</p>
+            </div>
+
+            <div class="h-64 sm:h-72 pt-3 relative flex items-center justify-center">
+                <canvas id="facultyChart"></canvas>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 text-center">
+                <span class="text-xs text-slate-500">
+                    Всего факультетов: <strong class="text-slate-800">{{ faculty_stats|length }}</strong>
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 5. Full Conversion Funnel Visualizer (5 Stage Steps) -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+                    <i class="bi bi-funnel text-amber-500"></i>
+                    Сквозная воронка конверсии абитуриентов
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Конверсия каждого этапа: от первичной регистрации до издания приказа о зачислении
+                </p>
+            </div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                <span>Итоговая конверсия:</span>
+                <strong class="text-indigo-600 font-bold text-sm">{{ funnel.overall_conversion }}%</strong>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            
+            <!-- Step 1: Регистрация -->
+            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 relative group hover:bg-blue-50/50 transition-colors">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+                    <span>Этап 1</span>
+                    <i class="bi bi-person-plus text-blue-500 text-base"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-2xl font-black text-slate-900">{{ funnel.stage_registered }}</div>
+                    <div class="text-xs font-semibold text-slate-700 mt-0.5">Регистрации в CRM</div>
+                    <div class="text-[11px] text-slate-500 mt-2">Базовая база абитуриентов</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+                    <span>Доля: 100%</span>
+                    <span>Старт воронки</span>
+                </div>
+            </div>
+
+            <!-- Step 2: Подача заявления -->
+            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 relative group hover:bg-blue-50/50 transition-colors">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+                    <span>Этап 2</span>
+                    <i class="bi bi-file-earmark-text text-indigo-500 text-base"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-2xl font-black text-slate-900">{{ funnel.stage_applied }}</div>
+                    <div class="text-xs font-semibold text-slate-700 mt-0.5">Подали заявление</div>
+                    <div class="text-[11px] text-slate-500 mt-2">Выбрали программу</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-indigo-600">
+                    <span>Конверсия:</span>
+                    <strong>{{ funnel.conv_reg_to_app }}%</strong>
+                </div>
+            </div>
+
+            <!-- Step 3: Загрузка документов -->
+            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 relative group hover:bg-blue-50/50 transition-colors">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+                    <span>Этап 3</span>
+                    <i class="bi bi-folder-check text-cyan-500 text-base"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-2xl font-black text-slate-900">{{ funnel.stage_with_docs }}</div>
+                    <div class="text-xs font-semibold text-slate-700 mt-0.5">Прикрепили документы</div>
+                    <div class="text-[11px] text-slate-500 mt-2">Паспорт, аттестат, СНИЛС</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-cyan-600">
+                    <span>Конверсия:</span>
+                    <strong>{{ funnel.conv_app_to_docs }}%</strong>
+                </div>
+            </div>
+
+            <!-- Step 4: Допуск к конкурсу -->
+            <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 relative group hover:bg-blue-50/50 transition-colors">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+                    <span>Этап 4</span>
+                    <i class="bi bi-check2-circle text-emerald-500 text-base"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-2xl font-black text-slate-900">{{ funnel.stage_approved }}</div>
+                    <div class="text-xs font-semibold text-slate-700 mt-0.5">Одобрены (в конкурсе)</div>
+                    <div class="text-[11px] text-slate-500 mt-2">Прошли модерацию</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-emerald-600">
+                    <span>Конверсия:</span>
+                    <strong>{{ funnel.conv_docs_to_appr }}%</strong>
+                </div>
+            </div>
+
+            <!-- Step 5: Зачисление -->
+            <div class="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 relative group shadow-xs">
+                <div class="flex items-center justify-between text-xs font-bold text-emerald-700 uppercase">
+                    <span>Финал</span>
+                    <i class="bi bi-award-fill text-emerald-600 text-base"></i>
+                </div>
+                <div class="mt-3">
+                    <div class="text-2xl font-black text-emerald-950">{{ funnel.stage_enrolled }}</div>
+                    <div class="text-xs font-bold text-emerald-900 mt-0.5">Зачислены в университет</div>
+                    <div class="text-[11px] text-emerald-700 mt-2">Изданы приказы</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-emerald-200/80 flex items-center justify-between text-[11px] font-bold text-emerald-800">
+                    <span>Конверсия финала:</span>
+                    <strong>{{ funnel.conv_appr_to_enr }}%</strong>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 6. Detailed Faculty & Institute Analytics Table -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+                    <i class="bi bi-buildings-fill text-witte-700"></i>
+                    Сводные показатели по факультетам и институтам
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    План приема (КЦП), объем поданных заявлений, конкурс и процент зачисления
+                </p>
+            </div>
+            <div class="text-xs text-slate-500">
+                Всего мест по плану: <strong class="text-slate-900 font-bold">{{ overall_stats.total_places }}</strong> (Бюджет: {{ budget_stats.places }}, Платка: {{ paid_stats.places }})
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 divide-y divide-slate-100">
+                <thead class="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <tr>
+                        <th class="px-4 py-3 rounded-l-xl">Факультет / Институт</th>
+                        <th class="px-3 py-3 text-center">Программ</th>
+                        <th class="px-3 py-3 text-center">Бюджет (план/факт)</th>
+                        <th class="px-3 py-3 text-center">Платное (план/факт)</th>
+                        <th class="px-3 py-3 text-center">Всего заявлений</th>
+                        <th class="px-3 py-3 text-center">Конкурс</th>
+                        <th class="px-3 py-3 text-center">Зачислено</th>
+                        <th class="px-4 py-3 text-right rounded-r-xl">Выполнение КЦП</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                    {% for item in faculty_stats %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <div class="font-bold text-slate-900 text-sm">{{ item.faculty.name }}</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">Код: {{ item.faculty.code|default:"—" }}</div>
+                        </td>
+                        <td class="px-3 py-3.5 text-center font-semibold text-slate-700">
+                            {{ item.specialties_count }}
+                        </td>
+                        <td class="px-3 py-3.5 text-center">
+                            <span class="font-bold text-emerald-700">{{ item.enrolled_budget }}</span>
+                            <span class="text-slate-400">/ {{ item.budget_places }}</span>
+                            <div class="text-[10px] text-slate-400 mt-0.5">заявл: {{ item.apps_budget }}</div>
+                        </td>
+                        <td class="px-3 py-3.5 text-center">
+                            <span class="font-bold text-indigo-700">{{ item.enrolled_paid }}</span>
+                            <span class="text-slate-400">/ {{ item.paid_places }}</span>
+                            <div class="text-[10px] text-slate-400 mt-0.5">заявл: {{ item.apps_paid }}</div>
+                        </td>
+                        <td class="px-3 py-3.5 text-center font-bold text-slate-900 text-sm">
+                            {{ item.apps_total }}
+                        </td>
+                        <td class="px-3 py-3.5 text-center">
+                            <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold text-[11px] border border-blue-200/60">
+                                {{ item.competition }} чел./м.
+                            </span>
+                        </td>
+                        <td class="px-3 py-3.5 text-center font-black text-slate-900">
+                            {{ item.enrolled_total }}
+                        </td>
+                        <td class="px-4 py-3.5 text-right">
+                            <div class="flex items-center justify-end gap-2.5">
+                                <span class="font-black text-xs {% if item.fill_rate >= 80 %}text-emerald-600{% elif item.fill_rate >= 40 %}text-blue-600{% else %}text-amber-600{% endif %}">
+                                    {{ item.fill_rate }}%
+                                </span>
+                                <div class="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="{% if item.fill_rate >= 80 %}bg-emerald-500{% elif item.fill_rate >= 40 %}bg-blue-500{% else %}bg-amber-500{% endif %} h-1.5 rounded-full" style="width: {{ item.fill_rate }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-slate-400">
+                            Данные по факультетам пока не зарегистрированы.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 7. Two Column Breakdown: Top Programs & Real-time Audit Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Left: Top In-demand Specialties -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-6">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="bi bi-trophy-fill text-amber-500"></i>
+                        Топ популярных направлений подготовки
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Рейтинг специальностей по числу поданных заявлений</p>
+                </div>
+                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">ТОП-6</span>
+            </div>
+
+            <div class="space-y-4">
+                {% for item in top_specialties %}
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-slate-800">
+                            <span class="text-indigo-600 font-mono text-[11px] mr-1">{{ item.specialty.code }}</span>
+                            {{ item.specialty.name }}
+                        </span>
+                        <span class="font-bold text-slate-900 shrink-0 ml-2">{{ item.apps_count }} заяв.</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+                        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full" style="width: {{ item.percent_of_max }}%"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>{{ item.specialty.faculty.name }}</span>
+                        <span>Конкурс: <strong>{{ item.competition }}</strong> чел./место • Зачислено: <strong>{{ item.enrolled_count }}</strong></span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-400 text-center py-6">Заявления пока не зарегистрированы.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Distribution by Study Form -->
+            <div class="pt-4 border-t border-slate-100">
+                <div class="text-xs font-bold text-slate-700 mb-2.5">Распределение по формам обучения:</div>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                    {% for form in study_forms_stat %}
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
+                        <div class="text-[11px] text-slate-500">{{ form.name }}</div>
+                        <div class="text-sm font-bold text-slate-900 mt-0.5">{{ form.count }} <span class="text-[10px] text-slate-400 font-normal">({{ form.percentage }}%)</span></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Recent Operational Audit Trail -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="bi bi-clock-history text-blue-600"></i>
+                        Лента последних операций аудита
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Фиксация действий сотрудников и изменений статусов</p>
+                </div>
+                <a href="/admin/audit/statuslog/" class="text-xs font-bold text-indigo-600 hover:text-indigo-700">
+                    Весь журнал <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="space-y-3 overflow-y-auto max-h-[380px] pr-1 custom-scrollbar">
+                {% for log in recent_logs %}
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1 hover:bg-slate-100/70 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-800">
+                            Заявление №{{ log.application.id }} ({{ log.application.applicant.get_full_name|default:log.application.applicant.username }})
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-mono">{{ log.changed_at|date:"d.m H:i" }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[11px]">
+                        <span class="text-slate-500">Статус:</span>
+                        <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700">{{ log.get_old_status_display|default:log.old_status }}</span>
+                        <i class="bi bi-arrow-right text-slate-400 text-[10px]"></i>
+                        <span class="px-1.5 py-0.2 rounded font-bold {% if log.new_status == 'ENROLLED' %}bg-emerald-100 text-emerald-800{% elif log.new_status == 'APPROVED' %}bg-blue-100 text-blue-800{% elif log.new_status == 'REJECTED' %}bg-rose-100 text-rose-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                            {{ log.get_new_status_display|default:log.new_status }}
+                        </span>
+                    </div>
+                    {% if log.comment %}
+                    <p class="text-[11px] text-slate-500 italic mt-0.5">{{ log.comment|truncatechars:90 }}</p>
+                    {% endif %}
+                    <div class="text-[10px] text-slate-400 pt-0.5">
+                        Сотрудник: {{ log.changed_by.get_full_name|default:log.changed_by.username|default:"Система" }}
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-400 text-center py-8">Записи журнала аудита отсутствуют.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Interactive Chart.js Initialization Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rawData = {{ charts_json|safe }};
+
+    // 1. Timeline Chart (Applications & Enrolled over time)
+    const timelineCtx = document.getElementById('timelineChart');
+    if (timelineCtx) {
+        new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: rawData.timeline_dates,
+                datasets: [
+                    {
+                        label: 'Подано заявлений',
+                        data: rawData.timeline_submitted,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#2563eb',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'Зачислено (приказы)',
+                        data: rawData.timeline_enrolled,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#10b981',
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        padding: 10,
+                        cornerRadius: 8,
+                        boxPadding: 4,
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, color: '#94a3b8' },
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' }
+                    },
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Faculty Distribution Doughnut Chart
+    const facultyCtx = document.getElementById('facultyChart');
+    if (facultyCtx) {
+        new Chart(facultyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: rawData.faculty_labels,
+                datasets: [{
+                    data: rawData.faculty_data,
+                    backgroundColor: [
+                        '#3b82f6', // blue
+                        '#6366f1', // indigo
+                        '#10b981', // emerald
+                        '#f59e0b', // amber
+                        '#ec4899', // pink
+                        '#8b5cf6', // purple
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 12,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

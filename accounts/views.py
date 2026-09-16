@@ -22,7 +22,7 @@ def get_redirect_url_for_role(user, next_url=None, request=None):
 
     # Перенаправление по роли
     if user.role == User.Role.ADMIN or user.is_superuser:
-        return '/admin/'
+        return '/admin/dashboard/'
     elif user.role == User.Role.OFFICER:
         return '/officer/workplace/'
     elif user.role == User.Role.APPLICANT:

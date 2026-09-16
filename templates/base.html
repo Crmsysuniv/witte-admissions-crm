@@ -278,9 +278,18 @@
                 </a>
 
                 <!-- Section 4 -->
-                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Система</div>
+                <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Администрирование</div>
                 
-                <!-- 13. Панель администратора Django -->
+                <!-- 13. Аналитический дашборд руководителя -->
+                {% if user.is_authenticated and user.role == 'ADMIN' or user.is_staff or user.is_superuser %}
+                <a href="/admin/dashboard/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if '/admin/dashboard/' in request.path %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
+                    <i class="bi bi-speedometer2 text-lg text-indigo-400"></i>
+                    <span class="flex-1">Аналитический дашборд</span>
+                    <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/30 text-indigo-200">KPI</span>
+                </a>
+                {% endif %}
+
+                <!-- 14. Панель администратора Django -->
                 <a href="/admin/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
                     <i class="bi bi-shield-lock-fill text-lg text-indigo-400"></i>
                     <span>Панель администратора</span>
@@ -426,7 +435,11 @@
                                     <span>Сменить пароль</span>
                                 </a>
                                 {% endif %}
-                                {% if user.is_staff or user.is_superuser %}
+                                {% if user.is_staff or user.is_superuser or user.role == 'ADMIN' %}
+                                <a href="/admin/dashboard/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                    <i class="bi bi-speedometer2 text-indigo-500"></i>
+                                    <span>Аналитический дашборд</span>
+                                </a>
                                 <a href="/admin/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-sliders text-slate-400"></i>
                                     <span>Управление системой</span>

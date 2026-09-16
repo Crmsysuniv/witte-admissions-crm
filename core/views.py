@@ -253,3 +253,345 @@ def contacts(request):
     return render(request, 'contacts.html', context)
 
 
+from datetime import timedelta
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Count, Sum, Avg, Q, F
+from django.utils import timezone
+from accounts.decorators import admin_required
+from accounts.models import User, ApplicantProfile, OfficerProfile
+from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore
+from audit.models import StatusLog, Notification
+from feedback.models import FeedbackMessage
+
+
+@admin_required
+def admin_dashboard_view(request):
+    """
+    Главный аналитический дашборд руководителя / администратора CRM (admin/dashboard.html).
+    Отображает исчерпывающий комплекс управленческих метрик, KPI приемной кампании,
+    анализ распределения бюджетных и платных мест, воронку конверсии от регистрации до зачисления,
+    финансовые прогнозы, нагрузку на комиссию и интерактивную инфографику.
+    """
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+
+    # 1. Основные объемы заявлений и динамика
+    total_applications = Application.objects.count()
+    today_applications = Application.objects.filter(submission_date__gte=today_start).count()
+    week_applications = Application.objects.filter(submission_date__gte=week_start).count()
+    month_applications = Application.objects.filter(submission_date__gte=month_start).count()
+
+    submitted_count = Application.objects.filter(status=Application.Status.SUBMITTED).count()
+    under_review_count = Application.objects.filter(status=Application.Status.UNDER_REVIEW).count()
+    docs_required_count = Application.objects.filter(status=Application.Status.DOCUMENTS_REQUIRED).count()
+    approved_count = Application.objects.filter(status=Application.Status.APPROVED).count()
+    enrolled_count = Application.objects.filter(status=Application.Status.ENROLLED).count()
+    rejected_count = Application.objects.filter(status=Application.Status.REJECTED).count()
+    withdrawn_count = Application.objects.filter(status=Application.Status.WITHDRAWN).count()
+    draft_count = Application.objects.filter(status=Application.Status.DRAFT).count()
+
+    queue_count = submitted_count + under_review_count + docs_required_count
+
+    # 2. Бюджет vs Платное обучение (План / Факт / Конкурс)
+    total_budget_places = Specialty.objects.filter(is_active=True).aggregate(Sum('budget_places'))['budget_places__sum'] or 0
+    total_paid_places = Specialty.objects.filter(is_active=True).aggregate(Sum('paid_places'))['paid_places__sum'] or 0
+    total_planned_places = total_budget_places + total_paid_places
+
+    budget_apps_count = Application.objects.filter(financing_type=Application.FinancingType.BUDGET).count()
+    budget_approved_count = Application.objects.filter(financing_type=Application.FinancingType.BUDGET, status=Application.Status.APPROVED).count()
+    budget_enrolled_count = Application.objects.filter(financing_type=Application.FinancingType.BUDGET, status=Application.Status.ENROLLED).count()
+
+    paid_apps_count = Application.objects.filter(financing_type=Application.FinancingType.PAID).count()
+    paid_approved_count = Application.objects.filter(financing_type=Application.FinancingType.PAID, status=Application.Status.APPROVED).count()
+    paid_enrolled_count = Application.objects.filter(financing_type=Application.FinancingType.PAID, status=Application.Status.ENROLLED).count()
+
+    total_enrolled_all = budget_enrolled_count + paid_enrolled_count
+
+    budget_fill_rate = round((budget_enrolled_count / total_budget_places * 100) if total_budget_places else 0, 1)
+    paid_fill_rate = round((paid_enrolled_count / total_paid_places * 100) if total_paid_places else 0, 1)
+    overall_fill_rate = round((total_enrolled_all / total_planned_places * 100) if total_planned_places else 0, 1)
+
+    budget_competition = round((budget_apps_count / total_budget_places) if total_budget_places else 0, 2)
+    paid_competition = round((paid_apps_count / total_paid_places) if total_paid_places else 0, 2)
+    overall_competition = round((total_applications / total_planned_places) if total_planned_places else 0, 2)
+
+    budget_share = round((budget_apps_count / total_applications * 100) if total_applications else 0, 1)
+    paid_share = round((paid_apps_count / total_applications * 100) if total_applications else 0, 1)
+
+    # 3. Воронка конверсии (Conversion Funnel)
+    stage_registered = User.objects.filter(role=User.Role.APPLICANT).count()
+    stage_applied = Application.objects.values('applicant_id').distinct().count()
+    stage_with_docs = ApplicationDocument.objects.values('application__applicant_id').distinct().count()
+    stage_approved = Application.objects.filter(
+        status__in=[Application.Status.APPROVED, Application.Status.ENROLLED]
+    ).values('applicant_id').distinct().count()
+    stage_enrolled = Application.objects.filter(status=Application.Status.ENROLLED).values('applicant_id').distinct().count()
+
+    conv_reg_to_app = round((stage_applied / stage_registered * 100) if stage_registered else 0, 1)
+    conv_app_to_docs = round((stage_with_docs / stage_applied * 100) if stage_applied else 0, 1)
+    conv_docs_to_appr = round((stage_approved / stage_with_docs * 100) if stage_with_docs else 0, 1)
+    conv_appr_to_enr = round((stage_enrolled / stage_approved * 100) if stage_approved else 0, 1)
+    overall_conversion = round((stage_enrolled / stage_registered * 100) if stage_registered else 0, 1)
+
+    # 4. Финансовые метрики
+    enrolled_paid_revenue = Application.objects.filter(
+        status=Application.Status.ENROLLED,
+        financing_type=Application.FinancingType.PAID
+    ).aggregate(total=Sum('program__tuition_fee'))['total'] or 0
+
+    pipeline_paid_revenue = Application.objects.filter(
+        status__in=[Application.Status.APPROVED, Application.Status.ENROLLED],
+        financing_type=Application.FinancingType.PAID
+    ).aggregate(total=Sum('program__tuition_fee'))['total'] or 0
+
+    avg_annual_tuition = EducationProgram.objects.filter(is_active=True).aggregate(avg=Avg('tuition_fee'))['avg'] or 0
+
+    # 5. Подтвержденные документы об образовании (аттестаты/дипломы) и средние баллы
+    verified_edu_docs_count = ApplicationDocument.objects.filter(
+        document_type__in=[ApplicationDocument.DocumentType.CERTIFICATE, ApplicationDocument.DocumentType.DIPLOMA],
+        is_verified=True
+    ).values('application_id').distinct().count()
+    verified_edu_percentage = round((verified_edu_docs_count / total_applications * 100) if total_applications else 0, 1)
+
+    all_apps = Application.objects.prefetch_related('exam_scores').all()
+    all_scores = []
+    budget_scores = []
+    paid_scores = []
+    for app in all_apps:
+        score = app.total_score
+        if score > 0:
+            all_scores.append(score)
+            if app.financing_type == Application.FinancingType.BUDGET:
+                budget_scores.append(score)
+            else:
+                paid_scores.append(score)
+
+    avg_total_score = round(sum(all_scores) / len(all_scores), 1) if all_scores else 0
+    avg_budget_score = round(sum(budget_scores) / len(budget_scores), 1) if budget_scores else 0
+    avg_paid_score = round(sum(paid_scores) / len(paid_scores), 1) if paid_scores else 0
+
+    # 6. Операционные показатели
+    total_users_count = User.objects.count()
+    total_officers_count = User.objects.filter(role=User.Role.OFFICER).count()
+    unverified_docs_count = ApplicationDocument.objects.filter(is_verified=False).count()
+    total_docs_count = ApplicationDocument.objects.count()
+    verified_docs_percent = round(((total_docs_count - unverified_docs_count) / total_docs_count * 100) if total_docs_count else 0, 1)
+
+    new_feedback_count = FeedbackMessage.objects.filter(status=FeedbackMessage.Status.NEW).count()
+    in_progress_feedback_count = FeedbackMessage.objects.filter(status=FeedbackMessage.Status.IN_PROGRESS).count()
+    total_feedback_count = FeedbackMessage.objects.count()
+
+    # 7. Аналитика по институтам и факультетам
+    faculties = Faculty.objects.prefetch_related('specialties__programs').all().order_by('name')
+    faculty_stats = []
+    faculty_chart_labels = []
+    faculty_chart_data = []
+
+    for fac in faculties:
+        f_specs = fac.specialties.filter(is_active=True)
+        f_b_places = f_specs.aggregate(total=Sum('budget_places'))['total'] or 0
+        f_p_places = f_specs.aggregate(total=Sum('paid_places'))['total'] or 0
+        f_tot_places = f_b_places + f_p_places
+
+        f_apps = Application.objects.filter(program__specialty__faculty=fac)
+        f_apps_tot = f_apps.count()
+        f_apps_b = f_apps.filter(financing_type=Application.FinancingType.BUDGET).count()
+        f_apps_p = f_apps.filter(financing_type=Application.FinancingType.PAID).count()
+
+        f_enr_b = f_apps.filter(status=Application.Status.ENROLLED, financing_type=Application.FinancingType.BUDGET).count()
+        f_enr_p = f_apps.filter(status=Application.Status.ENROLLED, financing_type=Application.FinancingType.PAID).count()
+        f_enr_tot = f_enr_b + f_enr_p
+
+        f_fill = round((f_enr_tot / f_tot_places * 100) if f_tot_places else 0, 1)
+        f_comp = round((f_apps_tot / f_tot_places) if f_tot_places else 0, 2)
+        f_conv = round((f_enr_tot / f_apps_tot * 100) if f_apps_tot else 0, 1)
+
+        faculty_stats.append({
+            'faculty': fac,
+            'specialties_count': f_specs.count(),
+            'budget_places': f_b_places,
+            'paid_places': f_p_places,
+            'total_places': f_tot_places,
+            'apps_total': f_apps_tot,
+            'apps_budget': f_apps_b,
+            'apps_paid': f_apps_p,
+            'enrolled_total': f_enr_tot,
+            'enrolled_budget': f_enr_b,
+            'enrolled_paid': f_enr_p,
+            'fill_rate': f_fill,
+            'competition': f_comp,
+            'conversion': f_conv,
+        })
+
+        faculty_chart_labels.append(fac.code or fac.name)
+        faculty_chart_data.append(f_apps_tot)
+
+    # 8. Топ популярных направлений подготовки
+    top_specialties_qs = Specialty.objects.filter(is_active=True).annotate(
+        apps_count=Count('programs__applications')
+    ).select_related('faculty').order_by('-apps_count')[:6]
+
+    top_specialties = []
+    max_spec_apps = max([s.apps_count for s in top_specialties_qs] or [1])
+    for sp in top_specialties_qs:
+        sp_tot_places = sp.budget_places + sp.paid_places
+        sp_enrolled = Application.objects.filter(program__specialty=sp, status=Application.Status.ENROLLED).count()
+        top_specialties.append({
+            'specialty': sp,
+            'apps_count': sp.apps_count,
+            'percent_of_max': round((sp.apps_count / max_spec_apps * 100) if max_spec_apps else 0, 1),
+            'budget_places': sp.budget_places,
+            'paid_places': sp.paid_places,
+            'total_places': sp_tot_places,
+            'enrolled_count': sp_enrolled,
+            'competition': round((sp.apps_count / sp_tot_places) if sp_tot_places else 0, 2),
+        })
+
+    # 9. Распределение по формам обучения
+    study_forms_stat = []
+    for form_code, form_name in EducationProgram.StudyForm.choices:
+        f_count = Application.objects.filter(program__study_form=form_code).count()
+        f_pct = round((f_count / total_applications * 100) if total_applications else 0, 1)
+        study_forms_stat.append({
+            'code': form_code,
+            'name': form_name,
+            'count': f_count,
+            'percentage': f_pct,
+        })
+
+    # 10. График динамики за последние 14 дней
+    chart_dates = []
+    chart_submitted_counts = []
+    chart_enrolled_counts = []
+    for i in range(13, -1, -1):
+        day_date = (now - timedelta(days=i)).date()
+        day_start = timezone.make_aware(timezone.datetime.combine(day_date, timezone.datetime.min.time()))
+        day_end = timezone.make_aware(timezone.datetime.combine(day_date, timezone.datetime.max.time()))
+
+        sub_c = Application.objects.filter(submission_date__range=(day_start, day_end)).count()
+        enr_c = StatusLog.objects.filter(new_status=Application.Status.ENROLLED, changed_at__range=(day_start, day_end)).count()
+
+        chart_dates.append(day_date.strftime('%d.%m'))
+        chart_submitted_counts.append(sub_c)
+        chart_enrolled_counts.append(enr_c)
+
+    # 11. Лента последних операций аудита (StatusLog)
+    recent_logs = StatusLog.objects.select_related(
+        'application',
+        'application__applicant',
+        'application__program__specialty',
+        'changed_by'
+    ).order_by('-changed_at')[:8]
+
+    # Данные для JS-графиков в формате JSON
+    charts_json = {
+        'timeline_dates': chart_dates,
+        'timeline_submitted': chart_submitted_counts,
+        'timeline_enrolled': chart_enrolled_counts,
+        'faculty_labels': faculty_chart_labels,
+        'faculty_data': faculty_chart_data,
+        'funnel_labels': ['Регистрации', 'Подали заявление', 'Загрузили документы', 'Одобрены (конкурс)', 'Зачислены'],
+        'funnel_data': [stage_registered, stage_applied, stage_with_docs, stage_approved, stage_enrolled],
+        'budget_paid_comparison': {
+            'budget_places': total_budget_places,
+            'budget_enrolled': budget_enrolled_count,
+            'paid_places': total_paid_places,
+            'paid_enrolled': paid_enrolled_count,
+        }
+    }
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Панель администратора', 'url': '/admin/'},
+        {'title': 'Аналитический дашборд руководителя', 'is_active': True},
+    ]
+
+    context = {
+        'total_applications': total_applications,
+        'today_applications': today_applications,
+        'week_applications': week_applications,
+        'month_applications': month_applications,
+        'status_counts': {
+            'SUBMITTED': submitted_count,
+            'UNDER_REVIEW': under_review_count,
+            'DOCUMENTS_REQUIRED': docs_required_count,
+            'APPROVED': approved_count,
+            'ENROLLED': enrolled_count,
+            'REJECTED': rejected_count,
+            'WITHDRAWN': withdrawn_count,
+            'DRAFT': draft_count,
+            'queue': queue_count,
+        },
+        'budget_stats': {
+            'places': total_budget_places,
+            'applications': budget_apps_count,
+            'approved': budget_approved_count,
+            'enrolled': budget_enrolled_count,
+            'fill_rate': budget_fill_rate,
+            'competition': budget_competition,
+            'share': budget_share,
+        },
+        'paid_stats': {
+            'places': total_paid_places,
+            'applications': paid_apps_count,
+            'approved': paid_approved_count,
+            'enrolled': paid_enrolled_count,
+            'fill_rate': paid_fill_rate,
+            'competition': paid_competition,
+            'share': paid_share,
+        },
+        'overall_stats': {
+            'total_places': total_planned_places,
+            'total_enrolled': total_enrolled_all,
+            'fill_rate': overall_fill_rate,
+            'competition': overall_competition,
+        },
+        'funnel': {
+            'stage_registered': stage_registered,
+            'stage_applied': stage_applied,
+            'stage_with_docs': stage_with_docs,
+            'stage_approved': stage_approved,
+            'stage_enrolled': stage_enrolled,
+            'conv_reg_to_app': conv_reg_to_app,
+            'conv_app_to_docs': conv_app_to_docs,
+            'conv_docs_to_appr': conv_docs_to_appr,
+            'conv_appr_to_enr': conv_appr_to_enr,
+            'overall_conversion': overall_conversion,
+        },
+        'financial': {
+            'enrolled_paid_revenue': enrolled_paid_revenue,
+            'pipeline_paid_revenue': pipeline_paid_revenue,
+            'avg_annual_tuition': avg_annual_tuition,
+        },
+        'scores': {
+            'avg_total': avg_total_score,
+            'avg_budget': avg_budget_score,
+            'avg_paid': avg_paid_score,
+            'originals_count': verified_edu_docs_count,
+            'originals_percentage': verified_edu_percentage,
+        },
+        'operations': {
+            'total_users': total_users_count,
+            'total_officers': total_officers_count,
+            'unverified_docs': unverified_docs_count,
+            'verified_docs_percent': verified_docs_percent,
+            'new_feedback': new_feedback_count,
+            'in_progress_feedback': in_progress_feedback_count,
+            'total_feedback': total_feedback_count,
+        },
+        'faculty_stats': faculty_stats,
+        'top_specialties': top_specialties,
+        'study_forms_stat': study_forms_stat,
+        'recent_logs': recent_logs,
+        'charts_json': json.dumps(charts_json, ensure_ascii=False, cls=DjangoJSONEncoder),
+        'breadcrumbs': breadcrumbs,
+        'current_time': now,
+    }
+
+    return render(request, 'admin/dashboard.html', context)
+
+
+
