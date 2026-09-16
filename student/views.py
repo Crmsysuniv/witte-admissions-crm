@@ -1,10 +1,11 @@
+import json
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from accounts.models import ApplicantProfile
-from admissions.models import Application, ApplicationDocument, ExamScore, Specialty, EducationProgram
-from audit.models import Notification
-from .forms import StudentProfileForm
+from admissions.models import Faculty, Specialty, EducationProgram, Application, ApplicationDocument, ExamScore
+from audit.models import Notification, StatusLog
+from .forms import StudentProfileForm, ApplicationSubmissionForm
 
 
 @login_required
@@ -82,7 +83,7 @@ def dashboard_view(request):
             'completed': step3_application,
             'current': step2_profile and not step3_application,
             'icon': 'bi-file-earmark-plus-fill',
-            'url': '/programs/',
+            'url': '/student/apply/',
         },
         {
             'num': 4,
@@ -305,4 +306,166 @@ def profile_view(request):
         'completion_percentage': completion_percentage,
     }
     return render(request, 'student/profile.html', context)
+
+
+@login_required
+def apply_view(request):
+    """
+    Пошаговая форма подачи заявления на обучение (student/apply.html):
+    - Выбор факультета / института (Шаг 1);
+    - Выбор направления подготовки (Шаг 2);
+    - Выбор формы обучения и программы (Шаг 3);
+    - Выбор основы финансирования (бюджет / платная) и согласия (Шаг 4);
+    - Финальная проверка параметров и отправка заявления (Шаг 5).
+    """
+    user = request.user
+    applicant_profile = getattr(user, 'applicant_profile', None)
+
+    existing_applications = (
+        Application.objects.filter(applicant=user)
+        .select_related('program__specialty__faculty', 'program')
+        .order_by('-submission_date')
+    )
+    total_existing = existing_applications.count()
+    max_applications = 5
+    remaining_slots = max(0, max_applications - total_existing)
+    can_apply = remaining_slots > 0
+
+    initial_faculty_id = request.POST.get('faculty') if request.method == 'POST' else request.GET.get('faculty', '')
+    initial_specialty_id = request.POST.get('specialty') if request.method == 'POST' else request.GET.get('specialty', '')
+    initial_program_id = request.POST.get('program') if request.method == 'POST' else request.GET.get('program', '')
+
+    if request.method == 'POST':
+        if not can_apply:
+            messages.error(
+                request,
+                'Вы достигли максимального лимита заявлений (5 из 5) в рамках приемной кампании 2026 года.'
+            )
+            return redirect('student:dashboard')
+
+        form = ApplicationSubmissionForm(request.POST, user=user)
+        if form.is_valid():
+            program = form.cleaned_data['program']
+            financing_type = form.cleaned_data['financing_type']
+
+            # Создание заявления
+            application = Application.objects.create(
+                applicant=user,
+                program=program,
+                financing_type=financing_type,
+                status=Application.Status.SUBMITTED,
+            )
+
+            # Запись в историю аудита статусов
+            StatusLog.objects.create(
+                application=application,
+                old_status='',
+                new_status=Application.Status.SUBMITTED,
+                changed_by=user,
+                comment='Электронное заявление успешно подано абитуриентом через личный кабинет.',
+            )
+
+            # Персональное уведомление абитуриенту
+            Notification.objects.create(
+                user=user,
+                notification_type=Notification.NotificationType.SUCCESS,
+                title=f'Заявление №{application.id} принято в комиссию',
+                message=(
+                    f'Ваше заявление на направление «{program.specialty.code} {program.specialty.name}» '
+                    f'({program.get_study_form_display()}, {application.get_financing_type_display()}) '
+                    f'успешно зарегистрировано в CRM и направлено на проверку.'
+                ),
+            )
+
+            messages.success(
+                request,
+                f'Заявление №{application.id} на направление «{program.specialty.name}» успешно подано в приемную комиссию!'
+            )
+            return redirect('student:dashboard')
+        else:
+            messages.error(request, 'Пожалуйста, проверьте правильность заполнения полей заявления.')
+    else:
+        initial_data = {}
+        if initial_program_id and str(initial_program_id).isdigit():
+            prog = EducationProgram.objects.filter(id=initial_program_id, is_active=True).select_related('specialty__faculty').first()
+            if prog:
+                initial_data['program'] = prog.id
+                initial_data['specialty'] = prog.specialty_id
+                initial_data['faculty'] = prog.specialty.faculty_id
+                initial_faculty_id = str(prog.specialty.faculty_id)
+                initial_specialty_id = str(prog.specialty_id)
+        elif initial_specialty_id and str(initial_specialty_id).isdigit():
+            spec = Specialty.objects.filter(id=initial_specialty_id, is_active=True).first()
+            if spec:
+                initial_data['specialty'] = spec.id
+                initial_data['faculty'] = spec.faculty_id
+                initial_faculty_id = str(spec.faculty_id)
+
+        form = ApplicationSubmissionForm(user=user, initial=initial_data)
+
+    # Подготовка данных для визарда на Alpine.js
+    faculties = Faculty.objects.prefetch_related('specialties__programs').all()
+    faculties_data = [
+        {
+            'id': f.id,
+            'name': f.name,
+            'code': f.code or f.name[:4].upper(),
+            'description': f.description,
+            'specialties_count': f.specialties.filter(is_active=True).count(),
+        }
+        for f in faculties if f.specialties.filter(is_active=True).exists()
+    ]
+
+    specialties = Specialty.objects.filter(is_active=True).select_related('faculty').prefetch_related('programs')
+    specialties_data = [
+        {
+            'id': s.id,
+            'faculty_id': s.faculty_id,
+            'faculty_name': s.faculty.name,
+            'code': s.code,
+            'name': s.name,
+            'education_level': s.education_level,
+            'education_level_display': s.get_education_level_display(),
+            'budget_places': s.budget_places,
+            'paid_places': s.paid_places,
+            'total_places': s.total_places,
+            'programs_count': s.programs.filter(is_active=True).count(),
+        }
+        for s in specialties if s.programs.filter(is_active=True).exists()
+    ]
+
+    programs = EducationProgram.objects.filter(is_active=True).select_related('specialty__faculty')
+    programs_data = [
+        {
+            'id': p.id,
+            'specialty_id': p.specialty_id,
+            'faculty_id': p.specialty.faculty_id,
+            'study_form': p.study_form,
+            'study_form_display': p.get_study_form_display(),
+            'duration': p.duration,
+            'tuition_fee': float(p.tuition_fee),
+            'tuition_fee_formatted': f"{int(p.tuition_fee):,} ₽/год".replace(',', ' '),
+            'tuition_fee_discounted': float(p.tuition_fee) * 0.8,
+            'tuition_fee_discounted_formatted': f"{int(float(p.tuition_fee) * 0.8):,} ₽/год".replace(',', ' '),
+        }
+        for p in programs
+    ]
+
+    context = {
+        'form': form,
+        'applicant_profile': applicant_profile,
+        'total_existing': total_existing,
+        'max_applications': max_applications,
+        'remaining_slots': remaining_slots,
+        'can_apply': can_apply,
+        'existing_applications': existing_applications,
+        'faculties_json': json.dumps(faculties_data, ensure_ascii=False),
+        'specialties_json': json.dumps(specialties_data, ensure_ascii=False),
+        'programs_json': json.dumps(programs_data, ensure_ascii=False),
+        'initial_faculty_id': initial_faculty_id or '',
+        'initial_specialty_id': initial_specialty_id or '',
+        'initial_program_id': initial_program_id or '',
+    }
+    return render(request, 'student/apply.html', context)
+
 

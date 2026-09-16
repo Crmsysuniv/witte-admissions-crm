@@ -1,0 +1,797 @@
+{% extends 'base.html' %}
+
+{% block title %}Подача заявления на поступление | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Подача заявления{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12" x-data="applicationWizard()">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-file-earmark-plus-fill text-emerald-400"></i>
+                <span>Приемная кампания 2026/2027 • Мастер подачи электронного заявления</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Подача заявления на поступление
+            </h1>
+
+            <p class="mt-3 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Пошаговый мастер поможет выбрать факультет, направление подготовки, форму обучения и основу финансирования. В соответствии с приказом Минобрнауки РФ и правилами приема 2026 года вы можете одновременно подать до 5 заявлений!
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-file-earmark-check-fill text-cyan-300"></i>
+                    <span>Подано заявлений: <strong class="text-white font-bold">{{ total_existing }}</strong> из {{ max_applications }}</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-plus-circle-fill text-emerald-400"></i>
+                    <span>Доступно к подаче: <strong class="text-emerald-300 font-bold">{{ remaining_slots }}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-person-circle text-amber-300"></i>
+                    <span>Заявитель: {{ user.get_full_name|default:user.username }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not can_apply %}
+    <!-- LIMIT REACHED ALERT BANNER -->
+    <div class="p-6 sm:p-8 rounded-3xl bg-rose-50 border-2 border-rose-200 text-rose-950 space-y-4">
+        <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-rose-600 text-white flex items-center justify-center text-2xl shrink-0 shadow-md">
+                <i class="bi bi-exclamation-octagon-fill"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-lg sm:text-xl font-black text-rose-900">
+                    Достигнут максимальный лимит заявлений (5 из 5)
+                </h3>
+                <p class="text-xs sm:text-sm text-rose-800 leading-relaxed">
+                    Вы уже подали предельно допустимое число заявлений (5) в рамках текущей приемной кампании 2026 года. Чтобы подать заявление на другую специальность, отзовите одно из поданных заявлений через обращение в приемную комиссию.
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 pt-2">
+            <a href="/student/dashboard/" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition-all">
+                <i class="bi bi-speedometer2"></i>
+                <span>Перейти в личный кабинет к поданным заявлениям</span>
+            </a>
+            <a href="/feedback/" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-rose-100/50 text-rose-800 text-xs font-bold border border-rose-300 transition-all">
+                <i class="bi bi-chat-left-dots"></i>
+                <span>Связаться с приемной комиссией</span>
+            </a>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- 2. STEP PROGRESS TRACKER (5 STEPS) -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+            <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-blue-600 block">Пошаговый мастер</span>
+                <h2 class="text-lg sm:text-xl font-black text-slate-900">
+                    Этап <span x-text="currentStep">1</span> из 5: <span class="text-indigo-600" x-text="stepTitles[currentStep]"></span>
+                </h2>
+            </div>
+            <div class="text-xs text-slate-500 font-medium">
+                Шаг <span class="font-bold text-slate-800" x-text="currentStep"></span> / 5 (<span x-text="Math.round((currentStep / 5) * 100)"></span>%)
+            </div>
+        </div>
+
+        <!-- Progress Line -->
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner">
+            <div class="h-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full transition-all duration-300"
+                 :style="'width: ' + ((currentStep / 5) * 100) + '%'"></div>
+        </div>
+
+        <!-- Step Markers Navigation Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+            <template x-for="(title, num) in stepTitles" :key="num">
+                <button type="button"
+                        @click="goToStep(Number(num))"
+                        :disabled="Number(num) > maxUnlockedStep"
+                        class="p-2.5 rounded-xl border text-left transition-all text-xs flex items-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                        :class="{
+                            'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-500/20': currentStep === Number(num),
+                            'bg-emerald-50 border-emerald-200 text-emerald-900 hover:bg-emerald-100': currentStep > Number(num),
+                            'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100': currentStep < Number(num) && Number(num) <= maxUnlockedStep
+                        }">
+                    <span class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0"
+                          :class="{
+                              'bg-white text-blue-600': currentStep === Number(num),
+                              'bg-emerald-500 text-white': currentStep > Number(num),
+                              'bg-slate-200 text-slate-600': currentStep < Number(num)
+                          }">
+                        <span x-show="currentStep > Number(num)"><i class="bi bi-check-lg"></i></span>
+                        <span x-show="currentStep <= Number(num)" x-text="num"></span>
+                    </span>
+                    <span class="truncate font-semibold text-[11px]" x-text="title"></span>
+                </button>
+            </template>
+        </div>
+    </div>
+
+    <!-- 3. MULTI-STEP WIZARD FORM -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/80 shadow-xs">
+
+        <form method="post" action="{% url 'student:apply' %}" @submit="onSubmitForm($event)" novalidate>
+            {% csrf_token %}
+
+            <!-- Hidden Inputs Synced with Alpine -->
+            <input type="hidden" name="faculty" :value="selectedFacultyId">
+            <input type="hidden" name="specialty" :value="selectedSpecialtyId">
+            <input type="hidden" name="program" :value="selectedProgramId">
+            <input type="hidden" name="financing_type" :value="financingType">
+
+            {% if form.errors %}
+            <div class="p-4 mb-8 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-1">
+                <div class="font-bold flex items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Пожалуйста, исправьте ошибки:</span>
+                </div>
+                {% for field in form %}
+                    {% for error in field.errors %}
+                    <p>• <strong>{{ field.label }}:</strong> {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                <p>• {{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- ================= STEP 1: FACULTY ================= -->
+            <div x-show="currentStep === 1" x-transition:enter="transition ease-out duration-200" class="space-y-6">
+                <div class="space-y-1 border-b border-slate-100 pb-4">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Шаг 1 из 5</span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Выберите факультет или институт
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        В состав Московского университета имени С.Ю. Витте входят ведущие академические институты и колледж
+                    </p>
+                </div>
+
+                <!-- Grid of Faculties -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <template x-for="fac in faculties" :key="fac.id">
+                        <div @click="selectFaculty(fac.id)"
+                             class="group cursor-pointer rounded-2xl p-5 border-2 transition-all flex flex-col justify-between space-y-4 hover:shadow-md"
+                             :class="selectedFacultyId === fac.id ? 'border-blue-600 bg-blue-50/40 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300 bg-white'">
+                            
+                            <div class="flex items-start justify-between">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-xs transition-colors"
+                                     :class="selectedFacultyId === fac.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 group-hover:bg-blue-100 group-hover:text-blue-700'">
+                                    <i class="bi bi-buildings-fill"></i>
+                                </div>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
+                                      :class="selectedFacultyId === fac.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'"
+                                      x-text="fac.code || 'ВУЗ'"></span>
+                            </div>
+
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-base group-hover:text-blue-600 transition-colors"
+                                    x-text="fac.name"></h4>
+                                <p class="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2"
+                                   x-text="fac.description || 'Ведущие программы высшего образования и практической подготовки'"></p>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span class="text-slate-500 font-medium">
+                                    Направлений подготовки: <strong class="text-slate-800" x-text="fac.specialties_count"></strong>
+                                </span>
+                                <span class="font-bold flex items-center gap-1"
+                                      :class="selectedFacultyId === fac.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'">
+                                    <span x-text="selectedFacultyId === fac.id ? 'Выбран' : 'Выбрать'"></span>
+                                    <i class="bi" :class="selectedFacultyId === fac.id ? 'bi-check-circle-fill' : 'bi-arrow-right'"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Navigation Buttons Step 1 -->
+                <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <a href="/student/dashboard/" class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                        <i class="bi bi-x-lg"></i>
+                        <span>Отмена</span>
+                    </a>
+                    <button type="button"
+                            @click="nextStep()"
+                            :disabled="!selectedFacultyId"
+                            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span>Далее: Выбор специальности</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= STEP 2: SPECIALTY ================= -->
+            <div x-show="currentStep === 2" x-transition:enter="transition ease-out duration-200" class="space-y-6">
+                <div class="space-y-1 border-b border-slate-100 pb-4">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Шаг 2 из 5</span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Выберите направление подготовки (специальность)
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        Факультет: <strong class="text-blue-600" x-text="selectedFaculty ? selectedFaculty.name : ''"></strong>
+                    </p>
+                </div>
+
+                <!-- Level Filter Pills -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500 mr-1">Уровень образования:</span>
+                    <template x-for="lvl in availableLevels" :key="lvl.key">
+                        <button type="button"
+                                @click="filterLevel = lvl.key"
+                                class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border"
+                                :class="filterLevel === lvl.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'"
+                                x-text="lvl.label"></button>
+                    </template>
+                </div>
+
+                <!-- Grid of Specialties -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <template x-for="spec in filteredSpecialties" :key="spec.id">
+                        <div @click="selectSpecialty(spec.id)"
+                             class="group cursor-pointer rounded-2xl p-5 border-2 transition-all flex flex-col justify-between space-y-4 hover:shadow-md"
+                             :class="selectedSpecialtyId === spec.id ? 'border-blue-600 bg-blue-50/40 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300 bg-white'">
+                            
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="font-mono text-xs font-black px-2.5 py-1 rounded-lg"
+                                      :class="selectedSpecialtyId === spec.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'"
+                                      x-text="spec.code"></span>
+                                <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                      x-text="spec.education_level_display"></span>
+                            </div>
+
+                            <div>
+                                <h4 class="font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors"
+                                    x-text="spec.name"></h4>
+                                <div class="mt-2 flex items-center gap-3 text-xs">
+                                    <span class="text-emerald-700 font-semibold flex items-center gap-1">
+                                        <i class="bi bi-mortarboard-fill text-emerald-500"></i>
+                                        Бюджет: <strong x-text="spec.budget_places"></strong>
+                                    </span>
+                                    <span class="text-blue-700 font-semibold flex items-center gap-1">
+                                        <i class="bi bi-wallet2 text-blue-500"></i>
+                                        Договор: <strong x-text="spec.paid_places"></strong>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span class="text-slate-400">
+                                    Программ обучения: <strong class="text-slate-700" x-text="spec.programs_count"></strong>
+                                </span>
+                                <span class="font-bold flex items-center gap-1"
+                                      :class="selectedSpecialtyId === spec.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'">
+                                    <span x-text="selectedSpecialtyId === spec.id ? 'Выбрано' : 'Выбрать направление'"></span>
+                                    <i class="bi" :class="selectedSpecialtyId === spec.id ? 'bi-check-circle-fill' : 'bi-arrow-right'"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div x-show="filteredSpecialties.length === 0" class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500 space-y-2">
+                    <i class="bi bi-search text-2xl text-slate-400 block"></i>
+                    <p>По выбранным критериям направления не найдены. Выберите другой уровень или смените факультет.</p>
+                </div>
+
+                <!-- Navigation Buttons Step 2 -->
+                <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <button type="button" @click="prevStep()" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Назад: Факультеты</span>
+                    </button>
+                    <button type="button"
+                            @click="nextStep()"
+                            :disabled="!selectedSpecialtyId"
+                            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span>Далее: Форма обучения</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= STEP 3: PROGRAM & STUDY FORM ================= -->
+            <div x-show="currentStep === 3" x-transition:enter="transition ease-out duration-200" class="space-y-6">
+                <div class="space-y-1 border-b border-slate-100 pb-4">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Шаг 3 из 5</span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Выберите форму и программу обучения
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        Направление: <strong class="text-blue-600" x-text="selectedSpecialty ? selectedSpecialty.code + ' ' + selectedSpecialty.name : ''"></strong>
+                    </p>
+                </div>
+
+                <!-- Grid of Programs -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <template x-for="prog in availablePrograms" :key="prog.id">
+                        <div @click="selectProgram(prog.id)"
+                             class="group cursor-pointer rounded-2xl p-6 border-2 transition-all flex flex-col justify-between space-y-5 hover:shadow-lg"
+                             :class="selectedProgramId === prog.id ? 'border-blue-600 bg-blue-50/40 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300 bg-white'">
+                            
+                            <div class="flex items-start justify-between">
+                                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-xs"
+                                     :class="{
+                                         'bg-blue-600 text-white': prog.study_form === 'FULL_TIME',
+                                         'bg-indigo-600 text-white': prog.study_form === 'MIXED',
+                                         'bg-emerald-600 text-white': prog.study_form === 'PART_TIME'
+                                     }">
+                                    <i class="bi" :class="{
+                                        'bi-sun-fill': prog.study_form === 'FULL_TIME',
+                                        'bi-moon-stars-fill': prog.study_form === 'MIXED',
+                                        'bi-laptop': prog.study_form === 'PART_TIME'
+                                    }"></i>
+                                </div>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
+                                      :class="selectedProgramId === prog.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'"
+                                      x-text="prog.study_form_display"></span>
+                            </div>
+
+                            <div class="space-y-2">
+                                <h4 class="font-black text-slate-900 text-lg group-hover:text-blue-600 transition-colors"
+                                    x-text="prog.study_form_display + ' форма'"></h4>
+                                
+                                <div class="space-y-1.5 text-xs">
+                                    <div class="flex items-center justify-between text-slate-500">
+                                        <span>Срок обучения:</span>
+                                        <strong class="text-slate-800" x-text="prog.duration"></strong>
+                                    </div>
+                                    <div class="flex items-center justify-between text-slate-500">
+                                        <span>Стоимость (базовая):</span>
+                                        <strong class="text-slate-800" x-text="prog.tuition_fee_formatted"></strong>
+                                    </div>
+                                    <div class="flex items-center justify-between text-emerald-700 font-semibold bg-emerald-50 p-2 rounded-xl border border-emerald-200">
+                                        <span>Со скидкой 20%:</span>
+                                        <strong class="font-bold" x-text="prog.tuition_fee_discounted_formatted"></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span class="text-[11px] text-slate-400">
+                                    <template x-if="prog.study_form === 'FULL_TIME'">
+                                        <span>Отсрочка от армии</span>
+                                    </template>
+                                    <template x-if="prog.study_form !== 'FULL_TIME'">
+                                        <span>Совмещение с работой</span>
+                                    </template>
+                                </span>
+                                <span class="font-bold flex items-center gap-1"
+                                      :class="selectedProgramId === prog.id ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-600'">
+                                    <span x-text="selectedProgramId === prog.id ? 'Выбрана' : 'Выбрать форму'"></span>
+                                    <i class="bi" :class="selectedProgramId === prog.id ? 'bi-check-circle-fill' : 'bi-arrow-right'"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Navigation Buttons Step 3 -->
+                <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <button type="button" @click="prevStep()" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Назад: Специальности</span>
+                    </button>
+                    <button type="button"
+                            @click="nextStep()"
+                            :disabled="!selectedProgramId"
+                            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span>Далее: Основа финансирования</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= STEP 4: FINANCING BASIS & CONSENT ================= -->
+            <div x-show="currentStep === 4" x-transition:enter="transition ease-out duration-200" class="space-y-8">
+                <div class="space-y-1 border-b border-slate-100 pb-4">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Шаг 4 из 5</span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Выберите основу обучения и подтвердите условия
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        Вы можете участвовать в конкурсе на бюджетные места либо подать заявление на платную основу с гарантией скидки
+                    </p>
+                </div>
+
+                <!-- Financing Basis Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    <!-- 1. BUDGET BASIS -->
+                    <div @click="financingType = 'BUDGET'"
+                         class="cursor-pointer rounded-3xl p-6 sm:p-7 border-2 transition-all flex flex-col justify-between space-y-4 hover:shadow-lg"
+                         :class="financingType === 'BUDGET' ? 'border-emerald-500 bg-emerald-50/40 ring-4 ring-emerald-500/10' : 'border-slate-200 hover:border-emerald-300 bg-white'">
+                        
+                        <div class="flex items-start justify-between">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
+                                 :class="financingType === 'BUDGET' ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-600'">
+                                <i class="bi bi-mortarboard-fill"></i>
+                            </div>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                                  :class="financingType === 'BUDGET' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'">
+                                Бюджетная основа
+                            </span>
+                        </div>
+
+                        <div>
+                            <h4 class="text-lg font-black text-slate-900">
+                                Бюджетное обучение (0 ₽)
+                            </h4>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                Обучение за счет средств федерального бюджета Российской Федерации. Выплата академической стипендии и льготное общежитие.
+                            </p>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-950 space-y-1">
+                            <div class="flex items-center justify-between font-bold">
+                                <span>Бюджетных мест по специальности:</span>
+                                <span class="text-emerald-700" x-text="selectedSpecialty ? selectedSpecialty.budget_places : 0"></span>
+                            </div>
+                            <p class="text-[11px] text-emerald-800/80">Зачисление по ранжированным конкурсным спискам баллов ЕГЭ/ВИ.</p>
+                        </div>
+
+                        <div class="pt-2 flex items-center justify-between text-xs font-bold text-emerald-700">
+                            <span>Выбор бюджета</span>
+                            <i class="bi" :class="financingType === 'BUDGET' ? 'bi-check-circle-fill text-lg' : 'bi-circle'"></i>
+                        </div>
+                    </div>
+
+                    <!-- 2. CONTRACT / PAID BASIS -->
+                    <div @click="financingType = 'PAID'"
+                         class="cursor-pointer rounded-3xl p-6 sm:p-7 border-2 transition-all flex flex-col justify-between space-y-4 hover:shadow-lg"
+                         :class="financingType === 'PAID' ? 'border-blue-600 bg-blue-50/40 ring-4 ring-blue-500/10' : 'border-slate-200 hover:border-blue-300 bg-white'">
+                        
+                        <div class="flex items-start justify-between">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"
+                                 :class="financingType === 'PAID' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'">
+                                <i class="bi bi-wallet2"></i>
+                            </div>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                                  :class="financingType === 'PAID' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'">
+                                Платная основа (Договор)
+                            </span>
+                        </div>
+
+                        <div>
+                            <h4 class="text-lg font-black text-slate-900">
+                                Обучение по договору
+                            </h4>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                                Гарантированное зачисление при сдаче экзаменов на минимальный порог. Государственный кредит под 3% годовых и персональная скидка 20%.
+                            </p>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 space-y-1">
+                            <div class="flex items-center justify-between font-bold">
+                                <span>Стоимость со скидкой 20%:</span>
+                                <span class="text-blue-700" x-text="selectedProgram ? selectedProgram.tuition_fee_discounted_formatted : ''"></span>
+                            </div>
+                            <p class="text-[11px] text-blue-800/80">Доступна беспроцентная помесячная рассрочка от университета.</p>
+                        </div>
+
+                        <div class="pt-2 flex items-center justify-between text-xs font-bold text-blue-700">
+                            <span>Выбор платной основы</span>
+                            <i class="bi" :class="financingType === 'PAID' ? 'bi-check-circle-fill text-lg' : 'bi-circle'"></i>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Consents and Acknowledgments -->
+                <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3.5 text-xs">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="consent_rules" x-model="consentRules" required class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-0.5">
+                        <span class="text-slate-700 leading-relaxed font-medium">
+                            Я ознакомлен(а) с <a href="/rules/" target="_blank" class="text-blue-600 underline font-semibold">Правилами приема</a> в ЧОУ ВО «Московский университет имени С.Ю. Витте» на 2026/2027 учебный год, лицензией на ведение образовательной деятельности и свидетельством о государственной аккредитации.
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" name="consent_data" x-model="consentData" required class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 mt-0.5">
+                        <span class="text-slate-700 leading-relaxed font-medium">
+                            Подтверждаю достоверность предоставленных сведений и даю согласие на обработку моих персональных данных в соответствии с Федеральным законом № 152-ФЗ.
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Navigation Buttons Step 4 -->
+                <div class="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <button type="button" @click="prevStep()" class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Назад: Форма обучения</span>
+                    </button>
+                    <button type="button"
+                            @click="nextStep()"
+                            :disabled="!consentRules || !consentData"
+                            class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                        <span>Далее: Проверка заявления</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ================= STEP 5: FINAL CONFIRMATION & SUBMIT ================= -->
+            <div x-show="currentStep === 5" x-transition:enter="transition ease-out duration-200" class="space-y-8">
+                <div class="space-y-1 border-b border-slate-100 pb-4">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">Шаг 5 из 5</span>
+                    <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Проверка параметров и итоговая отправка заявления
+                    </h3>
+                    <p class="text-xs text-slate-500">
+                        Внимательно проверьте указанные параметры перед регистрацией заявления в единой базе CRM
+                    </p>
+                </div>
+
+                <!-- Final Review Summary Card -->
+                <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white border border-slate-800 shadow-xl space-y-6">
+                    
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex items-center justify-center text-2xl shrink-0">
+                                <i class="bi bi-mortarboard"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs text-blue-300 font-semibold block">Новое электронное заявление</span>
+                                <h4 class="text-lg sm:text-xl font-black text-white"
+                                    x-text="selectedSpecialty ? selectedSpecialty.code + ' ' + selectedSpecialty.name : ''"></h4>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-bold border"
+                              :class="financingType === 'BUDGET' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-blue-500/20 text-blue-300 border-blue-500/40'"
+                              x-text="financingType === 'BUDGET' ? 'Бюджетная основа' : 'Платная основа (Договор)'"></span>
+                    </div>
+
+                    <!-- Specs Breakdown -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 text-xs">
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Факультет / Институт:</span>
+                            <strong class="text-white font-semibold" x-text="selectedFaculty ? selectedFaculty.name : ''"></strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Форма обучения:</span>
+                            <strong class="text-white font-semibold" x-text="selectedProgram ? selectedProgram.study_form_display : ''"></strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Срок освоения:</span>
+                            <strong class="text-white font-semibold" x-text="selectedProgram ? selectedProgram.duration : ''"></strong>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block mb-0.5">Стоимость в год:</span>
+                            <strong class="text-emerald-300 font-bold"
+                                    x-text="financingType === 'BUDGET' ? '0 ₽ (Бюджет)' : (selectedProgram ? selectedProgram.tuition_fee_discounted_formatted : '')"></strong>
+                        </div>
+                    </div>
+
+                    <!-- Applicant Data Recap -->
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2 text-xs">
+                        <span class="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Сведения об абитуриенте:</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <span class="text-slate-400">ФИО заявителя:</span>
+                                <p class="text-white font-semibold">{{ user.get_full_name|default:user.username }}</p>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Контактный телефон:</span>
+                                <p class="text-white font-semibold">{{ user.phone|default:"Не указан" }}</p>
+                            </div>
+                            <div>
+                                <span class="text-slate-400">Электронная почта:</span>
+                                <p class="text-white font-semibold">{{ user.email|default:"Не указан" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Missing Profile Details Alert (if SNILS is not filled yet) -->
+                {% if not applicant_profile or not applicant_profile.snils %}
+                <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
+                    <i class="bi bi-info-circle-fill text-amber-600 text-base shrink-0 mt-0.5"></i>
+                    <div>
+                        <strong class="block font-bold">Напоминание о персональных данных:</strong>
+                        <p class="mt-0.5 leading-relaxed">
+                            Вы можете отправить заявление прямо сейчас. Однако для допуска к конкурсу и публикации в рейтингах вам необходимо заполнить паспортные данные и СНИЛС в разделе <a href="/student/profile/" class="text-indigo-600 underline font-bold" target="_blank">Персональные данные</a>.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Navigation and Submission Buttons -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100">
+                    <button type="button" @click="prevStep()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Назад: Изменить основу</span>
+                    </button>
+
+                    <button type="submit"
+                            :disabled="isSubmitting"
+                            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white text-xs font-black shadow-xl shadow-emerald-600/25 transition-all">
+                        <i class="bi bi-send-check-fill text-base" x-show="!isSubmitting"></i>
+                        <span x-show="!isSubmitting">Отправить заявление в приемную комиссию</span>
+                        <span x-show="isSubmitting">Регистрация заявления в CRM...</span>
+                    </button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- 4. BOTTOM SUPPORT CARD -->
+    <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1.5 max-w-xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold uppercase tracking-wider">
+                <i class="bi bi-headset"></i> Помощь в выборе программы
+            </span>
+            <h3 class="text-lg sm:text-xl font-bold text-white">
+                Сомневаетесь в выборе специальности?
+            </h3>
+            <p class="text-xs text-blue-200/80 leading-relaxed">
+                Специалисты приемной комиссии помогут подобрать оптимальное направление подготовки и рассчитать ваши шансы на бюджет на основе баллов ЕГЭ.
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+            <a href="/calculator/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+                <i class="bi bi-calculator text-amber-300"></i>
+                <span>Калькулятор ЕГЭ</span>
+            </a>
+            <a href="/feedback/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-md">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Задать вопрос куратору</span>
+            </a>
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
+
+<!-- Alpine.js Application Wizard Script -->
+<script>
+function applicationWizard() {
+    const rawFaculties = {{ faculties_json|safe }};
+    const rawSpecialties = {{ specialties_json|safe }};
+    const rawPrograms = {{ programs_json|safe }};
+
+    const initialFacultyId = parseInt('{{ initial_faculty_id|default:"0" }}') || null;
+    const initialSpecialtyId = parseInt('{{ initial_specialty_id|default:"0" }}') || null;
+    const initialProgramId = parseInt('{{ initial_program_id|default:"0" }}') || null;
+
+    let startStep = 1;
+    if (initialProgramId) startStep = 4;
+    else if (initialSpecialtyId) startStep = 3;
+    else if (initialFacultyId) startStep = 2;
+
+    return {
+        faculties: rawFaculties,
+        specialties: rawSpecialties,
+        programs: rawPrograms,
+
+        currentStep: startStep,
+        maxUnlockedStep: startStep,
+
+        selectedFacultyId: initialFacultyId,
+        selectedSpecialtyId: initialSpecialtyId,
+        selectedProgramId: initialProgramId,
+        financingType: 'BUDGET',
+
+        filterLevel: 'ALL',
+        consentRules: true,
+        consentData: true,
+        isSubmitting: false,
+
+        stepTitles: {
+            1: 'Факультет / Институт',
+            2: 'Специальность',
+            3: 'Форма обучения',
+            4: 'Основа финансирования',
+            5: 'Проверка и подача'
+        },
+
+        get availableLevels() {
+            return [
+                { key: 'ALL', label: 'Все уровни' },
+                { key: 'BACHELOR', label: 'Бакалавриат' },
+                { key: 'SPECIALIST', label: 'Специалитет' },
+                { key: 'MASTER', label: 'Магистратура' },
+                { key: 'COLLEGE', label: 'Колледж' }
+            ];
+        },
+
+        get selectedFaculty() {
+            return this.faculties.find(f => f.id === this.selectedFacultyId) || null;
+        },
+
+        get filteredSpecialties() {
+            if (!this.selectedFacultyId) return [];
+            return this.specialties.filter(s => {
+                const matchFaculty = s.faculty_id === this.selectedFacultyId;
+                const matchLevel = this.filterLevel === 'ALL' || s.education_level === this.filterLevel;
+                return matchFaculty && matchLevel;
+            });
+        },
+
+        get selectedSpecialty() {
+            return this.specialties.find(s => s.id === this.selectedSpecialtyId) || null;
+        },
+
+        get availablePrograms() {
+            if (!this.selectedSpecialtyId) return [];
+            return this.programs.filter(p => p.specialty_id === this.selectedSpecialtyId);
+        },
+
+        get selectedProgram() {
+            return this.programs.find(p => p.id === this.selectedProgramId) || null;
+        },
+
+        selectFaculty(id) {
+            this.selectedFacultyId = id;
+            this.selectedSpecialtyId = null;
+            this.selectedProgramId = null;
+            this.maxUnlockedStep = Math.max(this.maxUnlockedStep, 2);
+        },
+
+        selectSpecialty(id) {
+            this.selectedSpecialtyId = id;
+            this.selectedProgramId = null;
+            this.maxUnlockedStep = Math.max(this.maxUnlockedStep, 3);
+        },
+
+        selectProgram(id) {
+            this.selectedProgramId = id;
+            this.maxUnlockedStep = Math.max(this.maxUnlockedStep, 4);
+        },
+
+        nextStep() {
+            if (this.currentStep === 1 && !this.selectedFacultyId) return;
+            if (this.currentStep === 2 && !this.selectedSpecialtyId) return;
+            if (this.currentStep === 3 && !this.selectedProgramId) return;
+            if (this.currentStep === 4 && (!this.consentRules || !this.consentData)) return;
+
+            if (this.currentStep < 5) {
+                this.currentStep++;
+                this.maxUnlockedStep = Math.max(this.maxUnlockedStep, this.currentStep);
+                window.scrollTo({ top: 150, behavior: 'smooth' });
+            }
+        },
+
+        prevStep() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+                window.scrollTo({ top: 150, behavior: 'smooth' });
+            }
+        },
+
+        goToStep(stepNum) {
+            if (stepNum <= this.maxUnlockedStep && stepNum >= 1 && stepNum <= 5) {
+                this.currentStep = stepNum;
+                window.scrollTo({ top: 150, behavior: 'smooth' });
+            }
+        },
+
+        onSubmitForm(e) {
+            if (!this.selectedProgramId || !this.selectedSpecialtyId || !this.selectedFacultyId) {
+                e.preventDefault();
+                alert('Пожалуйста, выберите факультет, специальность и программу обучения.');
+                return;
+            }
+            this.isSubmitting = true;
+        }
+    };
+}
+</script>
+{% endblock %}

@@ -32,6 +32,7 @@ urlpatterns = [
     path('student/', include('student.urls')),
     path('dashboard/', student_views.dashboard_view, name='dashboard_shortcut'),
     path('profile/', student_views.profile_view, name='profile_shortcut'),
+    path('apply/', student_views.apply_view, name='apply_shortcut'),
     path('accounts/', include('accounts.urls')),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),

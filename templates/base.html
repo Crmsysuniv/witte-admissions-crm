@@ -146,7 +146,7 @@
                 </a>
 
                 <!-- 3. Подать заявление -->
-                <a href="/admin/admissions/application/add/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                <a href="/student/apply/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/apply/' or request.path == '/apply/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                     <i class="bi bi-plus-circle-fill text-lg text-emerald-400"></i>
                     <span>Подать заявление</span>
                 </a>
@@ -348,6 +348,10 @@
                                 <a href="/student/dashboard/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-workspace text-slate-400"></i>
                                     <span>Кабинет абитуриента</span>
+                                </a>
+                                <a href="/student/apply/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                    <i class="bi bi-file-earmark-plus-fill text-slate-400"></i>
+                                    <span>Подать заявление</span>
                                 </a>
                                 <a href="/student/profile/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-vcard-fill text-slate-400"></i>

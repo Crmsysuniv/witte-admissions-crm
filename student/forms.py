@@ -3,6 +3,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 from accounts.models import User, ApplicantProfile
+from admissions.models import Faculty, Specialty, EducationProgram, Application
 
 
 class StudentProfileForm(forms.Form):
@@ -307,6 +308,92 @@ class StudentProfileForm(forms.Form):
         profile.passport_issue_date = data.get('passport_issue_date')
         profile.passport_department_code = data.get('passport_department_code', '').strip()
         profile.address = data.get('address', '').strip()
-        profile.save()
-
         return user, profile
+
+
+class ApplicationSubmissionForm(forms.Form):
+    """
+    Пошаговая форма подачи заявления на обучение (student/apply.html):
+    - Выбор факультета / института;
+    - Выбор направления подготовки (специальности);
+    - Выбор образовательной программы и формы обучения;
+    - Выбор основы обучения (бюджет / договор);
+    - Согласие с правилами приема и 152-ФЗ.
+    """
+    faculty = forms.ModelChoiceField(
+        queryset=Faculty.objects.all(),
+        required=True,
+        label='Факультет / Институт',
+        empty_label='— Выберите факультет —',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+        })
+    )
+
+    specialty = forms.ModelChoiceField(
+        queryset=Specialty.objects.filter(is_active=True),
+        required=True,
+        label='Направление подготовки',
+        empty_label='— Выберите направление —',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+        })
+    )
+
+    program = forms.ModelChoiceField(
+        queryset=EducationProgram.objects.filter(is_active=True),
+        required=True,
+        label='Форма обучения и программа',
+        empty_label='— Выберите форму обучения —',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+        })
+    )
+
+    financing_type = forms.ChoiceField(
+        choices=Application.FinancingType.choices,
+        required=True,
+        initial=Application.FinancingType.BUDGET,
+        label='Основа финансирования',
+    )
+
+    consent_rules = forms.BooleanField(
+        required=True,
+        label='Я ознакомлен(а) с Правилами приема в МУ им. С.Ю. Витте на 2026/2027 учебный год',
+    )
+
+    consent_data = forms.BooleanField(
+        required=True,
+        label='Подтверждаю достоверность предоставленных сведений и даю согласие на обработку персональных данных (152-ФЗ)',
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        faculty = cleaned_data.get('faculty')
+        specialty = cleaned_data.get('specialty')
+        program = cleaned_data.get('program')
+        financing_type = cleaned_data.get('financing_type')
+
+        if specialty and faculty and specialty.faculty_id != faculty.id:
+            self.add_error('specialty', 'Выбранное направление подготовки не относится к указанному факультету.')
+
+        if program and specialty and program.specialty_id != specialty.id:
+            self.add_error('program', 'Выбранная программа обучения не относится к данному направлению подготовки.')
+
+        if self.user:
+            # 1. Лимит заявлений (не более 5)
+            existing_count = Application.objects.filter(applicant=self.user).count()
+            if existing_count >= 5:
+                raise ValidationError('Превышен лимит подачи заявлений. По правилам приема 2026 года абитуриент может участвовать в конкурсе максимум по 5 заявлениям.')
+
+            # 2. Дубликат программы и формы финансирования
+            if program and financing_type:
+                if Application.objects.filter(applicant=self.user, program=program, financing_type=financing_type).exists():
+                    raise ValidationError(f'Вы уже подали заявление на программу «{program.specialty.name}» ({program.get_study_form_display()}) с этой основой обучения.')
+
+        return cleaned_data
+
