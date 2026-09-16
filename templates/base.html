@@ -519,7 +519,7 @@
             <!-- Scrollable Content View -->
             <main class="flex-1 overflow-y-auto bg-slate-50 relative flex flex-col justify-between">
                 
-                <div class="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full flex-1">
+                <div class="p-4 sm:p-6 lg:p-8 {% block content_width %}max-w-7xl mx-auto{% endblock %} w-full flex-1">
                     
                     <!-- Flash Messages Alert Banners -->
                     {% if messages %}

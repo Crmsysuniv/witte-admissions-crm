@@ -10,6 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 {% endblock %}
 
+{% block content_width %}{% endblock %}
+
 {% block content %}
 <div class="space-y-8" x-data="{ currentTab: 'overview' }">
 
@@ -39,26 +41,28 @@
                 </p>
             </div>
 
-                <a href="{% url 'admin_users_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/30">
-                    <i class="bi bi-people-fill text-sm"></i>
-                    <span>Пользователи & Роли</span>
-                </a>
-                <a href="{% url 'officer:export_rating_xlsx' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/30">
-                    <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
-                    <span>Экспорт в Excel</span>
-                </a>
-                <a href="{% url 'officer:protocols' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30">
-                    <i class="bi bi-file-earmark-check-fill text-sm"></i>
-                    <span>Приказы зачисления</span>
-                </a>
-                <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
-                    <i class="bi bi-card-checklist text-sm"></i>
-                    <span>Реестр заявлений</span>
-                </a>
-                <a href="/admin/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
-                    <i class="bi bi-gear-wide-connected text-sm"></i>
-                    <span>Django Admin</span>
-                </a>
+                <div class="flex flex-wrap items-center gap-2.5 lg:flex-nowrap">
+                    <a href="{% url 'admin_users_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-900/30">
+                        <i class="bi bi-people-fill text-sm"></i>
+                        <span>Пользователи & Роли</span>
+                    </a>
+                    <a href="{% url 'officer:export_rating_xlsx' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-900/30">
+                        <i class="bi bi-file-earmark-spreadsheet-fill text-sm"></i>
+                        <span>Экспорт в Excel</span>
+                    </a>
+                    <a href="{% url 'officer:protocols' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md shadow-blue-900/30">
+                        <i class="bi bi-file-earmark-check-fill text-sm"></i>
+                        <span>Приказы зачисления</span>
+                    </a>
+                    <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                        <i class="bi bi-card-checklist text-sm"></i>
+                        <span>Реестр заявлений</span>
+                    </a>
+                    <a href="/admin/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-colors">
+                        <i class="bi bi-gear-wide-connected text-sm"></i>
+                        <span>Django Admin</span>
+                    </a>
+                </div>
             </div>
         </div>
 
