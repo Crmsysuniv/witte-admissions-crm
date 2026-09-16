@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'feedback',
     'audit',
     'student',
+    'officer',
 ]
 
 MIDDLEWARE = [

@@ -11,8 +11,8 @@ def get_redirect_url_for_role(user, next_url=None, request=None):
     """
     Определяет целевой URL перенаправления после авторизации в зависимости от роли пользователя.
     1. Администратор (ADMIN) -> Панель управления /admin/
-    2. Сотрудник приемной комиссии (OFFICER) -> Рабочее место со списком заявлений /admin/admissions/application/
-    3. Абитуриент (APPLICANT) -> Главная страница портала абитуриента /
+    # 2. Сотрудник приемной комиссии (OFFICER) -> Рабочее место сотрудника /officer/workplace/
+    # 3. Абитуриент (APPLICANT) -> Главная страница портала абитуриента /student/dashboard/
     """
     # Если передан корректный и безопасный URL в параметре next, отдаем ему приоритет
     if next_url and request and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
@@ -24,7 +24,7 @@ def get_redirect_url_for_role(user, next_url=None, request=None):
     if user.role == User.Role.ADMIN or user.is_superuser:
         return '/admin/'
     elif user.role == User.Role.OFFICER:
-        return '/admin/admissions/application/'
+        return '/officer/workplace/'
     elif user.role == User.Role.APPLICANT:
         return '/student/dashboard/'
 

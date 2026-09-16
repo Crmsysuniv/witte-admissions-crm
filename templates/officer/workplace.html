@@ -1,0 +1,693 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Рабочий стол сотрудника | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Рабочий стол сотрудника приемной комиссии{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    statusModalOpen: false,
+    viewModalOpen: false,
+    activeAppId: null,
+    activeAppNumber: '',
+    activeApplicantName: '',
+    activeCurrentStatus: '',
+    activeProgramName: '',
+    selectedNewStatus: '',
+    officerComment: '',
+    openStatusModal(id, number, name, currentStatus) {
+        this.activeAppId = id;
+        this.activeAppNumber = number;
+        this.activeApplicantName = name;
+        this.activeCurrentStatus = currentStatus;
+        this.selectedNewStatus = currentStatus;
+        this.officerComment = '';
+        this.statusModalOpen = true;
+    }
+}">
+
+    <!-- 1. HERO BANNER СОТРУДНИКА -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                    <i class="bi bi-shield-check text-emerald-400 text-sm"></i>
+                    <span>Рабочее место сотрудника приемной комиссии • МУ им. С.Ю. Витте</span>
+                </div>
+                
+                <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                    Здравствуйте, <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-amber-200">{{ user.get_full_name|default:user.username }}</span>!
+                </h1>
+
+                <p class="mt-3 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                    Единый пульт обработки входящих заявлений абитуриентов. Контролируйте очередь подачи, верифицируйте прикрепленные электронные документы и переводите заявления в конкурсные списки в режиме реального времени.
+                </p>
+
+                <!-- Реквизиты сотрудника -->
+                <div class="mt-6 flex flex-wrap items-center gap-3 text-xs font-medium text-blue-200">
+                    <div class="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-xl border border-white/10 backdrop-blur-xs">
+                        <i class="bi bi-person-badge-fill text-amber-400 text-sm"></i>
+                        <span>Должность: <strong class="text-white">{{ officer_profile.position|default:"Специалист приемной комиссии" }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-xl border border-white/10 backdrop-blur-xs">
+                        <i class="bi bi-door-open-fill text-emerald-400 text-sm"></i>
+                        <span>Кабинет: <strong class="text-white">{{ officer_profile.cabinet|default:"Главный корпус, каб. 101" }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-xl border border-white/10 backdrop-blur-xs">
+                        <i class="bi bi-person-check-fill text-cyan-300 text-sm"></i>
+                        <span>Роль: <strong class="text-white">{{ user.get_role_display }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правый блок: быстрые ссылки и служебная информация -->
+            <div class="flex flex-col sm:flex-row lg:flex-col gap-3 min-w-[240px]">
+                <a href="/admin/admissions/application/" class="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 backdrop-blur-md shadow-sm group">
+                    <i class="bi bi-sliders text-base text-indigo-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Реестр в Django Admin</span>
+                </a>
+                <a href="/rating/" class="inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-bold transition-all border border-blue-400/30 shadow-md group">
+                    <i class="bi bi-trophy-fill text-base text-yellow-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Конкурсные списки</span>
+                </a>
+                <div class="p-3 rounded-xl bg-black/20 border border-white/5 text-[11px] text-blue-200/80 text-center">
+                    Разработчик: <strong class="text-white">Имя Фамилия</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. СВОДКА ВХОДЯЩЕЙ ОЧЕРЕДИ (KPI МЕТРИКИ) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        
+        <!-- Карточка 1: Очередь на проверку -->
+        <a href="?status=queue" class="relative group p-5 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 text-white border {% if status_filter == 'queue' %}border-indigo-400 ring-2 ring-indigo-400/50 shadow-lg{% else %}border-slate-800 hover:border-indigo-500/50{% endif %} transition-all shadow-md">
+            <div class="flex items-center justify-between text-indigo-300 text-xs font-semibold mb-2">
+                <span>В очереди</span>
+                <i class="bi bi-inbox-fill text-base text-indigo-400 group-hover:scale-110 transition-transform"></i>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white">{{ metrics.queue }}</div>
+            <div class="mt-1 text-[11px] text-indigo-200/70">Требуют внимания</div>
+        </a>
+
+        <!-- Карточка 2: Новые (SUBMITTED) -->
+        <a href="?status=SUBMITTED" class="relative group p-5 rounded-2xl bg-white border {% if status_filter == 'SUBMITTED' %}border-amber-500 ring-2 ring-amber-400/40 shadow-lg{% else %}border-slate-200/80 hover:border-amber-400/60{% endif %} transition-all shadow-xs">
+            <div class="flex items-center justify-between text-amber-700 text-xs font-semibold mb-2">
+                <span>Новые</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-amber-600">{{ metrics.submitted }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Первичная проверка</div>
+        </a>
+
+        <!-- Карточка 3: В процессе (UNDER_REVIEW) -->
+        <a href="?status=UNDER_REVIEW" class="relative group p-5 rounded-2xl bg-white border {% if status_filter == 'UNDER_REVIEW' %}border-blue-500 ring-2 ring-blue-400/40 shadow-lg{% else %}border-slate-200/80 hover:border-blue-400/60{% endif %} transition-all shadow-xs">
+            <div class="flex items-center justify-between text-blue-700 text-xs font-semibold mb-2">
+                <span>На проверке</span>
+                <i class="bi bi-hourglass-split text-base text-blue-500"></i>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-blue-600">{{ metrics.under_review }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Взято сотрудником</div>
+        </a>
+
+        <!-- Карточка 4: Требуются документы (DOCUMENTS_REQUIRED) -->
+        <a href="?status=DOCUMENTS_REQUIRED" class="relative group p-5 rounded-2xl bg-white border {% if status_filter == 'DOCUMENTS_REQUIRED' %}border-rose-500 ring-2 ring-rose-400/40 shadow-lg{% else %}border-slate-200/80 hover:border-rose-400/60{% endif %} transition-all shadow-xs">
+            <div class="flex items-center justify-between text-rose-700 text-xs font-semibold mb-2">
+                <span>Ждут документы</span>
+                <i class="bi bi-exclamation-triangle-fill text-base text-rose-500"></i>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-rose-600">{{ metrics.docs_required }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Запрос абитуриенту</div>
+        </a>
+
+        <!-- Карточка 5: Одобренные (APPROVED) -->
+        <a href="?status=APPROVED" class="relative group p-5 rounded-2xl bg-white border {% if status_filter == 'APPROVED' %}border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg{% else %}border-slate-200/80 hover:border-emerald-400/60{% endif %} transition-all shadow-xs">
+            <div class="flex items-center justify-between text-emerald-700 text-xs font-semibold mb-2">
+                <span>Одобрено</span>
+                <i class="bi bi-check-circle-fill text-base text-emerald-500"></i>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-emerald-600">{{ metrics.approved }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Допущены к конкурсу</div>
+        </a>
+
+        <!-- Карточка 6: Неверифицированные документы -->
+        <div class="relative p-5 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-xs">
+            <div class="flex items-center justify-between text-slate-600 text-xs font-semibold mb-2">
+                <span>Сканы на верификацию</span>
+                <i class="bi bi-file-earmark-check-fill text-base text-cyan-600"></i>
+            </div>
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-slate-800">{{ metrics.unverified_docs }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Файлов ожидают проверки</div>
+        </div>
+
+    </div>
+
+    <!-- 3. ПАНЕЛЬ ФИЛЬТРАЦИИ И ПОИСКА -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-5">
+        
+        <!-- Быстрые табы статуса -->
+        <div class="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-2">Очередь:</span>
+            
+            <a href="?status=queue{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'queue' %}bg-indigo-600 text-white shadow-sm shadow-indigo-500/20{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Активная очередь ({{ metrics.queue }})
+            </a>
+
+            <a href="?status=SUBMITTED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'SUBMITTED' %}bg-amber-500 text-white shadow-sm shadow-amber-500/20{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Только новые ({{ metrics.submitted }})
+            </a>
+
+            <a href="?status=UNDER_REVIEW{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'UNDER_REVIEW' %}bg-blue-600 text-white shadow-sm shadow-blue-500/20{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                На рассмотрении ({{ metrics.under_review }})
+            </a>
+
+            <a href="?status=DOCUMENTS_REQUIRED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'DOCUMENTS_REQUIRED' %}bg-rose-600 text-white shadow-sm shadow-rose-500/20{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Ждут документов ({{ metrics.docs_required }})
+            </a>
+
+            <a href="?status=APPROVED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white shadow-sm shadow-emerald-500/20{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Одобренные ({{ metrics.approved }})
+            </a>
+
+            <a href="?status=all{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all {% if status_filter == 'all' %}bg-slate-800 text-white shadow-sm{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+                Все заявления ({{ metrics.total_all }})
+            </a>
+        </div>
+
+        <!-- Форма детальных фильтров и поиска -->
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+            <input type="hidden" name="status" value="{{ status_filter }}">
+
+            <!-- Поисковая строка -->
+            <div class="lg:col-span-4">
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Поиск заявления или абитуриента</label>
+                <div class="relative">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="№ заявления, ФИО, СНИЛС, тел..." 
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <i class="bi bi-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
+            <!-- Фильтр по факультету -->
+            <div class="lg:col-span-3">
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Факультет / Институт</label>
+                <select name="faculty" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <option value="">Все факультеты</option>
+                    {% for faculty in faculties %}
+                    <option value="{{ faculty.id }}" {% if faculty_filter == faculty.id|stringformat:"i" %}selected{% endif %}>
+                        {{ faculty.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Фильтр по форме финансирования -->
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Основа обучения</label>
+                <select name="financing" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <option value="">Все основы</option>
+                    {% for f_code, f_name in financing_choices %}
+                    <option value="{{ f_code }}" {% if financing_filter == f_code %}selected{% endif %}>
+                        {{ f_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Сортировка -->
+            <div class="lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Порядок очереди</label>
+                <select name="sort" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <option value="fifo" {% if sort_by == 'fifo' %}selected{% endif %}>FIFO (поступление: сначала старые)</option>
+                    <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Сначала новые</option>
+                    <option value="updated" {% if sort_by == 'updated' %}selected{% endif %}>По дате изменения</option>
+                </select>
+            </div>
+
+            <!-- Кнопки применения -->
+            <div class="lg:col-span-1 flex items-end gap-2">
+                <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs transition-colors shadow-xs flex items-center justify-center gap-1.5" title="Применить фильтры">
+                    <i class="bi bi-funnel-fill"></i>
+                </button>
+                {% if search_query or faculty_filter or financing_filter or status_filter != 'queue' or sort_by != 'fifo' %}
+                <a href="?" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs transition-colors flex items-center justify-center" title="Сбросить все фильтры">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+    </div>
+
+    <!-- 4. ТАБЛИЦА ВХОДЯЩЕЙ ОЧЕРЕДИ ЗАЯВЛЕНИЙ -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+                    <i class="bi bi-list-task text-indigo-600 text-xl"></i>
+                    <span>Входящая очередь заявлений</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                        {{ total_filtered_count }} заявок
+                    </span>
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">
+                    Кликните «В работу» или «Изменить статус» для управления движением дела абитуриента
+                </p>
+            </div>
+
+            <!-- Индикатор режима проверки -->
+            <div class="flex items-center gap-2 text-xs font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/60">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Очередь синхронизирована</span>
+            </div>
+        </div>
+
+        {% if applications %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="py-3.5 px-5">№ и дата подачи</th>
+                        <th class="py-3.5 px-5">Абитуриент</th>
+                        <th class="py-3.5 px-5">Специальность & Факультет</th>
+                        <th class="py-3.5 px-5">Основа / Баллы</th>
+                        <th class="py-3.5 px-5">Документы</th>
+                        <th class="py-3.5 px-5">Статус</th>
+                        <th class="py-3.5 px-5 text-right">Действия сотрудника</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for app in applications %}
+                    <tr class="hover:bg-indigo-50/30 transition-colors group">
+                        
+                        <!-- № и дата подачи -->
+                        <td class="py-4 px-5 align-top whitespace-nowrap">
+                            <div class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                                <i class="bi bi-file-earmark-text text-indigo-600"></i>
+                                <span>№ {{ app.id }}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5" title="{{ app.submission_date|date:'d.m.Y H:i:s' }}">
+                                {{ app.submission_date|date:'d.m.Y H:i' }}
+                            </div>
+                            <div class="mt-1">
+                                {% if app.status == 'SUBMITTED' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                    Ожидает
+                                </span>
+                                {% elif app.status == 'UNDER_REVIEW' %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold">
+                                    В работе
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Абитуриент -->
+                        <td class="py-4 px-5 align-top">
+                            <div class="font-bold text-slate-900 text-sm">
+                                {{ app.applicant.get_full_name|default:app.applicant.username }}
+                            </div>
+                            <div class="text-slate-500 text-[11px] mt-0.5 flex items-center gap-2">
+                                {% if app.applicant.applicant_profile.snils %}
+                                <span>СНИЛС: <strong class="text-slate-700 font-mono">{{ app.applicant.applicant_profile.snils }}</strong></span>
+                                {% endif %}
+                            </div>
+                            <div class="text-slate-500 text-[11px] mt-1 space-y-0.5">
+                                {% if app.applicant.phone %}
+                                <div class="flex items-center gap-1.5">
+                                    <i class="bi bi-telephone text-slate-400"></i>
+                                    <a href="tel:{{ app.applicant.phone }}" class="hover:text-indigo-600 transition-colors">{{ app.applicant.phone }}</a>
+                                </div>
+                                {% endif %}
+                                {% if app.applicant.email %}
+                                <div class="flex items-center gap-1.5">
+                                    <i class="bi bi-envelope text-slate-400"></i>
+                                    <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 transition-colors truncate max-w-[180px]">{{ app.applicant.email }}</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Специальность & Факультет -->
+                        <td class="py-4 px-5 align-top">
+                            <div class="font-bold text-slate-800">
+                                <span class="font-mono text-indigo-700">{{ app.program.specialty.code }}</span>
+                                {{ app.program.specialty.name }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">
+                                {{ app.program.specialty.faculty.name }}
+                            </div>
+                            <div class="mt-1 flex items-center gap-1.5 text-[11px]">
+                                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+                                    {{ app.program.get_study_form_display }}
+                                </span>
+                                <span class="text-slate-400">•</span>
+                                <span class="text-slate-500">{{ app.program.duration }}</span>
+                            </div>
+                        </td>
+
+                        <!-- Основа / Баллы -->
+                        <td class="py-4 px-5 align-top whitespace-nowrap">
+                            <div>
+                                {% if app.financing_type == 'BUDGET' %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60 text-[11px]">
+                                    <i class="bi bi-award-fill text-emerald-600"></i>
+                                    Бюджет
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60 text-[11px]">
+                                    <i class="bi bi-credit-card-2-front-fill text-indigo-600"></i>
+                                    Договор
+                                </span>
+                                {% endif %}
+                            </div>
+
+                            <div class="mt-2 flex items-baseline gap-1.5">
+                                <span class="text-xs text-slate-500">Сумма:</span>
+                                <span class="text-base font-black text-slate-900 font-mono">{{ app.total_score }}</span>
+                                <span class="text-[10px] text-slate-400">баллов</span>
+                            </div>
+
+                            {% if app.exam_scores.exists %}
+                            <div class="mt-1 text-[10px] text-slate-500 space-y-0.5">
+                                {% for score in app.exam_scores.all %}
+                                <div>{{ score.subject.name }}: <strong class="text-slate-700 font-mono">{{ score.score }}</strong></div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Документы -->
+                        <td class="py-4 px-5 align-top">
+                            {% with docs=app.documents.all %}
+                            {% if docs %}
+                            <div class="space-y-1.5 min-w-[170px]">
+                                {% for doc in docs %}
+                                <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200/60">
+                                    <a href="{{ doc.file.url }}" target="_blank" class="flex items-center gap-1.5 text-[11px] font-medium text-slate-700 hover:text-indigo-600 truncate max-w-[110px]" title="{{ doc.get_document_type_display }}">
+                                        <i class="bi bi-file-earmark-pdf text-rose-500"></i>
+                                        <span>{{ doc.get_document_type_display }}</span>
+                                    </a>
+
+                                    <form method="post" class="inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="verify_single_doc">
+                                        <input type="hidden" name="application_id" value="{{ app.id }}">
+                                        <input type="hidden" name="document_id" value="{{ doc.id }}">
+                                        {% if doc.is_verified %}
+                                        <button type="submit" title="Верифицирован (клик для отмены)" class="text-emerald-600 hover:text-emerald-700 text-sm">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </button>
+                                        {% else %}
+                                        <button type="submit" title="Не верифицирован (клик для подтверждения)" class="text-amber-500 hover:text-emerald-600 text-sm">
+                                            <i class="bi bi-circle"></i>
+                                        </button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                                {% endfor %}
+
+                                <!-- Кнопка быстрой верификации всех документов заявления -->
+                                <form method="post" class="mt-1">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="verify_all_docs">
+                                    <input type="hidden" name="application_id" value="{{ app.id }}">
+                                    <button type="submit" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold underline">
+                                        Верифицировать все
+                                    </button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="text-[11px] text-slate-400 italic">Документы еще не прикреплены</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        <!-- Статус заявления -->
+                        <td class="py-4 px-5 align-top whitespace-nowrap">
+                            {% if app.status == 'SUBMITTED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                Подано
+                            </span>
+                            {% elif app.status == 'UNDER_REVIEW' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                На рассмотрении
+                            </span>
+                            {% elif app.status == 'DOCUMENTS_REQUIRED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                Требуются документы
+                            </span>
+                            {% elif app.status == 'APPROVED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                Одобрено
+                            </span>
+                            {% elif app.status == 'ENROLLED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                Зачислен
+                            </span>
+                            {% elif app.status == 'REJECTED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                Отклонено
+                            </span>
+                            {% elif app.status == 'WITHDRAWN' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                                Отозвано
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                                {{ app.get_status_display }}
+                            </span>
+                            {% endif %}
+
+                            {% if app.officer_comment %}
+                            <div class="mt-1.5 p-2 rounded-lg bg-slate-50 border border-slate-200/60 text-[10px] text-slate-600 max-w-[160px] truncate" title="{{ app.officer_comment }}">
+                                <i class="bi bi-chat-quote-fill text-slate-400 mr-1"></i>{{ app.officer_comment }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Действия сотрудника -->
+                        <td class="py-4 px-5 align-top text-right whitespace-nowrap">
+                            <div class="flex flex-col items-end gap-1.5">
+                                
+                                <!-- Быстрое взятие в работу, если статус SUBMITTED -->
+                                {% if app.status == 'SUBMITTED' %}
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="change_status">
+                                    <input type="hidden" name="application_id" value="{{ app.id }}">
+                                    <input type="hidden" name="new_status" value="UNDER_REVIEW">
+                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-colors">
+                                        <i class="bi bi-play-fill"></i>
+                                        <span>В работу</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- Быстрое одобрение, если в работе -->
+                                {% if app.status == 'UNDER_REVIEW' or app.status == 'SUBMITTED' %}
+                                <form method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="change_status">
+                                    <input type="hidden" name="application_id" value="{{ app.id }}">
+                                    <input type="hidden" name="new_status" value="APPROVED">
+                                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors">
+                                        <i class="bi bi-check-lg"></i>
+                                        <span>Одобрить</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- Модальное окно изменения статуса с комментарием -->
+                                <button @click="openStatusModal({{ app.id }}, '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}')"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors">
+                                    <i class="bi bi-pencil-square text-indigo-600"></i>
+                                    <span>Сменить статус...</span>
+                                </button>
+
+                                <a href="/admin/admissions/application/{{ app.id }}/change/" target="_blank" class="text-[11px] text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 mt-0.5">
+                                    <span>Редактор Django</span>
+                                    <i class="bi bi-box-arrow-up-right text-[9px]"></i>
+                                </a>
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Пагинация -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-5 bg-slate-50/80 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="text-xs text-slate-500">
+                Показаны записи с {{ page_obj.start_index }} по {{ page_obj.end_index }} из {{ total_filtered_count }}
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                   class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+                    <i class="bi bi-chevron-left mr-1"></i> Назад
+                </a>
+                {% endif %}
+
+                {% for p in page_obj.paginator.page_range %}
+                    {% if p == page_obj.number %}
+                    <span class="w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                        {{ p }}
+                    </span>
+                    {% elif p > page_obj.number|add:'-3' and p < page_obj.number|add:'3' %}
+                    <a href="?page={{ p }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                       class="w-8 h-8 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors">
+                        {{ p }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}"
+                   class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+                    Вперед <i class="bi bi-chevron-right ml-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- EMPTY STATE -->
+        <div class="p-12 sm:p-16 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 border border-emerald-200/60 shadow-inner">
+                <i class="bi bi-check2-circle text-3xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900">Заявлений в очереди не обнаружено</h3>
+            <p class="text-xs text-slate-500 max-w-md mx-auto mt-1.5">
+                По текущим параметрам фильтрации нет активных заявлений. Все новые заявления обработаны, либо измените параметры поиска.
+            </p>
+            <div class="mt-5">
+                <a href="?status=all" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100 transition-colors">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span>Показать все заявления базы</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 5. МОДАЛЬНОЕ ОКНО ИЗМЕНЕНИЯ СТАТУСА ЗАЯВЛЕНИЯ -->
+    <div x-show="statusModalOpen" 
+         x-cloak
+         class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200"
+             @click.away="statusModalOpen = false">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <i class="bi bi-arrow-left-right text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Смена статуса заявления</h3>
+                        <p class="text-xs text-slate-500">Заявление №<span x-text="activeAppNumber"></span> • <span x-text="activeApplicantName"></span></p>
+                    </div>
+                </div>
+                <button @click="statusModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <form method="post" class="mt-6 space-y-5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_status">
+                <input type="hidden" name="application_id" :value="activeAppId">
+
+                <!-- Выбор нового статуса -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        Новый статус заявления <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="new_status" x-model="selectedNewStatus" required
+                            class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        {% for s_val, s_label in status_choices %}
+                        <option value="{{ s_val }}">{{ s_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Комментарий сотрудника -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                        Комментарий приемной комиссии
+                    </label>
+                    <textarea name="officer_comment" 
+                              x-model="officerComment"
+                              rows="3" 
+                              placeholder="Укажите замечания к документам, причину перевода или инструкции для абитуриента..." 
+                              class="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"></textarea>
+                    <p class="text-[11px] text-slate-500 mt-1">
+                        Комментарий сохранится в журнале аудита и будет отправлен абитуриенту в персональном уведомлении.
+                    </p>
+                </div>
+
+                <!-- Подтверждение -->
+                <div class="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <button type="button" @click="statusModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all">
+                        Применить статус
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. ИНФОРМАЦИОННЫЙ БЛОК И АВТОРСКИЙ КОПИРАЙТ -->
+    <div class="p-6 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-xs text-slate-500">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                <i class="bi bi-info-circle-fill"></i>
+            </div>
+            <div>
+                <p class="font-bold text-slate-800">Приемная комиссия Московского университета имени С.Ю. Витте</p>
+                <p class="text-[11px]">Электронный документооборот и регламент проверки заявлений в соответствии с правилами приема 2026.</p>
+            </div>
+        </div>
+        <div class="text-right font-medium">
+            Разработка модуля: <strong class="text-slate-800">{{ developer_name }}</strong>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -30,6 +30,7 @@ urlpatterns = [
     path('register/', accounts_views.register_view, name='register'),
     path('password_change/', accounts_views.password_change_view, name='password_change'),
     path('student/', include('student.urls')),
+    path('officer/', include('officer.urls')),
     path('dashboard/', student_views.dashboard_view, name='dashboard_shortcut'),
     path('profile/', student_views.profile_view, name='profile_shortcut'),
     path('apply/', student_views.apply_view, name='apply_shortcut'),
