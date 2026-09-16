@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+
+{% block title %}Контакты приемной комиссии и схема проезда | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Контакты и схема проезда{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-12" x-data="{ 
+    routeTab: 'metro_avtozavodskaya',
+    callbackSent: false,
+    cbName: '',
+    cbPhone: '',
+    cbQuestion: '',
+    submitCallback() {
+        if (this.cbName && this.cbPhone) {
+            this.callbackSent = true;
+            setTimeout(() => {
+                this.callbackSent = false;
+                this.cbName = '';
+                this.cbPhone = '';
+                this.cbQuestion = '';
+            }, 5000);
+        }
+    }
+}">
+
+    <!-- Notification Toast for Callback Request -->
+    <div x-show="callbackSent" 
+         x-cloak
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-2"
+         class="fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <i class="bi bi-telephone-inbound-fill text-lg"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-200">Запрос на обратный звонок принят</p>
+            <p class="text-xs text-slate-400 mt-0.5">Специалист приемной комиссии перезвонит вам в течение 15 минут в рабочее время.</p>
+        </div>
+        <button @click="callbackSent = false" class="text-slate-400 hover:text-white transition-colors">
+            <i class="bi bi-x-lg text-sm"></i>
+        </button>
+    </div>
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-geo-alt-fill text-rose-400"></i>
+                <span>Главный кампус • Москва, Южный административный округ (ЮАО)</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Контакты и <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">схема проезда</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Приемная комиссия Московского университета имени С.Ю. Витте работает для вас 7 дней в неделю в период активной приемной кампании. Приезжайте в кампус на очную консультацию или свяжитесь с нами удобным способом.
+            </p>
+
+            <!-- Quick Contacts Strip -->
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-medium text-blue-200">
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-telephone-fill text-emerald-400 text-base"></i>
+                    <div>
+                        <span class="block text-[10px] text-blue-300/70 uppercase">Горячая линия</span>
+                        <strong class="text-white font-bold text-xs">+7 (495) 500-03-03</strong>
+                    </div>
+                </div>
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-envelope-fill text-cyan-300 text-base"></i>
+                    <div>
+                        <span class="block text-[10px] text-blue-300/70 uppercase">Электронная почта</span>
+                        <strong class="text-white font-bold text-xs">pk@witte.ru</strong>
+                    </div>
+                </div>
+                <div class="bg-white/10 px-3.5 py-2.5 rounded-xl border border-white/10 backdrop-blur-xs flex items-center gap-2.5">
+                    <i class="bi bi-geo-fill text-amber-300 text-base"></i>
+                    <div>
+                        <span class="block text-[10px] text-blue-300/70 uppercase">Ближайшее метро</span>
+                        <strong class="text-white font-bold text-xs">м. Автозаводская / МЦК ЗИЛ</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CONTACT DIRECTORY CARDS -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Card 1: Main Campus & Address -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shadow-2xs">
+                        <i class="bi bi-buildings-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Главный кампус</h3>
+                        <p class="text-[11px] text-slate-500">Приемная комиссия</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-3 text-xs text-slate-700">
+                    <div class="flex items-start gap-2.5">
+                        <i class="bi bi-geo-alt-fill text-rose-500 text-base shrink-0 mt-0.5"></i>
+                        <div>
+                            <strong class="text-slate-900 block font-bold">115432, г. Москва</strong>
+                            <span>2-й Кожуховский проезд, д. 12, стр. 1</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-2.5">
+                        <i class="bi bi-train-front-fill text-blue-600 text-base shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="text-slate-600 block">Метро: <strong>Автозаводская</strong> (8 мин)</span>
+                            <span class="text-slate-600 block">МЦК: <strong>ЗИЛ</strong> (7 мин пешком)</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1 text-[11px] text-slate-600">
+                        <span class="font-bold text-slate-800 block">Ориентир:</span>
+                        <span>Исторический район Даниловский, между парком «Тюфелева роща» и набережной Марка Шагала.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+                <a href="#route" class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors">
+                    <i class="bi bi-map"></i> Посмотреть маршрут
+                </a>
+            </div>
+        </div>
+
+        <!-- Card 2: Working Hours -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shadow-2xs">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">График работы</h3>
+                        <p class="text-[11px] text-slate-500">Приемная комиссия 2026</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <span class="font-medium text-slate-700">Понедельник – Пятница</span>
+                        <strong class="text-slate-900 font-bold">09:00 – 19:00</strong>
+                    </div>
+
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <span class="font-medium text-slate-700">Суббота</span>
+                        <strong class="text-slate-900 font-bold">10:00 – 16:00</strong>
+                    </div>
+
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                        <span class="font-medium text-slate-700">Воскресенье (в пик приема)</span>
+                        <strong class="text-emerald-700 font-bold">10:00 – 14:00</strong>
+                    </div>
+
+                    <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-2">
+                        <i class="bi bi-check-circle-fill text-emerald-600 shrink-0 mt-0.5"></i>
+                        <span>Электронная подача заявлений через CRM-портал работает круглосуточно 24/7 без выходных.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+                <a href="/admin/admissions/application/add/" class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors">
+                    <i class="bi bi-laptop"></i> Подать онлайн 24/7
+                </a>
+            </div>
+        </div>
+
+        <!-- Card 3: Department Phone Extensions -->
+        <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shadow-2xs">
+                        <i class="bi bi-telephone-outbound-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Телефоны отделов</h3>
+                        <p class="text-[11px] text-slate-500">Добавочные номера</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-2 text-xs text-slate-700">
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600">Бакалавриат и специалитет</span>
+                        <strong class="font-mono font-bold text-slate-900">доб. 101, 102</strong>
+                    </div>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600">Приемная комиссия Колледжа</span>
+                        <strong class="font-mono font-bold text-slate-900">доб. 103</strong>
+                    </div>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600">Магистратура и аспирантура</span>
+                        <strong class="font-mono font-bold text-slate-900">доб. 105</strong>
+                    </div>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600">Отдел договоров и оплаты</span>
+                        <strong class="font-mono font-bold text-slate-900">доб. 110</strong>
+                    </div>
+                    <div class="flex items-center justify-between py-1 border-b border-slate-100">
+                        <span class="text-slate-600">Жилищный отдел (общежития)</span>
+                        <strong class="font-mono font-bold text-slate-900">доб. 114</strong>
+                    </div>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="text-slate-600">Бесплатно по всей России</span>
+                        <strong class="font-mono font-bold text-emerald-700">8 (800) 555-03-03</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+                <a href="tel:+74955000303" class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors">
+                    <i class="bi bi-telephone-fill"></i> Позвонить в комиссию
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. INTERACTIVE ROUTE NAVIGATION & MAP (СХЕМА ПРОЕЗДА) -->
+    <section id="route" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider mb-1.5">
+                    <i class="bi bi-compass"></i> Как добраться
+                </span>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Подробная схема проезда к университету
+                </h2>
+            </div>
+
+            <!-- Route Type Tabs -->
+            <div class="flex flex-wrap gap-1.5">
+                <button @click="routeTab = 'metro_avtozavodskaya'" 
+                        :class="routeTab === 'metro_avtozavodskaya' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>м. Автозаводская</span>
+                </button>
+                <button @click="routeTab = 'mcc_zil'" 
+                        :class="routeTab === 'mcc_zil' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span>МЦК ЗИЛ</span>
+                </button>
+                <button @click="routeTab = 'bus'" 
+                        :class="routeTab === 'bus' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                    <i class="bi bi-bus-front"></i>
+                    <span>Автобус</span>
+                </button>
+                <button @click="routeTab = 'car'" 
+                        :class="routeTab === 'car' ? 'bg-witte-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5">
+                    <i class="bi bi-car-front"></i>
+                    <span>На автомобиле</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Route Text Instruction (5 Cols) -->
+            <div class="lg:col-span-5 space-y-4">
+                
+                <!-- Tab 1: м. Автозаводская -->
+                <div x-show="routeTab === 'metro_avtozavodskaya'" class="space-y-3">
+                    <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs text-emerald-950 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-emerald-800">
+                            <i class="bi bi-geo-alt-fill"></i> Маршрут пешком (8–10 минут, 750 метров)
+                        </div>
+                        <p class="leading-relaxed">
+                            Замоскворецкая линия (зеленая ветка). Последний вагон из центра, выход №2 (к улице Мастеркова и 1-му Кожуховскому проезду).
+                        </p>
+                    </div>
+                    <ol class="space-y-2.5 text-xs text-slate-700 list-decimal list-inside">
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            При выходе из стеклянных дверей поверните налево на улицу Мастеркова.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            Пройдите прямо 200 метров до перекрестка с 1-м Кожуховским проездом.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            Поверните направо на 2-й Кожуховский проезд и двигайтесь прямо 400 метров.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            С левой стороны будет вход на территорию главного кампуса МУ им. С.Ю. Витте (дом 12, строение 1).
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Tab 2: МЦК ЗИЛ -->
+                <div x-show="routeTab === 'mcc_zil'" x-cloak class="space-y-3">
+                    <div class="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 text-xs text-rose-950 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-rose-800">
+                            <i class="bi bi-geo-alt-fill"></i> Маршрут пешком (6–7 минут, 550 метров)
+                        </div>
+                        <p class="leading-relaxed">
+                            Московское центральное кольцо (МЦК), станция ЗИЛ. Выход №1 в сторону парка «Тюфелева роща» и проспекта Лихачева.
+                        </p>
+                    </div>
+                    <ol class="space-y-2.5 text-xs text-slate-700 list-decimal list-inside">
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            Выйдите из здания станции МЦК ЗИЛ и перейдите проспект Лихачева по пешеходному переходу.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            Двигайтесь по пешеходному скверу вдоль парка «Тюфелева роща» в сторону улицы Автозаводская.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                            Через 400 метров поверните направо во 2-й Кожуховский проезд к главному входу в университет.
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Tab 3: Автобусы -->
+                <div x-show="routeTab === 'bus'" x-cloak class="space-y-3">
+                    <div class="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 text-xs text-blue-950 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-blue-800">
+                            <i class="bi bi-bus-front-fill"></i> Остановка «Университет имени Витте» (1 минута)
+                        </div>
+                        <p class="leading-relaxed">
+                            Остановка общественного транспорта расположена непосредственно напротив главного входа в университет.
+                        </p>
+                    </div>
+                    <div class="space-y-2 text-xs text-slate-700">
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <strong class="text-slate-900 block font-bold mb-1">Маршруты автобусов:</strong>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px]">с799</span>
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px]">944</span>
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px]">е80</span>
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-bold text-[11px]">м9</span>
+                            </div>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 leading-relaxed">
+                            Интервал движения городского транспорта составляет 5–8 минут в часы пик.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: На автомобиле -->
+                <div x-show="routeTab === 'car'" x-cloak class="space-y-3">
+                    <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 text-xs text-amber-950 space-y-2">
+                        <div class="flex items-center gap-2 font-bold text-amber-800">
+                            <i class="bi bi-car-front-fill"></i> Удобный подъезд с ТТК
+                        </div>
+                        <p class="leading-relaxed">
+                            Кампус расположен в 500 метрах от Третьего транспортного кольца (ТТК) на юге Москвы.
+                        </p>
+                    </div>
+                    <ul class="space-y-2 text-xs text-slate-700">
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 leading-relaxed">
+                            <strong>С внешней стороны ТТК:</strong> съезд на ул. Автозаводская, далее на светофоре направо на 1-й Кожуховский проезд и сразу во 2-й Кожуховский проезд.
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 leading-relaxed">
+                            <strong>Бесплатная парковка:</strong> на территории университета действует бесплатная гостевая парковка для абитуриентов и их родителей. При въезде сообщите охране: «В приемную комиссию».
+                        </li>
+                        <li class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                            <span>Координаты для навигатора:</span>
+                            <code class="font-mono font-bold text-indigo-600">55.7061, 37.6601</code>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Open in external navigators -->
+                <div class="pt-2 flex flex-wrap gap-2">
+                    <a href="https://yandex.ru/maps/?text=Москва+2-й+Кожуховский+проезд+12с1" target="_blank" rel="noopener noreferrer" 
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-colors">
+                        <i class="bi bi-compass"></i> Яндекс.Карты
+                    </a>
+                    <a href="https://2gis.ru/moscow/search/2-й%20Кожуховский%20проезд%2012с1" target="_blank" rel="noopener noreferrer" 
+                       class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold transition-colors">
+                        <i class="bi bi-geo-alt"></i> 2ГИС
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Styled Map Display Card (7 Cols) -->
+            <div class="lg:col-span-7 bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-lg relative min-h-[380px] flex flex-col justify-between p-6 text-white">
+                
+                <!-- Map Background Stylized Visual Representation -->
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-witte-950 opacity-90 pointer-events-none"></div>
+                <div class="absolute inset-0 opacity-15 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+
+                <!-- Top Badges on Map -->
+                <div class="relative z-10 flex items-center justify-between gap-2">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-semibold text-white">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Кампус МУ им. С.Ю. Витте на карте Москвы</span>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-lg bg-black/40 text-[11px] font-mono text-slate-300 border border-white/10">
+                        ЮАО • Даниловский
+                    </span>
+                </div>
+
+                <!-- Center: University Landmark Pin -->
+                <div class="relative z-10 my-auto text-center space-y-3 py-8">
+                    <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center mx-auto shadow-2xl shadow-blue-500/50 border-2 border-white animate-bounce">
+                        <span class="text-2xl font-black">В</span>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-white">МУ им. С.Ю. Витте</h3>
+                        <p class="text-xs text-blue-200/90 mt-0.5">г. Москва, 2-й Кожуховский проезд, д. 12, стр. 1</p>
+                    </div>
+                    <div class="flex items-center justify-center gap-4 text-xs font-medium text-slate-300">
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-circle-fill text-emerald-400 text-[8px]"></i> м. Автозаводская (8 мин)
+                        </span>
+                        <span>•</span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="bi bi-circle-fill text-rose-400 text-[8px]"></i> МЦК ЗИЛ (7 мин)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Bottom Bar on Map -->
+                <div class="relative z-10 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span class="text-slate-400">
+                        Бесплатный гостевой паркинг для абитуриентов
+                    </span>
+                    <a href="https://yandex.ru/maps/?text=Москва+2-й+Кожуховский+проезд+12с1" target="_blank" rel="noopener noreferrer" 
+                       class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-md flex items-center gap-1.5">
+                        <i class="bi bi-cursor-fill"></i> Проложить маршрут
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 4. REGIONAL BRANCHES (ФИЛИАЛЫ УНИВЕРСИТЕТА) -->
+    <div class="space-y-6">
+        <div class="max-w-3xl">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-2">
+                <i class="bi bi-diagram-3-fill"></i> Региональная сеть
+            </span>
+            <h2 class="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Филиалы МУ им. С.Ю. Витте в городах России
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+                Поступить в университет и получить московский государственный диплом можно также в региональных отделениях вуза.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {% for branch in branches %}
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs">
+                            {{ branch.city }}
+                        </span>
+                        <i class="bi bi-building text-slate-400"></i>
+                    </div>
+
+                    <h3 class="text-sm font-bold text-slate-900 leading-snug">
+                        {{ branch.name }}
+                    </h3>
+
+                    <div class="mt-3 space-y-1.5 text-xs text-slate-600">
+                        <div class="flex items-start gap-1.5">
+                            <i class="bi bi-geo-alt text-rose-500 shrink-0 mt-0.5"></i>
+                            <span class="text-[11px] leading-tight">{{ branch.address }}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="bi bi-telephone text-blue-500 shrink-0"></i>
+                            <strong class="text-[11px] text-slate-800 font-bold">{{ branch.phone }}</strong>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <i class="bi bi-envelope text-slate-400 shrink-0"></i>
+                            <span class="text-[11px] text-slate-500">{{ branch.email }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                    <i class="bi bi-info-circle mr-1"></i> {{ branch.metro_desc }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 5. EXPRESS CALLBACK & INQUIRY FORM -->
+    <div class="bg-gradient-to-r from-blue-700 via-indigo-700 to-witte-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl shadow-indigo-700/20">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            <div class="lg:col-span-7 space-y-3">
+                <span class="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold tracking-wide uppercase">
+                    Обратная связь
+                </span>
+                <h3 class="text-2xl sm:text-3xl font-black leading-tight">
+                    Остались вопросы по поступлению в 2026 году?
+                </h3>
+                <p class="text-xs sm:text-sm text-blue-100 leading-relaxed max-w-lg">
+                    Оставьте контактные данные — сотрудники приемной комиссии свяжутся с вами, помогут сориентироваться в правилах приема и подберут удобное время для визита в кампус.
+                </p>
+                <div class="pt-2 flex flex-wrap gap-4 text-xs text-blue-200">
+                    <span class="flex items-center gap-1.5">
+                        <i class="bi bi-check2-circle text-emerald-400"></i> Консультация бесплатна
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="bi bi-check2-circle text-emerald-400"></i> Звонок в течение 15 минут
+                    </span>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="lg:col-span-5 bg-white text-slate-900 rounded-2xl p-5 sm:p-6 shadow-lg space-y-3">
+                <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider">
+                    Заказать обратный звонок
+                </h4>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Ваше имя</label>
+                    <input type="text" 
+                           x-model="cbName" 
+                           placeholder="Алексей" 
+                           class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Телефон для связи</label>
+                    <input type="tel" 
+                           x-model="cbPhone" 
+                           placeholder="+7 (999) 000-00-00" 
+                           class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Вопрос или интересующая специальность</label>
+                    <input type="text" 
+                           x-model="cbQuestion" 
+                           placeholder="Например: Поступление на IT после колледжа" 
+                           class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <button @click="submitCallback()" 
+                        type="button" 
+                        :disabled="!cbName || !cbPhone"
+                        class="w-full mt-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-blue-600/30 transition-all">
+                    Отправить заявку
+                </button>
+                <p class="text-[10px] text-slate-400 text-center">
+                    Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

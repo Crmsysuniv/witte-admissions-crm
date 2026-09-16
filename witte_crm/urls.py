@@ -18,17 +18,19 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import home
+from core import views as core_views
 from admissions import views as admissions_views
 
 urlpatterns = [
-    path('', home, name='home'),
+    path('', core_views.home, name='home'),
     path('faculties/', admissions_views.faculties_list, name='faculties_list'),
     path('programs/', admissions_views.programs_catalog, name='programs_catalog'),
     path('rules/', admissions_views.admissions_rules, name='admissions_rules'),
     path('calculator/', admissions_views.score_calculator, name='score_calculator'),
     path('tuition/', admissions_views.tuition_fees, name='tuition_fees'),
     path('dormitory/', admissions_views.dormitory_info, name='dormitory_info'),
+    path('faq/', core_views.faq, name='faq'),
+    path('contacts/', core_views.contacts, name='contacts'),
     path('admissions/', include('admissions.urls')),
     path('admin/', admin.site.urls),
 ]

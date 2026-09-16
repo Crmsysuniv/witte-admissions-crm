@@ -1,4 +1,5 @@
 from django.urls import path
+from core import views as core_views
 from . import views
 
 app_name = 'admissions'
@@ -11,4 +12,6 @@ urlpatterns = [
     path('calculator/', views.score_calculator, name='score_calculator'),
     path('tuition/', views.tuition_fees, name='tuition_fees'),
     path('dormitory/', views.dormitory_info, name='dormitory_info'),
+    path('faq/', core_views.faq, name='faq'),
+    path('contacts/', core_views.contacts, name='contacts'),
 ]
