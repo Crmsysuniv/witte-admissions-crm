@@ -3,7 +3,7 @@ from datetime import date
 from django import forms
 from django.core.exceptions import ValidationError
 from accounts.models import User, ApplicantProfile
-from admissions.models import Faculty, Specialty, EducationProgram, Application
+from admissions.models import Faculty, Specialty, EducationProgram, Application, ApplicationDocument
 
 
 class StudentProfileForm(forms.Form):
@@ -396,4 +396,54 @@ class ApplicationSubmissionForm(forms.Form):
                     raise ValidationError(f'Вы уже подали заявление на программу «{program.specialty.name}» ({program.get_study_form_display()}) с этой основой обучения.')
 
         return cleaned_data
+
+
+class DocumentUploadForm(forms.ModelForm):
+    """
+    Форма прикрепления и загрузки электронных документов / сканов абитуриента (student/documents.html).
+    """
+    class Meta:
+        model = ApplicationDocument
+        fields = ['application', 'document_type', 'file', 'comment']
+        widgets = {
+            'application': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+            }),
+            'document_type': forms.Select(attrs={
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all cursor-pointer',
+                'accept': '.pdf,.jpg,.jpeg,.png',
+                '@change': 'handleFileSelected($event)',
+            }),
+            'comment': forms.TextInput(attrs={
+                'placeholder': 'Например: Разворот с фото и регистрация (стр. 2-5)',
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all',
+            }),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['application'].queryset = (
+                Application.objects.filter(applicant=user)
+                .select_related('program__specialty')
+                .order_by('-submission_date')
+            )
+            apps = list(self.fields['application'].queryset)
+            if len(apps) == 1:
+                self.fields['application'].initial = apps[0].id
+                self.fields['application'].empty_label = None
+            else:
+                self.fields['application'].empty_label = '— Выберите заявление для прикрепления —'
+
+    def clean_file(self):
+        uploaded_file = self.cleaned_data.get('file')
+        if uploaded_file:
+            max_size_mb = 15
+            if uploaded_file.size > max_size_mb * 1024 * 1024:
+                raise ValidationError(f'Размер файла превышает {max_size_mb} МБ. Пожалуйста, сожмите или уменьшите разрешение скана.')
+        return uploaded_file
+
 

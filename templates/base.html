@@ -212,7 +212,7 @@
                 <div class="pt-4 px-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-blue-300/50">Работа с заявками</div>
 
                 <!-- 8. Документы заявлений -->
-                <a href="/admin/admissions/applicationdocument/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-white/10">
+                <a href="{% if user.is_authenticated and not user.is_staff %}/student/documents/{% else %}/admin/admissions/applicationdocument/{% endif %}" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all {% if request.path == '/student/documents/' or request.path == '/documents/' %}bg-blue-600/20 text-blue-200 border border-blue-500/30 shadow-sm{% else %}text-slate-300 hover:text-white hover:bg-white/10{% endif %}">
                     <i class="bi bi-folder-check text-lg text-sky-400"></i>
                     <span>Документы и сканы</span>
                 </a>
@@ -356,6 +356,10 @@
                                 <a href="/student/profile/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-vcard-fill text-slate-400"></i>
                                     <span>Персональные данные</span>
+                                </a>
+                                <a href="/student/documents/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                                    <i class="bi bi-folder-check text-slate-400"></i>
+                                    <span>Документы и сканы</span>
                                 </a>
                                 <a href="/password_change/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-key-fill text-slate-400"></i>

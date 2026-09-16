@@ -1,11 +1,11 @@
 import json
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from accounts.models import ApplicantProfile
 from admissions.models import Faculty, Specialty, EducationProgram, Application, ApplicationDocument, ExamScore
 from audit.models import Notification, StatusLog
-from .forms import StudentProfileForm, ApplicationSubmissionForm
+from .forms import StudentProfileForm, ApplicationSubmissionForm, DocumentUploadForm
 
 
 @login_required
@@ -92,7 +92,7 @@ def dashboard_view(request):
             'completed': step4_documents,
             'current': step3_application and not step4_documents,
             'icon': 'bi-folder-check',
-            'url': '/admin/admissions/applicationdocument/',
+            'url': '/student/documents/',
         },
         {
             'num': 5,
@@ -220,6 +220,13 @@ def dashboard_view(request):
             'desc': '100% гарантия мест иногородним первокурсникам',
             'url': '/dormitory/',
             'icon': 'bi-houses-fill',
+            'color': 'teal',
+        },
+        {
+            'title': 'Документы и сканы',
+            'desc': 'Загрузка паспорта, аттестата и проверка файлов',
+            'url': '/student/documents/',
+            'icon': 'bi-folder-check',
             'color': 'teal',
         },
         {
@@ -467,5 +474,108 @@ def apply_view(request):
         'initial_program_id': initial_program_id or '',
     }
     return render(request, 'student/apply.html', context)
+
+
+@login_required
+def documents_view(request):
+    """
+    Интерфейс загрузки и управления электронными документами/сканами (student/documents.html):
+    - Сводка загруженных документов абитуриента с предпросмотром прикрепленных файлов (PDF, JPG, PNG);
+    - Статусы верификации документов сотрудниками приемной комиссии;
+    - Форма загрузки новых сканов с валидацией размера и типа файлов;
+    - Возможность удаления непринятых / устаревших документов;
+    - Чек-лист комплектности досье абитуриента.
+    """
+    user = request.user
+    applicant_profile = getattr(user, 'applicant_profile', None)
+
+    applications = (
+        Application.objects.filter(applicant=user)
+        .select_related('program__specialty__faculty', 'program')
+        .order_by('-submission_date')
+    )
+
+    documents = (
+        ApplicationDocument.objects.filter(application__applicant=user)
+        .select_related('application__program__specialty')
+        .order_by('-uploaded_at')
+    )
+
+    # Обработка удаления документа
+    if request.method == 'POST' and request.POST.get('action') == 'delete':
+        doc_id = request.POST.get('document_id')
+        doc = get_object_or_404(ApplicationDocument, id=doc_id, application__applicant=user)
+        doc_type_title = doc.get_document_type_display()
+        doc.file.delete(save=False)
+        doc.delete()
+        messages.success(request, f'Документ «{doc_type_title}» успешно удален.')
+        return redirect('student:documents')
+
+    # Обработка загрузки нового документа
+    if request.method == 'POST':
+        if not applications.exists():
+            messages.error(request, 'Для загрузки документов необходимо сначала подать хотя бы одно заявление.')
+            return redirect('student:apply')
+
+        form = DocumentUploadForm(request.POST, request.FILES, user=user)
+        if form.is_valid():
+            document = form.save()
+
+            # Уведомление для абитуриента
+            Notification.objects.create(
+                user=user,
+                notification_type=Notification.NotificationType.DOCUMENT,
+                title='Документ прикреплен к заявлению',
+                message=(
+                    f'Скан «{document.get_document_type_display()}» успешно прикреплен к заявлению №{document.application_id} '
+                    f'на направление «{document.application.program.specialty.name}» и передан на проверку.'
+                )
+            )
+
+            messages.success(
+                request,
+                f'Документ «{document.get_document_type_display()}» успешно загружен и ожидает проверки комиссией!'
+            )
+            return redirect('student:documents')
+        else:
+            messages.error(request, 'Пожалуйста, проверьте правильность заполнения полей и размер прикрепленного файла.')
+    else:
+        form = DocumentUploadForm(user=user)
+
+    # Расчет статистики комплектности досье
+    total_documents = documents.count()
+    verified_count = documents.filter(is_verified=True).count()
+    pending_count = total_documents - verified_count
+
+    has_passport = documents.filter(document_type=ApplicationDocument.DocumentType.PASSPORT).exists()
+    has_education_doc = documents.filter(
+        document_type__in=[ApplicationDocument.DocumentType.CERTIFICATE, ApplicationDocument.DocumentType.DIPLOMA]
+    ).exists()
+    has_privilege = documents.filter(document_type=ApplicationDocument.DocumentType.PRIVILEGE).exists()
+    has_other = documents.filter(document_type=ApplicationDocument.DocumentType.OTHER).exists()
+
+    # Прогресс комплектности документов (0-100%)
+    readiness_percentage = 0
+    if has_passport:
+        readiness_percentage += 50
+    if has_education_doc:
+        readiness_percentage += 50
+
+    context = {
+        'form': form,
+        'documents': documents,
+        'applications': applications,
+        'total_documents': total_documents,
+        'verified_count': verified_count,
+        'pending_count': pending_count,
+        'has_passport': has_passport,
+        'has_education_doc': has_education_doc,
+        'has_privilege': has_privilege,
+        'has_other': has_other,
+        'readiness_percentage': readiness_percentage,
+        'applicant_profile': applicant_profile,
+    }
+    return render(request, 'student/documents.html', context)
+
 
 

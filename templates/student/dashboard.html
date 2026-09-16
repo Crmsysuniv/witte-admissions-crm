@@ -66,18 +66,18 @@
         </div>
 
         <!-- Metric 2: Documents -->
-        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shrink-0">
+        <a href="/student/documents/" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md hover:border-emerald-300 block group">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl shrink-0 group-hover:scale-105 transition-transform">
                 <i class="bi bi-folder-check"></i>
             </div>
             <div class="min-w-0">
-                <span class="text-slate-400 text-xs font-semibold block uppercase tracking-wider">Загружено документов</span>
+                <span class="text-slate-400 text-xs font-semibold block uppercase tracking-wider group-hover:text-emerald-700 transition-colors">Загружено документов</span>
                 <div class="flex items-baseline gap-1.5 mt-0.5">
                     <span class="text-2xl font-black text-slate-900">{{ total_documents }}</span>
                     <span class="text-xs text-emerald-600 font-medium">({{ verified_documents_count }} пров.)</span>
                 </div>
             </div>
-        </div>
+        </a>
 
         <!-- Metric 3: Exam Scores -->
         <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4 transition-all hover:shadow-md">

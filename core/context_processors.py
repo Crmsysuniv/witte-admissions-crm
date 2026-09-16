@@ -13,6 +13,7 @@ PATH_TITLES = {
     'dashboard': 'Дашборд',
     'profile': 'Персональные данные',
     'apply': 'Подача заявления',
+    'documents': 'Документы и сканы',
     
     # Admissions
     'admissions': 'Приемная комиссия',

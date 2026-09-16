@@ -1,0 +1,619 @@
+{% extends 'base.html' %}
+
+{% block title %}Документы и сканы абитуриента | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Документы и сканы{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-12" x-data="documentManager()">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-4xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-folder-check text-emerald-400"></i>
+                <span>Приемная кампания 2026/2027 • Электронный документооборот</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Документы и сканы абитуриента
+            </h1>
+
+            <p class="mt-3 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Загрузите электронные скан-копии документов, необходимых для верификации личного дела и допуска к конкурсному отбору. Документы проверяются сотрудниками приемной комиссии в течение 24 часов.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-files text-cyan-300"></i>
+                    <span>Всего файлов: <strong class="text-white font-bold">{{ total_documents }}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-patch-check-fill text-emerald-400"></i>
+                    <span>Проверено комиссией: <strong class="text-emerald-300 font-bold">{{ verified_count }}</strong></span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3.5 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-clock-history text-amber-300"></i>
+                    <span>Ожидают проверки: <strong class="text-amber-300 font-bold">{{ pending_count }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DOSSIER CHECKLIST & READINESS -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 uppercase tracking-wider">
+                        Комплектность досье
+                    </span>
+                    <span class="text-xs text-slate-400">Обязательные документы для зачисления</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Статус комплекта документов
+                </h2>
+            </div>
+
+            <!-- Readiness Badge -->
+            <div class="flex items-center gap-3 bg-slate-50 p-2.5 sm:px-4 rounded-2xl border border-slate-200">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br {% if readiness_percentage >= 80 %}from-emerald-600 to-teal-600{% elif readiness_percentage >= 40 %}from-blue-600 to-indigo-600{% else %}from-amber-500 to-rose-500{% endif %} text-white flex items-center justify-center font-black text-base shadow-sm">
+                    {{ readiness_percentage }}%
+                </div>
+                <div class="text-left">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Готовность комплекта</span>
+                    <strong class="text-xs font-bold text-slate-800">
+                        {% if readiness_percentage == 100 %}
+                            Полный комплект документов
+                        {% elif readiness_percentage >= 50 %}
+                            Часть документов загружена
+                        {% else %}
+                            Требуется загрузка документов
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Progress Bar -->
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden flex shadow-inner">
+            <div class="h-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 rounded-full transition-all duration-500 shadow-sm"
+                 style="width: {{ readiness_percentage }}%"></div>
+        </div>
+
+        <!-- 3 Key Checklist Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- 1. Passport -->
+            <div class="p-4 rounded-2xl border transition-all text-xs space-y-2 {% if has_passport %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-amber-50/70 border-amber-200 text-amber-950{% endif %}">
+                <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs {% if has_passport %}bg-emerald-500 text-white{% else %}bg-amber-500 text-white{% endif %}">
+                        <i class="bi {% if has_passport %}bi-check-lg{% else %}bi-exclamation{% endif %}"></i>
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if has_passport %}bg-emerald-200/60 text-emerald-800{% else %}bg-amber-200/60 text-amber-800{% endif %}">
+                        {% if has_passport %}Прикреплен{% else %}Обязательно{% endif %}
+                    </span>
+                </div>
+                <div>
+                    <strong class="font-bold block text-sm">Паспорт гражданина РФ</strong>
+                    <p class="text-[11px] mt-0.5 leading-relaxed {% if has_passport %}text-emerald-800/80{% else %}text-amber-800/80{% endif %}">
+                        Разворот 2–3 страниц (фото) и страницы с действующей регистрацией по месту жительства.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. Education Document -->
+            <div class="p-4 rounded-2xl border transition-all text-xs space-y-2 {% if has_education_doc %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-amber-50/70 border-amber-200 text-amber-950{% endif %}">
+                <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs {% if has_education_doc %}bg-emerald-500 text-white{% else %}bg-amber-500 text-white{% endif %}">
+                        <i class="bi {% if has_education_doc %}bi-check-lg{% else %}bi-exclamation{% endif %}"></i>
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if has_education_doc %}bg-emerald-200/60 text-emerald-800{% else %}bg-amber-200/60 text-amber-800{% endif %}">
+                        {% if has_education_doc %}Прикреплен{% else %}Обязательно{% endif %}
+                    </span>
+                </div>
+                <div>
+                    <strong class="font-bold block text-sm">Аттестат или Диплом</strong>
+                    <p class="text-[11px] mt-0.5 leading-relaxed {% if has_education_doc %}text-emerald-800/80{% else %}text-amber-800/80{% endif %}">
+                        Документ о среднем общем или среднем профессиональном образовании с оценками (приложение).
+                    </p>
+                </div>
+            </div>
+
+            <!-- 3. Additional Docs -->
+            <div class="p-4 rounded-2xl border transition-all text-xs space-y-2 {% if has_privilege or has_other %}bg-emerald-50/70 border-emerald-200 text-emerald-950{% else %}bg-slate-50 border-slate-200 text-slate-600{% endif %}">
+                <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs {% if has_privilege or has_other %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">
+                        <i class="bi {% if has_privilege or has_other %}bi-check-lg{% else %}bi-plus-lg{% endif %}"></i>
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {% if has_privilege or has_other %}bg-emerald-200/60 text-emerald-800{% else %}bg-slate-200 text-slate-600{% endif %}">
+                        По желанию / льготы
+                    </span>
+                </div>
+                <div>
+                    <strong class="font-bold block text-sm">Достижения и льготы</strong>
+                    <p class="text-[11px] mt-0.5 leading-relaxed text-slate-500">
+                        Справки об инвалидности, сиротстве, дипломы олимпиад, волонтерские книжки, знак ГТО (+баллы).
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 3. UPLOAD NEW DOCUMENT FORM -->
+    <div class="bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/80 shadow-xs space-y-6">
+        
+        <div class="border-b border-slate-100 pb-4">
+            <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
+                Загрузка файлов
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 mt-1">
+                Прикрепить новый электронный скан
+            </h2>
+            <p class="text-xs text-slate-500">
+                Поддерживаются файлы форматов PDF, JPG, JPEG, PNG размером до 15 МБ
+            </p>
+        </div>
+
+        {% if applications.exists %}
+        <form method="post" action="{% url 'student:documents' %}" enctype="multipart/form-data" class="space-y-6" @submit="isUploading = true">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                
+                <!-- Target Application -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.application.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                        Заявление для прикрепления <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.application }}
+                    {% if form.application.errors %}
+                    <p class="text-xs text-rose-600 font-medium">{{ form.application.errors.0 }}</p>
+                    {% endif %}
+                    <span class="text-[11px] text-slate-400 block">Выберите заявление, в состав досье которого входит документ</span>
+                </div>
+
+                <!-- Document Type -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.document_type.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                        Тип прикрепляемого документа <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.document_type }}
+                    {% if form.document_type.errors %}
+                    <p class="text-xs text-rose-600 font-medium">{{ form.document_type.errors.0 }}</p>
+                    {% endif %}
+                    <span class="text-[11px] text-slate-400 block">Укажите точный тип для корректной маршрутизации в комиссии</span>
+                </div>
+
+            </div>
+
+            <!-- Comment -->
+            <div class="space-y-1.5">
+                <label for="{{ form.comment.id_for_label }}" class="block text-xs font-bold text-slate-700">
+                    Примечание или комментарий к скану
+                </label>
+                {{ form.comment }}
+                {% if form.comment.errors %}
+                <p class="text-xs text-rose-600 font-medium">{{ form.comment.errors.0 }}</p>
+                {% endif %}
+                <span class="text-[11px] text-slate-400 block">Например: «Паспорт (разворот с фото и регистрацией)» или «Аттестат с отличием»</span>
+            </div>
+
+            <!-- Drag & Drop Zone and File Input -->
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700">
+                    Файл документа (PDF, JPG, PNG) <span class="text-rose-500">*</span>
+                </label>
+                
+                <div class="relative border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all cursor-pointer"
+                     :class="dragOver ? 'border-blue-500 bg-blue-50/50' : 'border-slate-300 hover:border-blue-400 bg-slate-50/50'"
+                     @dragover.prevent="dragOver = true"
+                     @dragleave.prevent="dragOver = false"
+                     @drop.prevent="handleDrop($event)">
+                    
+                    <!-- File input hidden under zone -->
+                    <input type="file" name="file" id="{{ form.file.id_for_label }}" required
+                           accept=".pdf,.jpg,.jpeg,.png"
+                           @change="handleFileSelected($event)"
+                           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+
+                    <!-- Content inside drop zone when no file selected -->
+                    <div x-show="!selectedFileName" class="space-y-3">
+                        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto shadow-xs">
+                            <i class="bi bi-cloud-arrow-up-fill"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-sm font-bold text-slate-800">
+                                Перетащите скан документа сюда или <span class="text-blue-600 underline">выберите на устройстве</span>
+                            </p>
+                            <p class="text-xs text-slate-400">
+                                Поддерживаются PDF, JPG, JPEG, PNG (максимальный размер 15 МБ)
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Client-side Selected File Preview Box -->
+                    <div x-show="selectedFileName" x-cloak class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-blue-200 shadow-sm text-left">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <!-- Thumbnail Preview if Image, else Icon -->
+                            <template x-if="isImageFile && selectedFilePreviewUrl">
+                                <img :src="selectedFilePreviewUrl" class="w-14 h-14 object-cover rounded-xl border border-slate-200 shrink-0 shadow-xs" alt="Предпросмотр">
+                            </template>
+                            <template x-if="!isImageFile">
+                                <div class="w-14 h-14 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center text-2xl shrink-0">
+                                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                                </div>
+                            </template>
+
+                            <div class="min-w-0">
+                                <strong class="text-sm font-bold text-slate-900 block truncate" x-text="selectedFileName"></strong>
+                                <span class="text-xs text-slate-400 block" x-text="selectedFileSize"></span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                <i class="bi bi-check2"></i> Готов к отправке
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                {% if form.file.errors %}
+                <p class="text-xs text-rose-600 font-medium">{{ form.file.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                <span class="text-xs text-slate-400 hidden sm:inline">
+                    Файл будет направлен на проверку куратору приемной комиссии
+                </span>
+
+                <button type="submit"
+                        :disabled="isUploading"
+                        class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all disabled:opacity-50">
+                    <i class="bi bi-cloud-arrow-up text-base" x-show="!isUploading"></i>
+                    <span x-show="!isUploading">Загрузить документ в комиссию</span>
+                    <span x-show="isUploading">Отправка файла...</span>
+                </button>
+            </div>
+
+        </form>
+        {% else %}
+        <!-- No Applications Warning Prompt -->
+        <div class="p-6 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+                <i class="bi bi-info-circle-fill text-xl text-amber-600 shrink-0 mt-0.5"></i>
+                <div>
+                    <strong class="block font-bold">Сначала необходимо подать заявление на обучение</strong>
+                    <p class="text-xs text-amber-800/90 mt-0.5 leading-relaxed">
+                        Документы прикрепляются к конкретному заявлению абитуриента. Подайте хотя бы одно электронное заявление в университет, после чего вы сможете прикрепить скан-копии.
+                    </p>
+                </div>
+            </div>
+            <a href="/student/apply/" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shrink-0 shadow-md">
+                Подать заявление →
+            </a>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 4. UPLOADED DOCUMENTS GALLERY & VERIFICATION STATUS -->
+    <div class="space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                    Прикрепленные документы абитуриента
+                </h2>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Статусы проверки документов сотрудниками приемной комиссии и предпросмотр сканов
+                </p>
+            </div>
+            <span class="text-xs font-bold text-slate-400">
+                Файлов в досье: {{ total_documents }}
+            </span>
+        </div>
+
+        {% if documents.exists %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for doc in documents %}
+            <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between space-y-4">
+                
+                <div class="space-y-3">
+                    <!-- Card Top: Type Badge & Verification Pill -->
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="px-3 py-1 rounded-xl text-xs font-bold {% if doc.document_type == 'PASSPORT' %}bg-blue-100 text-blue-800 border border-blue-200{% elif doc.document_type == 'CERTIFICATE' or doc.document_type == 'DIPLOMA' %}bg-purple-100 text-purple-800 border border-purple-200{% elif doc.document_type == 'PRIVILEGE' %}bg-amber-100 text-amber-800 border border-amber-200{% else %}bg-slate-100 text-slate-800 border border-slate-200{% endif %}">
+                            {{ doc.get_document_type_display }}
+                        </span>
+
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border {% if doc.is_verified %}bg-emerald-50 text-emerald-800 border-emerald-200{% else %}bg-amber-50 text-amber-800 border-amber-200{% endif %}">
+                            <i class="bi {% if doc.is_verified %}bi-check-circle-fill text-emerald-500{% else %}bi-clock-fill text-amber-500{% endif %}"></i>
+                            <span>{% if doc.is_verified %}Проверен{% else %}На проверке{% endif %}</span>
+                        </span>
+                    </div>
+
+                    <!-- File Info & Thumbnail Anchor -->
+                    <div class="flex items-start gap-3 cursor-pointer group"
+                         @click="openPreview('{{ doc.file.url }}', '{{ doc.get_document_type_display }}', '{{ doc.file.name|slice:'-3:'|lower }}', {{ doc.is_verified|yesno:'true,false' }}, '{{ doc.application.program.specialty.code }} {{ doc.application.program.specialty.name }}', '{{ doc.uploaded_at|date:'d.m.Y в H:i' }}', '{{ doc.comment|default:'' }}')">
+                        
+                        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-xs transition-transform group-hover:scale-105 {% if '.pdf' in doc.file.name|lower %}bg-rose-50 text-rose-600 border border-rose-200{% else %}bg-blue-50 text-blue-600 border border-blue-200{% endif %}">
+                            {% if '.pdf' in doc.file.name|lower %}
+                            <i class="bi bi-file-earmark-pdf-fill"></i>
+                            {% else %}
+                            <i class="bi bi-file-earmark-image-fill"></i>
+                            {% endif %}
+                        </div>
+
+                        <div class="min-w-0">
+                            <strong class="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors block truncate" title="{{ doc.file.name }}">
+                                {{ doc.get_document_type_display }}
+                            </strong>
+                            <span class="text-xs text-slate-500 block truncate">
+                                Заявление №{{ doc.application_id }}: {{ doc.application.program.specialty.code }}
+                            </span>
+                            <span class="text-[11px] text-slate-400 block mt-0.5">
+                                Загружен: {{ doc.uploaded_at|date:"d.m.Y в H:i" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {% if doc.comment %}
+                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
+                        <strong class="text-slate-700 block text-[10px] uppercase font-bold tracking-wider">Примечание:</strong>
+                        <span>{{ doc.comment }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons Bottom of Card -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                    
+                    <!-- Preview Button -->
+                    <button type="button"
+                            @click="openPreview('{{ doc.file.url }}', '{{ doc.get_document_type_display }}', '{{ doc.file.name|slice:'-3:'|lower }}', {{ doc.is_verified|yesno:'true,false' }}, '{{ doc.application.program.specialty.code }} {{ doc.application.program.specialty.name }}', '{{ doc.uploaded_at|date:'d.m.Y в H:i' }}', '{{ doc.comment|default:'' }}')"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 font-semibold transition-colors">
+                        <i class="bi bi-eye-fill"></i>
+                        <span>Предпросмотр</span>
+                    </button>
+
+                    <div class="flex items-center gap-1.5">
+                        <!-- Direct Download Link -->
+                        <a href="{{ doc.file.url }}" download title="Скачать файл" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors">
+                            <i class="bi bi-download text-base"></i>
+                        </a>
+
+                        <!-- Delete Document Form -->
+                        <form method="post" action="{% url 'student:documents' %}" onsubmit="return confirm('Вы уверены, что хотите удалить документ «{{ doc.get_document_type_display }}»?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="document_id" value="{{ doc.id }}">
+                            <button type="submit" title="Удалить документ" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                                <i class="bi bi-trash3-fill text-base"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty Documents State -->
+        <div class="bg-white rounded-3xl p-10 sm:p-14 border border-slate-200/80 shadow-xs text-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl mx-auto shadow-xs">
+                <i class="bi bi-folder-plus"></i>
+            </div>
+            <div class="max-w-md mx-auto space-y-1">
+                <h3 class="text-lg font-black text-slate-900">
+                    У вас пока нет загруженных документов
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Прикрепите скан-копию паспорта РФ и аттестата/диплома через форму выше для верификации заявления приемной комиссией.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 5. LIGHTBOX / MODAL PREVIEW (ПРЕДПРОСМОТР ПРИКРЕПЛЕННЫХ ФАЙЛОВ) -->
+    <div x-show="previewModalOpen" 
+         x-cloak
+         @keydown.escape.window="previewModalOpen = false"
+         class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-6 lg:p-8"
+         aria-labelledby="preview-title" role="dialog" aria-modal="true">
+        
+        <!-- Backdrop Blur -->
+        <div x-show="previewModalOpen"
+             x-transition:enter="transition-opacity ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition-opacity ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"
+             @click="previewModalOpen = false"></div>
+
+        <!-- Modal Dialog Card -->
+        <div x-show="previewModalOpen"
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="relative bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden z-10">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-slate-50/50">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg shrink-0">
+                        <i class="bi" :class="modalFileType === 'pdf' ? 'bi-file-earmark-pdf-fill' : 'bi-file-earmark-image-fill'"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-black text-slate-900 truncate" id="preview-title" x-text="modalTitle"></h3>
+                        <p class="text-xs text-slate-500 truncate" x-text="modalSpecialty"></p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border"
+                          :class="modalIsVerified ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-amber-50 text-amber-800 border-amber-200'">
+                        <i class="bi" :class="modalIsVerified ? 'bi-check-circle-fill text-emerald-500' : 'bi-clock-fill text-amber-500'"></i>
+                        <span x-text="modalIsVerified ? 'Проверен' : 'На проверке'"></span>
+                    </span>
+
+                    <button @click="previewModalOpen = false" type="button" aria-label="Закрыть предпросмотр" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors">
+                        <i class="bi bi-x-lg text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body: File Viewer -->
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-900/5 flex items-center justify-center min-h-[50vh]">
+                
+                <!-- If Image -->
+                <template x-if="modalFileType !== 'pdf'">
+                    <div class="flex flex-col items-center justify-center w-full">
+                        <img :src="modalUrl" class="max-h-[70vh] max-w-full object-contain rounded-2xl shadow-xl border border-white" alt="Предпросмотр документа">
+                    </div>
+                </template>
+
+                <!-- If PDF -->
+                <template x-if="modalFileType === 'pdf'">
+                    <iframe :src="modalUrl" class="w-full h-[70vh] rounded-2xl border border-slate-200 bg-white shadow-inner" title="Предпросмотр PDF"></iframe>
+                </template>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white text-xs">
+                <div class="text-slate-400 text-[11px] self-start sm:self-center">
+                    Дата загрузки: <strong class="text-slate-700" x-text="modalUploadedAt"></strong>
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <a :href="modalUrl" target="_blank" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        <span>В новой вкладке</span>
+                    </a>
+                    
+                    <a :href="modalUrl" download class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md">
+                        <i class="bi bi-download"></i>
+                        <span>Скачать файл</span>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 6. BOTTOM ADVISOR & SCANNING GUIDE BANNER -->
+    <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-1.5 max-w-xl">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-[11px] font-bold uppercase tracking-wider">
+                <i class="bi bi-info-circle-fill"></i> Рекомендации по сканированию
+            </span>
+            <h3 class="text-lg sm:text-xl font-bold text-white">
+                Требования к качеству электронных копий
+            </h3>
+            <p class="text-xs text-blue-200/80 leading-relaxed">
+                Скан-копии должны быть четкими, без бликов и обрезанных краев (разрешение от 300 DPI). Текст, серия, номер паспорта и печати учебного заведения должны легко читаться.
+            </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+            <a href="tel:+74955000303" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/10 transition-colors">
+                <i class="bi bi-telephone-fill text-emerald-400"></i>
+                <span>+7 (495) 500-03-03</span>
+            </a>
+            <a href="/feedback/" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-colors shadow-md">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Задать вопрос по документам</span>
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Alpine.js Document Management & Lightbox Script -->
+<script>
+function documentManager() {
+    return {
+        dragOver: false,
+        isUploading: false,
+        selectedFileName: '',
+        selectedFileSize: '',
+        selectedFilePreviewUrl: '',
+        isImageFile: false,
+
+        // Modal Lightbox state
+        previewModalOpen: false,
+        modalUrl: '',
+        modalTitle: '',
+        modalFileType: '',
+        modalIsVerified: false,
+        modalSpecialty: '',
+        modalUploadedAt: '',
+        modalComment: '',
+
+        handleFileSelected(event) {
+            const input = event.target;
+            if (input.files && input.files[0]) {
+                this.processFile(input.files[0]);
+            }
+        },
+
+        handleDrop(event) {
+            this.dragOver = false;
+            const files = event.dataTransfer.files;
+            if (files && files.length > 0) {
+                const fileInput = document.getElementById('{{ form.file.id_for_label }}');
+                if (fileInput) {
+                    fileInput.files = files;
+                    this.processFile(files[0]);
+                }
+            }
+        },
+
+        processFile(file) {
+            this.selectedFileName = file.name;
+            this.selectedFileSize = (file.size / (1024 * 1024)).toFixed(2) + ' МБ';
+
+            const ext = file.name.split('.').pop().toLowerCase();
+            this.isImageFile = ['jpg', 'jpeg', 'png'].includes(ext);
+
+            if (this.isImageFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.selectedFilePreviewUrl = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                this.selectedFilePreviewUrl = '';
+            }
+        },
+
+        openPreview(url, title, fileType, isVerified, specialty, uploadedAt, comment) {
+            this.modalUrl = url;
+            this.modalTitle = title;
+            this.modalFileType = fileType;
+            this.modalIsVerified = isVerified;
+            this.modalSpecialty = specialty;
+            this.modalUploadedAt = uploadedAt;
+            this.modalComment = comment;
+            this.previewModalOpen = true;
+        }
+    };
+}
+</script>
+{% endblock %}
