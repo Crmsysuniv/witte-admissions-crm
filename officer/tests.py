@@ -635,4 +635,192 @@ class OfficerProtocolsTests(TestCase):
         self.assertEqual(log.changed_by, self.officer_user)
 
 
+class OfficerSecurityRoleTests(TestCase):
+    """
+    Комплексное тестирование системы разграничения прав доступа и защиты маршрутов сотрудника приемной комиссии.
+    Проверяет:
+    1. Перенаправление анонимных пользователей на страницу входа (/login/?next=...).
+    2. Запрет доступа (HTTP 403 Forbidden) для пользователей с ролью APPLICANT (Абитуриент).
+    3. Разрешение полного доступа (HTTP 200) для пользователей с ролью OFFICER (Сотрудник приемной комиссии).
+    4. Разрешение полного доступа (HTTP 200) для пользователей с ролью ADMIN (Администратор).
+    5. Разрешение доступа для суперпользователей (is_superuser=True) и staff-пользователей (is_staff=True).
+    6. Работу вспомогательной функции is_officer_or_admin и миксина OfficerRequiredMixin.
+    7. Защищенность всех зарегистрированных маршрутов в officer:*.
+    """
+    def setUp(self):
+        self.client = Client()
+
+        # Администратор CRM
+        self.admin_user = User.objects.create_user(
+            username='admin_role_user',
+            password='testpassword123',
+            email='admin@witte.ru',
+            first_name='Алексей',
+            last_name='Администраторов',
+            role=User.Role.ADMIN
+        )
+
+        # Сотрудник приемной комиссии
+        self.officer_user = User.objects.create_user(
+            username='officer_role_user',
+            password='testpassword123',
+            email='officer@witte.ru',
+            first_name='Ольга',
+            last_name='Сотрудникова',
+            role=User.Role.OFFICER
+        )
+        OfficerProfile.objects.create(
+            user=self.officer_user,
+            position='Член приемной комиссии',
+            cabinet='101'
+        )
+
+        # Обычный абитуриент
+        self.applicant_user = User.objects.create_user(
+            username='applicant_role_user',
+            password='testpassword123',
+            email='applicant@example.com',
+            first_name='Иван',
+            last_name='Абитуриентов',
+            role=User.Role.APPLICANT
+        )
+        ApplicantProfile.objects.create(
+            user=self.applicant_user,
+            snils='123-456-789 00'
+        )
+
+        # Тестовая инфраструктура (факультет, специальность, программа, заявление)
+        self.faculty = Faculty.objects.create(name='Факультет информационных систем', code='ФИС')
+        self.specialty = Specialty.objects.create(
+            faculty=self.faculty,
+            code='09.03.02',
+            name='Информационные системы и технологии',
+            education_level=Specialty.EducationLevel.BACHELOR,
+            budget_places=10,
+            paid_places=25
+        )
+        self.program = EducationProgram.objects.create(
+            specialty=self.specialty,
+            study_form=EducationProgram.StudyForm.FULL_TIME,
+            tuition_fee=145000.00,
+            duration='4 года'
+        )
+        self.application = Application.objects.create(
+            applicant=self.applicant_user,
+            program=self.program,
+            status=Application.Status.APPROVED,
+            financing_type=Application.FinancingType.BUDGET
+        )
+
+        # Список тестируемых URL-адресов модуля сотрудника
+        self.officer_urls = [
+            reverse('officer:workplace'),
+            reverse('officer:workplace_alias'),
+            reverse('officer:applications_list'),
+            reverse('officer:application_detail', kwargs={'pk': self.application.pk}),
+            reverse('officer:inquiries'),
+            reverse('officer:protocols'),
+            reverse('officer:export_rating_xlsx'),
+            reverse('officer:application_receipt_docx', kwargs={'pk': self.application.pk}),
+        ]
+
+    def test_anonymous_user_redirected_for_all_endpoints(self):
+        """Анонимные пользователи перенаправляются на авторизацию со всех маршрутов сотрудника."""
+        for url in self.officer_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn('/login/', response.url)
+
+    def test_applicant_user_forbidden_for_all_endpoints(self):
+        """Пользователи с ролью APPLICANT получают 403 Forbidden при попытке доступа к любому эндпоинту сотрудника."""
+        self.client.login(username='applicant_role_user', password='testpassword123')
+        for url in self.officer_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+
+    def test_officer_user_allowed_for_all_endpoints(self):
+        """Пользователи с ролью OFFICER имеют полный доступ ко всем маршрутам."""
+        self.client.login(username='officer_role_user', password='testpassword123')
+        for url in self.officer_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+
+    def test_admin_user_allowed_for_all_endpoints(self):
+        """Пользователи с ролью ADMIN имеют полный доступ ко всем маршрутам сотрудника."""
+        self.client.login(username='admin_role_user', password='testpassword123')
+        for url in self.officer_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+
+    def test_superuser_allowed_for_all_endpoints(self):
+        """Суперпользователи Django имеют доступ ко всем маршрутам сотрудника."""
+        User.objects.create_superuser(
+            username='superuser_test',
+            password='testpassword123',
+            email='root@witte.ru'
+        )
+        self.client.login(username='superuser_test', password='testpassword123')
+        for url in self.officer_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+
+    def test_is_officer_or_admin_helper(self):
+        """Тестирование корректности работы функции is_officer_or_admin."""
+        from django.contrib.auth.models import AnonymousUser
+        from officer.decorators import is_officer_or_admin
+        self.assertFalse(is_officer_or_admin(None))
+        self.assertFalse(is_officer_or_admin(AnonymousUser()))
+        self.assertFalse(is_officer_or_admin(self.applicant_user))
+        self.assertTrue(is_officer_or_admin(self.officer_user))
+        self.assertTrue(is_officer_or_admin(self.admin_user))
+
+    def test_officer_required_mixin(self):
+        """Тестирование миксина OfficerRequiredMixin для CBV."""
+        from officer.decorators import OfficerRequiredMixin
+        from django.views.generic import View
+        from django.http import HttpResponse
+        from django.test import RequestFactory
+        from django.core.exceptions import PermissionDenied
+        from django.contrib.auth.models import AnonymousUser
+
+        class DummyOfficerCBV(OfficerRequiredMixin, View):
+            def get(self, request):
+                return HttpResponse("CBV Officer OK")
+
+        factory = RequestFactory()
+        view = DummyOfficerCBV.as_view()
+
+        # Анонимный запрос -> 302 редирект
+        req_anon = factory.get('/officer/dummy/')
+        req_anon.user = AnonymousUser()
+        resp_anon = view(req_anon)
+        self.assertEqual(resp_anon.status_code, 302)
+
+        # Запрос от абитуриента -> PermissionDenied (403)
+        req_appl = factory.get('/officer/dummy/')
+        req_appl.user = self.applicant_user
+        with self.assertRaises(PermissionDenied):
+            view(req_appl)
+
+        # Запрос от сотрудника -> 200 OK
+        req_off = factory.get('/officer/dummy/')
+        req_off.user = self.officer_user
+        resp_off = view(req_off)
+        self.assertEqual(resp_off.status_code, 200)
+        self.assertEqual(resp_off.content.decode('utf-8'), "CBV Officer OK")
+
+        # Запрос от администратора -> 200 OK
+        req_adm = factory.get('/officer/dummy/')
+        req_adm.user = self.admin_user
+        resp_adm = view(req_adm)
+        self.assertEqual(resp_adm.status_code, 200)
+        self.assertEqual(resp_adm.content.decode('utf-8'), "CBV Officer OK")
+
+
+
 

@@ -19,10 +19,14 @@
                 Ошибка 403 • Доступ ограничен
             </div>
             <h1 class="text-2xl sm:text-3xl font-black text-slate-900">
-                Раздел предназначен только для абитуриентов
+                Недостаточно прав доступа
             </h1>
-            <p class="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-                Личный кабинет, подача заявлений, загрузка документов и отслеживание рейтингов доступны исключительно пользователям с ролью <strong class="text-slate-800">«Абитуриент» (APPLICANT)</strong>.
+            <p class="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                {% if exception %}
+                    {{ exception }}
+                {% else %}
+                    У вашей учетной записи недостаточно полномочий для просмотра запрашиваемой страницы.
+                {% endif %}
             </p>
         </div>
 
@@ -41,20 +45,27 @@
 
         <!-- Navigation Actions -->
         <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
-            {% if user.is_staff or user.is_superuser %}
+            {% if user.role == 'OFFICER' or user.is_officer %}
+            <a href="/officer/workplace/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md">
+                <i class="bi bi-briefcase-fill"></i>
+                <span>Рабочий стол сотрудника</span>
+            </a>
+            {% elif user.role == 'APPLICANT' or user.is_applicant %}
+            <a href="/student/dashboard/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-md">
+                <i class="bi bi-person-workspace"></i>
+                <span>Личный кабинет абитуриента</span>
+            </a>
+            {% elif user.is_staff or user.is_superuser or user.role == 'ADMIN' %}
             <a href="/admin/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md">
                 <i class="bi bi-speedometer2"></i>
                 <span>Панель управления (Admin)</span>
             </a>
-            <a href="/admin/admissions/application/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
-                <i class="bi bi-folder2-open"></i>
-                <span>Заявления в CRM</span>
-            </a>
-            {% else %}
-            <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md">
+            {% endif %}
+            <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
                 <i class="bi bi-house-door-fill"></i>
                 <span>Главная страница</span>
             </a>
+            {% if user.is_authenticated %}
             <a href="/logout/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Сменить аккаунт</span>
