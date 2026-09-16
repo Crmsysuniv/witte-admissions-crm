@@ -1,0 +1,875 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Реестр поданных заявлений | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Реестр заявлений абитуриентов{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    statusModalOpen: false,
+    detailModalOpen: false,
+    activeAppId: null,
+    activeAppNumber: '',
+    activeApplicantName: '',
+    activeCurrentStatus: '',
+    selectedNewStatus: '',
+    officerComment: '',
+    activeDetail: null,
+
+    openStatusModal(id, number, name, currentStatus, comment = '') {
+        this.activeAppId = id;
+        this.activeAppNumber = number;
+        this.activeApplicantName = name;
+        this.activeCurrentStatus = currentStatus;
+        this.selectedNewStatus = currentStatus;
+        this.officerComment = comment;
+        this.statusModalOpen = true;
+    },
+
+    openDetailsModal(detail) {
+        this.activeDetail = detail;
+        this.detailModalOpen = true;
+    }
+}">
+
+    <!-- 1. HERO BANNER: РЕЕСТР ПОДАННЫХ ЗАЯВЛЕНИЙ -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-2xl border border-white/10 p-6 sm:p-8 lg:p-10">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-3 shadow-inner">
+                    <i class="bi bi-card-checklist text-sky-400 text-sm"></i>
+                    <span>Приемная комиссия 2026 • Официальный реестр заявлений</span>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">
+                    Реестр поданных <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-amber-200">заявлений абитуриентов</span>
+                </h1>
+
+                <p class="mt-2 text-sm text-blue-100/90 leading-relaxed font-normal">
+                    Централизованная картотека заявлений на поступление в МУ им. С.Ю. Витте. Фильтрация по статусам, факультетам, поиск по ФИО, контактным данным и СНИЛС, аудит документов и быстрое изменение статуса.
+                </p>
+
+                <!-- Инфо о сотруднике -->
+                <div class="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium text-blue-200">
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-person-badge-fill text-amber-400"></i>
+                        <span>Сотрудник: <strong class="text-white">{{ user.get_full_name|default:user.username }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-layers-fill text-emerald-400"></i>
+                        <span>Всего в базе: <strong class="text-white">{{ total_all_count }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-funnel-fill text-cyan-300"></i>
+                        <span>Отфильтровано: <strong class="text-white">{{ total_filtered_count }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Быстрые ссылки -->
+            <div class="flex flex-col sm:flex-row lg:flex-col gap-2.5 min-w-[230px]">
+                <a href="{% url 'officer:workplace' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-bold transition-all border border-amber-400/30 shadow-sm group">
+                    <i class="bi bi-inbox-fill text-sm text-amber-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Рабочий стол (Очередь)</span>
+                </a>
+                <a href="/rating/" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-bold transition-all border border-blue-400/30 shadow-md group">
+                    <i class="bi bi-trophy-fill text-sm text-yellow-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Конкурсные списки</span>
+                </a>
+                <a href="/admin/admissions/application/" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 backdrop-blur-md shadow-sm group">
+                    <i class="bi bi-sliders text-sm text-indigo-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Django Admin</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. СВОДНЫЕ СТАТУСНЫЕ ТАБЫ (БЫСТРЫЙ ПЕРЕХОД) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <!-- Все -->
+        <a href="?status={% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if not status_filter %}border-slate-900 ring-2 ring-slate-800/20 bg-slate-50{% else %}border-slate-200/80 hover:border-slate-400{% endif %}">
+            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Все</span>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 mt-1">{{ status_counts.total }}</div>
+            <span class="text-[10px] text-slate-400 mt-0.5">Вся база</span>
+        </a>
+
+        <!-- Подано -->
+        <a href="?status=SUBMITTED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'SUBMITTED' %}border-amber-500 ring-2 ring-amber-400/30 bg-amber-50/40{% else %}border-slate-200/80 hover:border-amber-400{% endif %}">
+            <div class="flex items-center justify-between text-amber-700">
+                <span class="text-[11px] font-bold uppercase tracking-wider">Подано</span>
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            </div>
+            <div class="text-xl sm:text-2xl font-black text-amber-600 mt-1">{{ status_counts.SUBMITTED }}</div>
+            <span class="text-[10px] text-amber-600/70 mt-0.5">Новые заявки</span>
+        </a>
+
+        <!-- На рассмотрении -->
+        <a href="?status=UNDER_REVIEW{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'UNDER_REVIEW' %}border-blue-500 ring-2 ring-blue-400/30 bg-blue-50/40{% else %}border-slate-200/80 hover:border-blue-400{% endif %}">
+            <span class="text-[11px] font-bold text-blue-700 uppercase tracking-wider">На просмотре</span>
+            <div class="text-xl sm:text-2xl font-black text-blue-600 mt-1">{{ status_counts.UNDER_REVIEW }}</div>
+            <span class="text-[10px] text-blue-600/70 mt-0.5">В работе</span>
+        </a>
+
+        <!-- Требуются документы -->
+        <a href="?status=DOCUMENTS_REQUIRED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'DOCUMENTS_REQUIRED' %}border-rose-500 ring-2 ring-rose-400/30 bg-rose-50/40{% else %}border-slate-200/80 hover:border-rose-400{% endif %}">
+            <span class="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Ждут док-ты</span>
+            <div class="text-xl sm:text-2xl font-black text-rose-600 mt-1">{{ status_counts.DOCUMENTS_REQUIRED }}</div>
+            <span class="text-[10px] text-rose-600/70 mt-0.5">Запрос данных</span>
+        </a>
+
+        <!-- Одобрено -->
+        <a href="?status=APPROVED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'APPROVED' %}border-emerald-500 ring-2 ring-emerald-400/30 bg-emerald-50/40{% else %}border-slate-200/80 hover:border-emerald-400{% endif %}">
+            <span class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Одобрено</span>
+            <div class="text-xl sm:text-2xl font-black text-emerald-600 mt-1">{{ status_counts.APPROVED }}</div>
+            <span class="text-[10px] text-emerald-600/70 mt-0.5">В конкурсе</span>
+        </a>
+
+        <!-- Зачислен -->
+        <a href="?status=ENROLLED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'ENROLLED' %}border-purple-500 ring-2 ring-purple-400/30 bg-purple-50/40{% else %}border-slate-200/80 hover:border-purple-400{% endif %}">
+            <span class="text-[11px] font-bold text-purple-700 uppercase tracking-wider">Зачислен</span>
+            <div class="text-xl sm:text-2xl font-black text-purple-600 mt-1">{{ status_counts.ENROLLED }}</div>
+            <span class="text-[10px] text-purple-600/70 mt-0.5">Приказ о зачислении</span>
+        </a>
+
+        <!-- Отклонено -->
+        <a href="?status=REJECTED{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'REJECTED' %}border-slate-500 ring-2 ring-slate-400/30 bg-slate-100{% else %}border-slate-200/80 hover:border-slate-400{% endif %}">
+            <span class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Отклонено</span>
+            <div class="text-xl sm:text-2xl font-black text-slate-700 mt-1">{{ status_counts.REJECTED }}</div>
+            <span class="text-[10px] text-slate-500 mt-0.5">Отказ</span>
+        </a>
+
+        <!-- Отозвано / Черновик -->
+        <a href="?status=WITHDRAWN{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-3.5 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'WITHDRAWN' %}border-zinc-500 ring-2 ring-zinc-400/30 bg-zinc-100{% else %}border-slate-200/80 hover:border-zinc-400{% endif %}">
+            <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider">Отозвано</span>
+            <div class="text-xl sm:text-2xl font-black text-zinc-700 mt-1">{{ status_counts.WITHDRAWN }}</div>
+            <span class="text-[10px] text-zinc-500 mt-0.5">Отозвано абитуриентом</span>
+        </a>
+    </div>
+
+    <!-- 3. БЛОК ФИЛЬТРАЦИИ И ПОИСКА ПО ФИО -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <form method="get" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+                
+                <!-- Поиск по ФИО, контактам, СНИЛС -->
+                <div class="lg:col-span-4">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Поиск по ФИО / СНИЛС / Контактам</label>
+                    <div class="relative">
+                        <input type="text" 
+                               name="search" 
+                               value="{{ search_query }}"
+                               placeholder="Фамилия, Имя, логин, email, СНИЛС, №..." 
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <i class="bi bi-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                        {% if search_query %}
+                        <a href="?{% if status_filter %}status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}"
+                           class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Очистить поиск">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Фильтр по статусу заявления -->
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Статус заявления</label>
+                    <select name="status" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="">Все статусы</option>
+                        {% for s_val, s_name in status_choices %}
+                        <option value="{{ s_val }}" {% if status_filter == s_val %}selected{% endif %}>
+                            {{ s_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Фильтр по факультету -->
+                <div class="lg:col-span-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Факультет / Институт</label>
+                    <select name="faculty" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="">Все факультеты</option>
+                        {% for faculty in faculties %}
+                        <option value="{{ faculty.id }}" {% if faculty_filter == faculty.id|stringformat:"i" %}selected{% endif %}>
+                            {{ faculty.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Фильтр по основе обучения -->
+                <div class="lg:col-span-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Основа финансирования</label>
+                    <select name="financing" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="">Все основы</option>
+                        {% for f_val, f_name in financing_choices %}
+                        <option value="{{ f_val }}" {% if financing_filter == f_val %}selected{% endif %}>
+                            {{ f_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- Дополнительная строка: Форма обучения, Сортировка и Кнопки -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 pt-2 border-t border-slate-100 items-end">
+                
+                <!-- Форма обучения -->
+                <div class="lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Форма обучения</label>
+                    <select name="study_form" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="">Все формы обучения</option>
+                        {% for sf_val, sf_name in study_form_choices %}
+                        <option value="{{ sf_val }}" {% if study_form_filter == sf_val %}selected{% endif %}>
+                            {{ sf_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Сортировка -->
+                <div class="lg:col-span-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Сортировка</label>
+                    <select name="sort" class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Сначала новые (по дате подачи)</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Сначала старые (по дате подачи)</option>
+                        <option value="fio_asc" {% if sort_by == 'fio_asc' %}selected{% endif %}>По ФИО абитуриента (А — Я)</option>
+                        <option value="fio_desc" {% if sort_by == 'fio_desc' %}selected{% endif %}>По ФИО абитуриента (Я — А)</option>
+                        <option value="id_desc" {% if sort_by == 'id_desc' %}selected{% endif %}>По номеру заявления (по убыванию)</option>
+                        <option value="id_asc" {% if sort_by == 'id_asc' %}selected{% endif %}>По номеру заявления (по возрастанию)</option>
+                        <option value="status" {% if sort_by == 'status' %}selected{% endif %}>По статусу</option>
+                    </select>
+                </div>
+
+                <!-- Кнопки действий фильтрации -->
+                <div class="lg:col-span-5 flex items-center justify-end gap-2.5">
+                    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20">
+                        <i class="bi bi-funnel-fill"></i>
+                        <span>Применить фильтры</span>
+                    </button>
+
+                    {% if search_query or status_filter or faculty_filter or financing_filter or study_form_filter or sort_by != 'newest' %}
+                    <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Сбросить</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        <!-- Активные фильтры (бейдж-чипсы) -->
+        {% if search_query or status_filter or faculty_filter or financing_filter or study_form_filter %}
+        <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 text-xs">
+            <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Активные фильтры:</span>
+            
+            {% if search_query %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200/70">
+                <span>Поиск: <strong>«{{ search_query }}»</strong></span>
+                <a href="?{% if status_filter %}status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}" class="hover:text-indigo-900"><i class="bi bi-x"></i></a>
+            </span>
+            {% endif %}
+
+            {% if status_filter %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200/70">
+                <span>Статус: <strong>{{ status_filter }}</strong></span>
+                <a href="?{% if search_query %}search={{ search_query }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}" class="hover:text-amber-900"><i class="bi bi-x"></i></a>
+            </span>
+            {% endif %}
+
+            {% if faculty_filter %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200/70">
+                <span>Факультет ID: <strong>{{ faculty_filter }}</strong></span>
+                <a href="?{% if search_query %}search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if financing_filter %}&financing={{ financing_filter }}{% endif %}" class="hover:text-blue-900"><i class="bi bi-x"></i></a>
+            </span>
+            {% endif %}
+
+            {% if financing_filter %}
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                <span>Основа: <strong>{{ financing_filter }}</strong></span>
+                <a href="?{% if search_query %}search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if faculty_filter %}&faculty={{ faculty_filter }}{% endif %}" class="hover:text-emerald-900"><i class="bi bi-x"></i></a>
+            </span>
+            {% endif %}
+
+            <a href="{% url 'officer:applications_list' %}" class="text-[11px] text-slate-500 hover:text-rose-600 underline ml-2">Сбросить все</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 4. ТАБЛИЦА РЕЕСТРА ЗАЯВЛЕНИЙ -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        
+        <!-- Заголовок таблицы и статистика -->
+        <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/50">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-800">Список заявлений</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                    {{ total_filtered_count }}
+                </span>
+            </div>
+
+            <div class="text-xs text-slate-500">
+                Показано {{ applications|length }} из {{ total_filtered_count }} записей
+            </div>
+        </div>
+
+        {% if applications %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        <th class="py-3.5 px-4">№ / Дата</th>
+                        <th class="py-3.5 px-4">Абитуриент (ФИО, Контакты)</th>
+                        <th class="py-3.5 px-4">Факультет и Специальность</th>
+                        <th class="py-3.5 px-4 text-center">Основа / Форма</th>
+                        <th class="py-3.5 px-4 text-center">Баллы</th>
+                        <th class="py-3.5 px-4 text-center">Документы</th>
+                        <th class="py-3.5 px-4 text-center">Статус</th>
+                        <th class="py-3.5 px-4 text-right">Действия</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for app in applications %}
+                    <tr class="hover:bg-slate-50/80 transition-colors group">
+                        
+                        <!-- 1. № / Дата подачи -->
+                        <td class="py-4 px-4 whitespace-nowrap">
+                            <div class="font-black text-indigo-700 text-sm">
+                                №{{ app.id }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                <i class="bi bi-clock text-[10px]"></i>
+                                <span>{{ app.submission_date|date:"d.m.Y H:i" }}</span>
+                            </div>
+                        </td>
+
+                        <!-- 2. Абитуриент: ФИО, телефон, email, СНИЛС -->
+                        <td class="py-4 px-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                                    {{ app.applicant.first_name|default:app.applicant.username|slice:":1"|upper }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="font-bold text-slate-900 text-sm leading-tight hover:text-indigo-600 transition-colors">
+                                        {{ app.applicant.get_full_name|default:app.applicant.username }}
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 mt-0.5 space-y-0.5">
+                                        {% if app.applicant.phone %}
+                                        <div class="flex items-center gap-1">
+                                            <i class="bi bi-telephone text-[10px] text-slate-400"></i>
+                                            <a href="tel:{{ app.applicant.phone }}" class="hover:text-indigo-600">{{ app.applicant.phone }}</a>
+                                        </div>
+                                        {% endif %}
+                                        {% if app.applicant.email %}
+                                        <div class="flex items-center gap-1">
+                                            <i class="bi bi-envelope text-[10px] text-slate-400"></i>
+                                            <a href="mailto:{{ app.applicant.email }}" class="hover:text-indigo-600 truncate max-w-[200px]">{{ app.applicant.email }}</a>
+                                        </div>
+                                        {% endif %}
+                                        {% if app.applicant.applicant_profile.snils %}
+                                        <div class="flex items-center gap-1 text-[10px] text-slate-600">
+                                            <span class="font-semibold text-slate-500">СНИЛС:</span>
+                                            <span>{{ app.applicant.applicant_profile.snils }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 3. Факультет и Специальность -->
+                        <td class="py-4 px-4 max-w-xs">
+                            <span class="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 mb-1">
+                                {{ app.program.specialty.faculty.name }}
+                            </span>
+                            <div class="font-semibold text-slate-800 text-xs leading-snug">
+                                <span class="font-mono text-indigo-600 font-bold">{{ app.program.specialty.code }}</span>
+                                {{ app.program.specialty.name }}
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">
+                                {{ app.program.specialty.get_education_level_display }}
+                            </div>
+                        </td>
+
+                        <!-- 4. Основа и Форма -->
+                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                            {% if app.financing_type == 'BUDGET' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Бюджет
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                Договор
+                            </span>
+                            {% endif %}
+                            <div class="text-[11px] font-medium text-slate-600 mt-1">
+                                {{ app.program.get_study_form_display }}
+                            </div>
+                        </td>
+
+                        <!-- 5. Баллы -->
+                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                            <div class="inline-flex flex-col items-center">
+                                <span class="text-sm font-black text-slate-900">
+                                    {{ app.computed_total_score }} б.
+                                </span>
+                                {% if app.scores_list %}
+                                <span class="text-[10px] text-slate-400 cursor-help" title="{% for s in app.scores_list %}{{ s.subject.name }}: {{ s.score }} б. ({{ s.get_exam_type_display }})&#10;{% endfor %}">
+                                    {{ app.scores_list|length }} предм. <i class="bi bi-info-circle"></i>
+                                </span>
+                                {% else %}
+                                <span class="text-[10px] text-slate-400">Нет баллов</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- 6. Документы -->
+                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                            {% if app.docs_total == 0 %}
+                            <span class="inline-flex items-center gap-1 text-[11px] text-slate-400">
+                                <i class="bi bi-dash-circle"></i> 0 файлов
+                            </span>
+                            {% elif app.docs_verified == app.docs_total %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <i class="bi bi-check2-all"></i> {{ app.docs_total }} пров.
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <i class="bi bi-hourglass-split"></i> {{ app.docs_verified }}/{{ app.docs_total }} пров.
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 7. Статус заявления -->
+                        <td class="py-4 px-4 text-center whitespace-nowrap">
+                            {% if app.status == 'SUBMITTED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-xs">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                Подано
+                            </span>
+                            {% elif app.status == 'UNDER_REVIEW' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                <i class="bi bi-search text-xs"></i>
+                                На рассмотрении
+                            </span>
+                            {% elif app.status == 'DOCUMENTS_REQUIRED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                <i class="bi bi-exclamation-circle text-xs"></i>
+                                Нужны документы
+                            </span>
+                            {% elif app.status == 'APPROVED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="bi bi-check-circle-fill text-xs text-emerald-600"></i>
+                                Одобрено
+                            </span>
+                            {% elif app.status == 'ENROLLED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                <i class="bi bi-mortarboard-fill text-xs text-purple-600"></i>
+                                Зачислен
+                            </span>
+                            {% elif app.status == 'REJECTED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                                <i class="bi bi-x-circle text-xs"></i>
+                                Отклонено
+                            </span>
+                            {% elif app.status == 'WITHDRAWN' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                                <i class="bi bi-arrow-return-left text-xs"></i>
+                                Отозвано
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                {{ app.get_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 8. Действия -->
+                        <td class="py-4 px-4 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                
+                                <!-- Кнопка детального просмотра -->
+                                <button type="button"
+                                        @click="openDetailsModal({
+                                            id: '{{ app.id }}',
+                                            fio: '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}',
+                                            username: '{{ app.applicant.username|escapejs }}',
+                                            email: '{{ app.applicant.email|default:''|escapejs }}',
+                                            phone: '{{ app.applicant.phone|default:''|escapejs }}',
+                                            snils: '{{ app.applicant.applicant_profile.snils|default:''|escapejs }}',
+                                            passport: '{% if app.applicant.applicant_profile.passport_series %}{{ app.applicant.applicant_profile.passport_series }} {{ app.applicant.applicant_profile.passport_number }}{% else %}—{% endif %}',
+                                            address: '{{ app.applicant.applicant_profile.address|default:''|escapejs }}',
+                                            faculty: '{{ app.program.specialty.faculty.name|escapejs }}',
+                                            specialty: '{{ app.program.specialty.code }} {{ app.program.specialty.name|escapejs }}',
+                                            level: '{{ app.program.specialty.get_education_level_display|escapejs }}',
+                                            study_form: '{{ app.program.get_study_form_display|escapejs }}',
+                                            financing: '{{ app.get_financing_type_display|escapejs }}',
+                                            tuition: '{{ app.program.tuition_fee|floatformat:0 }}',
+                                            submission_date: '{{ app.submission_date|date:'d.m.Y H:i' }}',
+                                            updated_at: '{{ app.updated_at|date:'d.m.Y H:i' }}',
+                                            status_code: '{{ app.status }}',
+                                            status_display: '{{ app.get_status_display|escapejs }}',
+                                            officer_comment: '{{ app.officer_comment|default:''|escapejs }}',
+                                            total_score: '{{ app.computed_total_score }}',
+                                            scores: [
+                                                {% for s in app.scores_list %}
+                                                {
+                                                    subject: '{{ s.subject.name|escapejs }}',
+                                                    score: {{ s.score }},
+                                                    type: '{{ s.get_exam_type_display|escapejs }}',
+                                                    passing: {{ s.is_passing|yesno:"true,false" }}
+                                                }{% if not forloop.last %},{% endif %}
+                                                {% endfor %}
+                                            ],
+                                            documents: [
+                                                {% for d in app.documents.all %}
+                                                {
+                                                    type: '{{ d.get_document_type_display|escapejs }}',
+                                                    url: '{{ d.file.url }}',
+                                                    verified: {{ d.is_verified|yesno:"true,false" }},
+                                                    date: '{{ d.uploaded_at|date:'d.m.Y H:i' }}'
+                                                }{% if not forloop.last %},{% endif %}
+                                                {% endfor %}
+                                            ]
+                                        })"
+                                        class="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors shadow-xs"
+                                        title="Просмотр карточки заявления">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+
+                                <!-- Кнопка смены статуса -->
+                                <button type="button"
+                                        @click="openStatusModal('{{ app.id }}', '{{ app.id }}', '{{ app.applicant.get_full_name|default:app.applicant.username|escapejs }}', '{{ app.status }}', '{{ app.officer_comment|default:''|escapejs }}')"
+                                        class="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition-colors shadow-xs font-semibold flex items-center gap-1"
+                                        title="Изменить статус заявления">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <span class="text-[11px] hidden sm:inline">Статус</span>
+                                </button>
+
+                                <!-- Ссылка в Django Admin -->
+                                <a href="/admin/admissions/application/{{ app.id }}/change/"
+                                   target="_blank"
+                                   class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors shadow-xs"
+                                   title="Открыть в Django Admin">
+                                    <i class="bi bi-gear-fill"></i>
+                                </a>
+
+                            </div>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 5. ПАГИНАЦИЯ -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 text-xs">
+            <div class="text-slate-500">
+                Показано с <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span>
+                по <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span>
+                из <span class="font-bold text-slate-700">{{ total_filtered_count }}</span> заявлений
+            </div>
+
+            <nav class="inline-flex items-center gap-1 rounded-xl shadow-xs" aria-label="Пагинация реестра">
+                <!-- Первая страница -->
+                {% if page_obj.has_previous %}
+                <a href="?{{ pagination_query }}&page=1" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors" title="Первая страница">
+                    <i class="bi bi-chevron-double-left"></i>
+                </a>
+                <a href="?{{ pagination_query }}&page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                    Назад
+                </a>
+                {% endif %}
+
+                <!-- Номера страниц -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold shadow-xs">
+                        {{ num }}
+                    </span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?{{ pagination_query }}&page={{ num }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Следующая страница -->
+                {% if page_obj.has_next %}
+                <a href="?{{ pagination_query }}&page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                    Вперед
+                </a>
+                <a href="?{{ pagination_query }}&page={{ page_obj.paginator.num_pages }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors" title="Последняя страница">
+                    <i class="bi bi-chevron-double-right"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- ПУСТОЙ РЕЗУЛЬТАТ -->
+        <div class="py-16 px-6 text-center">
+            <div class="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center text-3xl mb-4">
+                <i class="bi bi-folder-x"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">Заявления не найдены</h3>
+            <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                По заданным критериям фильтрации и поисковому запросу ничего не найдено. Попробуйте изменить параметры или сбросить фильтры.
+            </p>
+            <div class="mt-6">
+                <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <span>Сбросить все фильтры</span>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 6. МОДАЛЬНОЕ ОКНО: ИЗМЕНЕНИЕ СТАТУСА ЗАЯВЛЕНИЯ -->
+    <div x-show="statusModalOpen" 
+         x-cloak 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200"
+             @click.away="statusModalOpen = false">
+            
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Смена статуса заявления</h3>
+                        <p class="text-[11px] text-slate-300">Заявление №<span x-text="activeAppNumber"></span></p>
+                    </div>
+                </div>
+                <button @click="statusModalOpen = false" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="bi bi-x-lg text-base"></i>
+                </button>
+            </div>
+
+            <form method="post" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_status">
+                <input type="hidden" name="application_id" :value="activeAppId">
+
+                <div>
+                    <span class="block text-xs font-semibold text-slate-500">Абитуриент:</span>
+                    <span class="text-sm font-bold text-slate-900" x-text="activeApplicantName"></span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Новый статус заявления</label>
+                    <select name="new_status" x-model="selectedNewStatus" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        {% for s_code, s_title in status_choices %}
+                        <option value="{{ s_code }}">{{ s_title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Служебный комментарий приемной комиссии</label>
+                    <textarea name="officer_comment" 
+                              x-model="officerComment"
+                              rows="3" 
+                              placeholder="Укажите причину изменения или перечень недостающих документов..."
+                              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Комментарий будет зафиксирован в аудит-логе и отображен в уведомлении абитуриента.</span>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="statusModalOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20">
+                        Сохранить статус
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. МОДАЛЬНОЕ ОКНО: ДЕТАЛЬНАЯ КАРТОЧКА ЗАЯВЛЕНИЯ -->
+    <div x-show="detailModalOpen" 
+         x-cloak 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar border border-slate-200"
+             @click.away="detailModalOpen = false">
+            
+            <template x-if="activeDetail">
+                <div>
+                    <!-- Шапка модалки -->
+                    <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold text-blue-300">Карточка заявления</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-600 text-white" x-text="'№' + activeDetail.id"></span>
+                            </div>
+                            <h3 class="text-base font-bold text-white mt-0.5" x-text="activeDetail.fio"></h3>
+                        </div>
+                        <button @click="detailModalOpen = false" class="text-slate-400 hover:text-white transition-colors">
+                            <i class="bi bi-x-lg text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-6 space-y-6 text-xs">
+                        <!-- 1. Основные реквизиты абитуриента -->
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <i class="bi bi-person-vcard text-indigo-600"></i>
+                                <span>Данные абитуриента</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-600">
+                                <div><strong class="text-slate-800">Email:</strong> <span x-text="activeDetail.email || 'Не указан'"></span></div>
+                                <div><strong class="text-slate-800">Телефон:</strong> <span x-text="activeDetail.phone || 'Не указан'"></span></div>
+                                <div><strong class="text-slate-800">СНИЛС:</strong> <span x-text="activeDetail.snils || 'Не указан'"></span></div>
+                                <div><strong class="text-slate-800">Паспорт:</strong> <span x-text="activeDetail.passport"></span></div>
+                                <div class="sm:col-span-2"><strong class="text-slate-800">Адрес регистрации:</strong> <span x-text="activeDetail.address || 'Не указан'"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Выбранная образовательная программа -->
+                        <div class="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-3">
+                            <div class="text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                                <i class="bi bi-mortarboard-fill text-blue-600"></i>
+                                <span>Образовательная программа</span>
+                            </div>
+                            <div class="space-y-1.5 text-slate-700">
+                                <div><strong class="text-slate-900">Факультет:</strong> <span x-text="activeDetail.faculty"></span></div>
+                                <div><strong class="text-slate-900">Направление:</strong> <span x-text="activeDetail.specialty"></span></div>
+                                <div class="flex flex-wrap gap-4 pt-1 text-slate-600">
+                                    <div><strong class="text-slate-800">Уровень:</strong> <span x-text="activeDetail.level"></span></div>
+                                    <div><strong class="text-slate-800">Форма:</strong> <span x-text="activeDetail.study_form"></span></div>
+                                    <div><strong class="text-slate-800">Основа:</strong> <span x-text="activeDetail.financing"></span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Результаты вступительных испытаний и ЕГЭ -->
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                    <i class="bi bi-trophy text-amber-500"></i>
+                                    <span>Баллы испытаний (Сумма: <span x-text="activeDetail.total_score"></span> б.)</span>
+                                </div>
+                            </div>
+                            <template x-if="activeDetail.scores.length > 0">
+                                <div class="space-y-2">
+                                    <template x-for="(sc, idx) in activeDetail.scores" :key="idx">
+                                        <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200 text-xs">
+                                            <div>
+                                                <span class="font-bold text-slate-800" x-text="sc.subject"></span>
+                                                <span class="text-[10px] text-slate-400 ml-1.5" x-text="'(' + sc.type + ')'"></span>
+                                            </div>
+                                            <span class="font-black text-indigo-700 text-sm" x-text="sc.score + ' б.'"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="activeDetail.scores.length === 0">
+                                <div class="text-slate-400 text-center py-2">Результаты экзаменов не прикреплены.</div>
+                            </template>
+                        </div>
+
+                        <!-- 4. Прикрепленные документы -->
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                                <i class="bi bi-file-earmark-check text-cyan-600"></i>
+                                <span>Электронные документы заявления</span>
+                            </div>
+                            <template x-if="activeDetail.documents.length > 0">
+                                <div class="space-y-2">
+                                    <template x-for="(doc, idx) in activeDetail.documents" :key="idx">
+                                        <div class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 text-xs">
+                                            <div class="flex items-center gap-2">
+                                                <i class="bi bi-file-earmark-pdf text-rose-500 text-base"></i>
+                                                <div>
+                                                    <div class="font-semibold text-slate-800" x-text="doc.type"></div>
+                                                    <div class="text-[10px] text-slate-400" x-text="'Загружено: ' + doc.date"></div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold"
+                                                      :class="doc.verified ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                                                      x-text="doc.verified ? 'Верифицирован' : 'Ожидает проверки'"></span>
+                                                <a :href="doc.url" target="_blank" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="activeDetail.documents.length === 0">
+                                <div class="text-slate-400 text-center py-2">К заявлению не прикреплено электронных копий документов.</div>
+                            </template>
+                        </div>
+
+                        <!-- 5. Текущий статус и комментарий -->
+                        <div class="p-4 rounded-2xl bg-slate-100/80 border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-slate-700">Текущий статус:</span>
+                                <span class="font-bold text-indigo-700" x-text="activeDetail.status_display"></span>
+                            </div>
+                            <div class="flex items-center justify-between text-slate-500 text-[11px]">
+                                <span>Подано: <strong class="text-slate-700" x-text="activeDetail.submission_date"></strong></span>
+                                <span>Обновлено: <strong class="text-slate-700" x-text="activeDetail.updated_at"></strong></span>
+                            </div>
+                            <template x-if="activeDetail.officer_comment">
+                                <div class="pt-2 border-t border-slate-200/80">
+                                    <div class="text-[10px] font-bold text-slate-500 uppercase">Комментарий комиссии:</div>
+                                    <p class="text-slate-800 mt-0.5 italic" x-text="activeDetail.officer_comment"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Подвал модалки -->
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <a :href="'/admin/admissions/application/' + activeDetail.id + '/change/'"
+                           target="_blank"
+                           class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition-colors">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Редактировать в Admin</span>
+                        </a>
+                        <button type="button" @click="detailModalOpen = false" class="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors">
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
