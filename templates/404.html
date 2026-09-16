@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}404 — Страница не найдена | МУ им. С.Ю. Витте{% endblock %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center py-12 px-4">
+    <div class="max-w-lg w-full text-center space-y-6">
+        
+        <!-- Error Graphic / Icon -->
+        <div class="relative mx-auto w-32 h-32 flex items-center justify-center">
+            <div class="absolute inset-0 bg-indigo-500/10 rounded-full animate-ping"></div>
+            <div class="w-28 h-28 rounded-3xl bg-gradient-to-tr from-witte-900 to-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30">
+                <i class="bi bi-compass text-5xl"></i>
+            </div>
+            <span class="absolute -bottom-2 -right-2 px-3 py-1 rounded-full bg-rose-500 text-white font-black text-xs shadow-md">
+                404
+            </span>
+        </div>
+
+        <!-- Text Description -->
+        <div class="space-y-2">
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Страница не найдена
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
+                Запрашиваемая страница перемещена, удалена или указан неверный адрес в строке браузера.
+            </p>
+        </div>
+
+        <!-- Quick Links / Action Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <a href="/" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-600/20 transition-all inline-flex items-center justify-center gap-2">
+                <i class="bi bi-house-door-fill"></i> Вернуться на главную
+            </a>
+            <a href="/student/dashboard/" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors inline-flex items-center justify-center gap-2">
+                <i class="bi bi-person-workspace"></i> Личный кабинет
+            </a>
+        </div>
+
+        <!-- Support Info -->
+        <div class="pt-6 border-t border-slate-200 text-[11px] text-slate-400">
+            Возникли трудности? Свяжитесь с приемной комиссией: <span class="font-semibold text-slate-600">+7 (495) 500-03-03</span> или <span class="font-semibold text-slate-600">pk@witte.ru</span>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
