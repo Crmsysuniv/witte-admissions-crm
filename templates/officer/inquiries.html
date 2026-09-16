@@ -1,0 +1,589 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Обращения граждан с формы обратной связи | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Обращения с формы обратной связи{% endblock %}
+
+{% block content %}
+<div class="space-y-8 pb-16" x-data="{
+    replyModalOpen: false,
+    statusModalOpen: false,
+    activeId: null,
+    activeFullName: '',
+    activePhone: '',
+    activeEmail: '',
+    activeSubject: '',
+    activeMessage: '',
+    activeResponse: '',
+    activeStatus: 'RESOLVED',
+    activeCurrentStatus: '',
+
+    openReplyModal(inquiry) {
+        this.activeId = inquiry.id;
+        this.activeFullName = inquiry.fullName;
+        this.activePhone = inquiry.phone;
+        this.activeEmail = inquiry.email;
+        this.activeSubject = inquiry.subject;
+        this.activeMessage = inquiry.message;
+        this.activeResponse = inquiry.response || '';
+        this.activeStatus = inquiry.status === 'NEW' ? 'RESOLVED' : inquiry.status;
+        this.replyModalOpen = true;
+    },
+
+    openStatusModal(id, currentStatus, subject, fullName) {
+        this.activeId = id;
+        this.activeCurrentStatus = currentStatus;
+        this.activeSubject = subject;
+        this.activeFullName = fullName;
+        this.statusModalOpen = true;
+    },
+
+    setTemplate(text) {
+        if (this.activeResponse) {
+            this.activeResponse += '\n\n' + text;
+        } else {
+            this.activeResponse = text;
+        }
+    }
+}">
+
+    <!-- 1. HERO BANNER: ВХОДЯЩИЕ ОБРАЩЕНИЯ -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-950 text-white shadow-2xl border border-white/10 p-6 sm:p-8 lg:p-10">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-rose-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-rose-200 mb-3 shadow-inner">
+                    <i class="bi bi-chat-left-dots-fill text-rose-400 text-sm"></i>
+                    <span>Приемная комиссия 2026 • Helpdesk и консультации</span>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white leading-tight">
+                    Обращения с <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-indigo-200 to-sky-200">формы обратной связи</span>
+                </h1>
+
+                <p class="mt-2 text-sm text-blue-100/90 leading-relaxed font-normal">
+                    Центр обработки вопросов, заявок на консультации и обращений от абитуриентов и их родителей. Оперативная подготовка ответов, контроль сроков обработки и фиксация ответов сотрудников.
+                </p>
+
+                <!-- Инфо-чипы -->
+                <div class="mt-4 flex flex-wrap items-center gap-3 text-xs font-medium text-blue-200">
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-person-badge-fill text-amber-400"></i>
+                        <span>Сотрудник: <strong class="text-white">{{ user.get_full_name|default:user.username }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-inbox-fill text-rose-400"></i>
+                        <span>Требуют ответа: <strong class="text-white">{{ status_counts.NEW }}</strong></span>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                        <i class="bi bi-check2-circle text-emerald-400"></i>
+                        <span>Всего обработано: <strong class="text-white">{{ status_counts.RESOLVED }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Быстрые действия -->
+            <div class="flex flex-col sm:flex-row lg:flex-col gap-2.5 min-w-[220px]">
+                <a href="{% url 'officer:workplace' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-bold transition-all border border-amber-400/30 shadow-sm group">
+                    <i class="bi bi-inbox-fill text-sm text-amber-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Рабочий стол (Очередь)</span>
+                </a>
+                <a href="{% url 'officer:applications_list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 backdrop-blur-md shadow-sm group">
+                    <i class="bi bi-card-checklist text-sm text-sky-300 group-hover:scale-110 transition-transform"></i>
+                    <span>Реестр заявлений</span>
+                </a>
+                <a href="{% url 'feedback:feedback_form' %}" target="_blank" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-bold transition-all border border-rose-400/30 shadow-md group">
+                    <i class="bi bi-plus-circle text-sm text-white group-hover:scale-110 transition-transform"></i>
+                    <span>Форма на сайте</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. СВОДНЫЕ ТАБЫ ПО СТАТУСАМ ОБРАЩЕНИЙ -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <!-- Все -->
+        <a href="?status={% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-4 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if not status_filter %}border-slate-900 ring-2 ring-slate-800/20 bg-slate-50{% else %}border-slate-200/80 hover:border-slate-400{% endif %}">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Все обращения</span>
+            <div class="text-2xl font-black text-slate-900 mt-1">{{ status_counts.total }}</div>
+            <span class="text-[11px] text-slate-400 mt-0.5">Вся входящая почта</span>
+        </a>
+
+        <!-- Новые -->
+        <a href="?status=NEW{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-4 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'NEW' %}border-amber-500 ring-2 ring-amber-400/30 bg-amber-50/40{% else %}border-slate-200/80 hover:border-amber-400{% endif %}">
+            <div class="flex items-center justify-between text-amber-700">
+                <span class="text-xs font-bold uppercase tracking-wider">Новые</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            </div>
+            <div class="text-2xl font-black text-amber-600 mt-1">{{ status_counts.NEW }}</div>
+            <span class="text-[11px] text-amber-700/70 mt-0.5">Ожидают ответа</span>
+        </a>
+
+        <!-- В обработке -->
+        <a href="?status=IN_PROGRESS{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-4 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'IN_PROGRESS' %}border-blue-500 ring-2 ring-blue-400/30 bg-blue-50/40{% else %}border-slate-200/80 hover:border-blue-400{% endif %}">
+            <span class="text-xs font-bold text-blue-700 uppercase tracking-wider">В обработке</span>
+            <div class="text-2xl font-black text-blue-600 mt-1">{{ status_counts.IN_PROGRESS }}</div>
+            <span class="text-[11px] text-blue-700/70 mt-0.5">Взяты сотрудниками</span>
+        </a>
+
+        <!-- Обработано / Ответ дан -->
+        <a href="?status=RESOLVED{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-4 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'RESOLVED' %}border-emerald-500 ring-2 ring-emerald-400/30 bg-emerald-50/40{% else %}border-slate-200/80 hover:border-emerald-400{% endif %}">
+            <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Обработано</span>
+            <div class="text-2xl font-black text-emerald-600 mt-1">{{ status_counts.RESOLVED }}</div>
+            <span class="text-[11px] text-emerald-700/70 mt-0.5">Ответ предоставлен</span>
+        </a>
+
+        <!-- Отклонено / Спам -->
+        <a href="?status=REJECTED{% if search_query %}&search={{ search_query }}{% endif %}"
+           class="p-4 rounded-2xl bg-white border transition-all shadow-xs flex flex-col justify-between {% if status_filter == 'REJECTED' %}border-slate-500 ring-2 ring-slate-400/30 bg-slate-100{% else %}border-slate-200/80 hover:border-slate-400{% endif %}">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Отклонено</span>
+            <div class="text-2xl font-black text-slate-700 mt-1">{{ status_counts.REJECTED }}</div>
+            <span class="text-[11px] text-slate-500 mt-0.5">Спам / не относится</span>
+        </a>
+    </div>
+
+    <!-- 3. ПОИСК И ФИЛЬТРЫ -->
+    <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+            
+            <!-- Поисковая строка -->
+            <div class="lg:col-span-6">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Поиск по заявителю, теме или тексту</label>
+                <div class="relative">
+                    <input type="text" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="ФИО, email, номер телефона, тема или текст вопроса..." 
+                           class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <i class="bi bi-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    {% if search_query %}
+                    <a href="?{% if status_filter %}status={{ status_filter }}{% endif %}"
+                       class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Очистить поиск">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Фильтр по статусу -->
+            <div class="lg:col-span-3">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Статус обращения</label>
+                <select name="status" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                    <option value="">Все статусы</option>
+                    {% for s_val, s_name in status_choices %}
+                    <option value="{{ s_val }}" {% if status_filter == s_val %}selected{% endif %}>
+                        {{ s_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Сортировка -->
+            <div class="lg:col-span-3">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Сортировка</label>
+                <div class="flex items-center gap-2">
+                    <select name="sort" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                        <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Сначала новые</option>
+                        <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Сначала старые</option>
+                        <option value="name_asc" {% if sort_by == 'name_asc' %}selected{% endif %}>По ФИО заявителя (А-Я)</option>
+                        <option value="updated" {% if sort_by == 'updated' %}selected{% endif %}>По дате обновления</option>
+                    </select>
+                    
+                    <button type="submit" class="py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-xs shrink-0">
+                        <i class="bi bi-funnel-fill"></i>
+                    </button>
+                    
+                    {% if search_query or status_filter or sort_by != 'newest' %}
+                    <a href="{% url 'officer:inquiries' %}" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs transition-colors shrink-0" title="Сбросить фильтры">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- 4. СПИСОК ОБРАЩЕНИЙ -->
+    <div class="space-y-4">
+        
+        <!-- Заголовок реестра -->
+        <div class="flex items-center justify-between px-2">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-800">Список входящих обращений</span>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+                    {{ total_filtered_count }}
+                </span>
+            </div>
+            <span class="text-xs text-slate-500">Показано {{ inquiries|length }} из {{ total_filtered_count }} записей</span>
+        </div>
+
+        {% if inquiries %}
+        <div class="grid grid-cols-1 gap-4">
+            {% for inquiry in inquiries %}
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border transition-all shadow-sm {% if inquiry.status == 'NEW' %}border-amber-300 ring-1 ring-amber-300/50{% elif inquiry.status == 'IN_PROGRESS' %}border-blue-200{% elif inquiry.status == 'RESOLVED' %}border-emerald-200/80{% else %}border-slate-200/80{% endif %}">
+                
+                <!-- Шапка карточки обращения -->
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <span class="font-black text-indigo-700 text-sm">Обращение №{{ inquiry.id }}</span>
+                            <span class="text-xs text-slate-400">•</span>
+                            <span class="text-xs text-slate-500 flex items-center gap-1">
+                                <i class="bi bi-clock"></i>
+                                {{ inquiry.created_at|date:"d.m.Y в H:i" }}
+                            </span>
+
+                            <!-- Статус бейдж -->
+                            {% if inquiry.status == 'NEW' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                Новое обращение
+                            </span>
+                            {% elif inquiry.status == 'IN_PROGRESS' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                <i class="bi bi-hourglass-split"></i>
+                                В обработке
+                            </span>
+                            {% elif inquiry.status == 'RESOLVED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="bi bi-check-circle-fill text-emerald-600"></i>
+                                Ответ дан
+                            </span>
+                            {% elif inquiry.status == 'REJECTED' %}
+                            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
+                                <i class="bi bi-x-circle"></i>
+                                Отклонено / Спам
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Тема обращения -->
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 mt-2">
+                            {{ inquiry.subject }}
+                        </h2>
+                    </div>
+
+                    <!-- Контакты заявителя -->
+                    <div class="sm:text-right shrink-0 bg-slate-50 sm:bg-transparent p-3 sm:p-0 rounded-2xl border sm:border-0 border-slate-200/60 text-xs space-y-1">
+                        <div class="font-bold text-slate-900 text-sm">
+                            <i class="bi bi-person-fill text-indigo-600 mr-1"></i>
+                            {{ inquiry.full_name }}
+                        </div>
+                        <div>
+                            <i class="bi bi-envelope text-slate-400 mr-1"></i>
+                            <a href="mailto:{{ inquiry.email }}" class="text-indigo-600 hover:underline font-medium">{{ inquiry.email }}</a>
+                        </div>
+                        <div>
+                            <i class="bi bi-telephone text-slate-400 mr-1"></i>
+                            <a href="tel:{{ inquiry.phone }}" class="text-slate-700 hover:underline">{{ inquiry.phone }}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Текст обращения -->
+                <div class="py-4 text-xs sm:text-sm text-slate-800 leading-relaxed bg-slate-50/60 rounded-2xl p-4 my-3 border border-slate-100">
+                    <span class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Вопрос / Сообщение заявителя:</span>
+                    <p class="whitespace-pre-line">{{ inquiry.message }}</p>
+                </div>
+
+                <!-- Ответ сотрудника приемной комиссии (если предоставлен) -->
+                {% if inquiry.officer_response %}
+                <div class="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 text-xs space-y-2 mb-4">
+                    <div class="flex items-center justify-between text-emerald-900 font-bold">
+                        <div class="flex items-center gap-1.5">
+                            <i class="bi bi-reply-fill text-emerald-600 text-sm"></i>
+                            <span>Официальный ответ сотрудника приемной комиссии:</span>
+                        </div>
+                        <span class="text-[11px] text-emerald-700/80 font-normal">
+                            {{ inquiry.responded_at|date:"d.m.Y H:i" }}
+                        </span>
+                    </div>
+                    <p class="text-slate-800 whitespace-pre-line pl-5 border-l-2 border-emerald-400">{{ inquiry.officer_response }}</p>
+                    <div class="text-[11px] text-slate-500 pl-5">
+                        Ответил(а): <strong class="text-slate-700">{{ inquiry.responded_by.get_full_name|default:inquiry.responded_by.username|default:"Специалист приемной комиссии" }}</strong>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Панель действий -->
+                <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <!-- Кнопка взятия в работу (если статус NEW) -->
+                        {% if inquiry.status == 'NEW' %}
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="take_in_progress">
+                            <input type="hidden" name="inquiry_id" value="{{ inquiry.id }}">
+                            <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors">
+                                <i class="bi bi-play-fill"></i>
+                                <span>Взять в работу</span>
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <!-- Кнопка смены статуса -->
+                        <button type="button"
+                                @click="openStatusModal({{ inquiry.id }}, '{{ inquiry.status }}', '{{ inquiry.subject|escapejs }}', '{{ inquiry.full_name|escapejs }}')"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                            <i class="bi bi-tag-fill text-slate-400"></i>
+                            <span>Сменить статус</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Кнопка открыть модалку ответа -->
+                        <button type="button" 
+                                @click="openReplyModal({
+                                    id: {{ inquiry.id }},
+                                    fullName: '{{ inquiry.full_name|escapejs }}',
+                                    phone: '{{ inquiry.phone|escapejs }}',
+                                    email: '{{ inquiry.email|escapejs }}',
+                                    subject: '{{ inquiry.subject|escapejs }}',
+                                    message: '{{ inquiry.message|escapejs }}',
+                                    response: '{{ inquiry.officer_response|default:''|escapejs }}',
+                                    status: '{{ inquiry.status }}'
+                                })"
+                                class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20">
+                            <i class="bi bi-reply-fill text-sm"></i>
+                            <span>{% if inquiry.officer_response %}Изменить ответ{% else %}Ответить на обращение{% endif %}</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 5. ПАГИНАЦИЯ -->
+        {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 rounded-2xl bg-white border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div class="text-slate-500">
+                Показано с <span class="font-bold text-slate-700">{{ page_obj.start_index }}</span>
+                по <span class="font-bold text-slate-700">{{ page_obj.end_index }}</span>
+                из <span class="font-bold text-slate-700">{{ total_filtered_count }}</span> обращений
+            </div>
+
+            <nav class="inline-flex items-center gap-1" aria-label="Пагинация обращений">
+                {% if page_obj.has_previous %}
+                <a href="?{{ pagination_query }}&page={{ page_obj.previous_page_number }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                    Назад
+                </a>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold">
+                        {{ num }}
+                    </span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?{{ pagination_query }}&page={{ num }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <a href="?{{ pagination_query }}&page={{ page_obj.next_page_number }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors">
+                    Вперед
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- ПУСТОЙ РЕЗУЛЬТАТ -->
+        <div class="py-16 px-6 bg-white rounded-3xl border border-slate-200 text-center">
+            <div class="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center text-3xl mb-4">
+                <i class="bi bi-chat-square-text"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-800">Обращения не найдены</h3>
+            <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                В выбранной категории или по заданному поисковому запросу обращений нет.
+            </p>
+            {% if search_query or status_filter %}
+            <div class="mt-6">
+                <a href="{% url 'officer:inquiries' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <span>Сбросить фильтры</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- 6. МОДАЛЬНОЕ ОКНО ВВОДА ОТВЕТА НА ОБРАЩЕНИЕ (ALPINE.JS) -->
+    <div x-show="replyModalOpen" 
+         x-cloak 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar border border-slate-200"
+             @click.away="replyModalOpen = false">
+            
+            <!-- Шапка модалки -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-400/30 flex items-center justify-center text-rose-300">
+                        <i class="bi bi-reply-fill"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Ответ на обращение №<span x-text="activeId"></span></h3>
+                        <p class="text-[11px] text-slate-300">Заявитель: <span x-text="activeFullName"></span> (<span x-text="activeEmail"></span>)</p>
+                    </div>
+                </div>
+                <button @click="replyModalOpen = false" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="bi bi-x-lg text-base"></i>
+                </button>
+            </div>
+
+            <!-- Форма ввода ответа -->
+            <form method="post" class="p-6 space-y-5">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="respond">
+                <input type="hidden" name="inquiry_id" :value="activeId">
+
+                <!-- Исходный вопрос заявителя -->
+                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5 text-xs">
+                    <div class="font-bold text-slate-900" x-text="'Тема: ' + activeSubject"></div>
+                    <div class="text-slate-600 whitespace-pre-line" x-text="activeMessage"></div>
+                </div>
+
+                <!-- Быстрые шаблоны ответов -->
+                <div>
+                    <span class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Быстрые шаблоны для ответа:</span>
+                    <div class="flex flex-wrap gap-1.5 text-xs">
+                        <button type="button" 
+                                @click="setTemplate('Здравствуйте! Прием документов на очную форму обучения осуществляется до 25 июля, на заочную форму — до 15 августа. Подробные правила приема и перечень документов опубликованы на официальном сайте МУ им. С.Ю. Витте в разделе «Абитуриенту».')"
+                                class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 transition-colors text-left text-[11px]">
+                            Сроки и правила приема
+                        </button>
+                        <button type="button" 
+                                @click="setTemplate('Добрый день! Для подачи заявления на поступление зарегистрируйтесь в личном кабинете абитуриента, заполните паспортные данные, укажите выбранную специальность и загрузите скан-копии паспорта и документа об образовании.')"
+                                class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 transition-colors text-left text-[11px]">
+                            Как подать документы онлайн
+                        </button>
+                        <button type="button" 
+                                @click="setTemplate('Здравствуйте! Оплата обучения производится по семестрам после заключения договора. Доступны различные программы рассрочки и скидки для абитуриентов с высокими баллами ЕГЭ.')"
+                                class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 transition-colors text-left text-[11px]">
+                            Оплата и скидки
+                        </button>
+                        <button type="button" 
+                                @click="setTemplate('Здравствуйте! Иногородним студентам очной формы обучения предоставляются места в студенческом общежитии. Заявление на предоставление общежития подается одновременно с пакетом документов на зачисление.')"
+                                class="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60 transition-colors text-left text-[11px]">
+                            Общежитие
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Поле ввода ответа -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Текст официального ответа сотрудника</label>
+                    <textarea name="officer_response" 
+                              x-model="activeResponse"
+                              rows="6" 
+                              required
+                              placeholder="Введите текст ответа абитуриенту..."
+                              class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></textarea>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Ответ будет зафиксирован в карточке обращения и направлен заявителю на почту <strong class="text-slate-700" x-text="activeEmail"></strong>.</span>
+                </div>
+
+                <!-- Итоговый статус обращения -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Статус после сохранения ответа</label>
+                    <select name="status" x-model="activeStatus" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        <option value="RESOLVED">Обработано / Ответ дан (RESOLVED)</option>
+                        <option value="IN_PROGRESS">В обработке (требуется доп. уточнение)</option>
+                        <option value="REJECTED">Отклонено / Спам (REJECTED)</option>
+                    </select>
+                </div>
+
+                <!-- Кнопки отправки -->
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="replyModalOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-500/20 flex items-center gap-1.5">
+                        <i class="bi bi-send-fill"></i>
+                        <span>Сохранить ответ</span>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- 7. МОДАЛЬНОЕ ОКНО СМЕНЫ СТАТУСА (ALPINE.JS) -->
+    <div x-show="statusModalOpen" 
+         x-cloak 
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200"
+             @click.away="statusModalOpen = false">
+            
+            <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+                        <i class="bi bi-tag-fill"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-white">Статус обращения №<span x-text="activeId"></span></h3>
+                </div>
+                <button @click="statusModalOpen = false" class="text-slate-400 hover:text-white transition-colors">
+                    <i class="bi bi-x-lg text-base"></i>
+                </button>
+            </div>
+
+            <form method="post" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="change_status">
+                <input type="hidden" name="inquiry_id" :value="activeId">
+
+                <div class="text-xs text-slate-600">
+                    <div>Заявитель: <strong class="text-slate-800" x-text="activeFullName"></strong></div>
+                    <div>Тема: <strong class="text-slate-800" x-text="activeSubject"></strong></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Новый статус</label>
+                    <select name="status" x-model="activeCurrentStatus" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        {% for s_code, s_title in status_choices %}
+                        <option value="{{ s_code }}">{{ s_title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" @click="statusModalOpen = false" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm">
+                        Изменить статус
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

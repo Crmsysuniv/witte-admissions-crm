@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from admissions.models import Faculty, Specialty, EducationProgram, Application
 from audit.models import StatusLog, Notification
 from accounts.models import ApplicantProfile, OfficerProfile
+from feedback.models import FeedbackMessage
 
 User = get_user_model()
 
@@ -331,4 +332,137 @@ class OfficerApplicationDetailTests(TestCase):
         self.application.refresh_from_db()
         self.assertEqual(self.application.status, Application.Status.REJECTED)
         self.assertEqual(self.application.officer_comment, 'Отказ в приеме документов')
+
+
+class OfficerInquiriesTests(TestCase):
+    """
+    Тестирование раздела входящих обращений граждан (officer:inquiries).
+    Проверяет права доступа, фильтрацию по статусу, поиск по теме и автору,
+    сохранение ответов сотрудника и изменение статусов обращений.
+    """
+    def setUp(self):
+        self.client = Client()
+
+        self.officer_user = User.objects.create_user(
+            username='officer_support',
+            password='testpassword123',
+            email='support_officer@witte.ru',
+            first_name='Елена',
+            last_name='Соколова',
+            role=User.Role.OFFICER
+        )
+        OfficerProfile.objects.create(
+            user=self.officer_user,
+            position='Консультант приемной комиссии',
+            cabinet='105'
+        )
+
+        self.applicant_user = User.objects.create_user(
+            username='applicant_inq',
+            password='testpassword123',
+            email='inq_applicant@example.com',
+            first_name='Сергей',
+            last_name='Морозов',
+            role=User.Role.APPLICANT
+        )
+
+        self.inquiry1 = FeedbackMessage.objects.create(
+            full_name='Сергей Морозов',
+            phone='+7 (999) 111-22-33',
+            email='sergey@example.com',
+            subject='Сроки подачи документов на очное отделение',
+            message='Здравствуйте! Подскажите, пожалуйста, до какого числа можно подать оригинал аттестата?',
+            status=FeedbackMessage.Status.NEW
+        )
+
+        self.inquiry2 = FeedbackMessage.objects.create(
+            full_name='Мария Васильева',
+            phone='+7 (999) 444-55-66',
+            email='maria@example.com',
+            subject='Вопрос о стоимости обучения на IT-направлениях',
+            message='Добрый день! Предоставляется ли скидка при оплате за весь год сразу?',
+            status=FeedbackMessage.Status.RESOLVED,
+            officer_response='Да, при единовременной оплате предоставляется скидка 5%.',
+            responded_by=self.officer_user
+        )
+
+    def test_anonymous_redirected_to_login(self):
+        url = reverse('officer:inquiries')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login/', response.url)
+
+    def test_applicant_cannot_access_inquiries(self):
+        self.client.login(username='applicant_inq', password='testpassword123')
+        url = reverse('officer:inquiries')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_officer_can_view_inquiries(self):
+        self.client.login(username='officer_support', password='testpassword123')
+        url = reverse('officer:inquiries')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'officer/inquiries.html')
+        self.assertContains(response, 'Сергей Морозов')
+        self.assertContains(response, 'Мария Васильева')
+        self.assertContains(response, 'Сроки подачи документов')
+
+    def test_filter_inquiries_by_status(self):
+        self.client.login(username='officer_support', password='testpassword123')
+        url = reverse('officer:inquiries')
+        response = self.client.get(url, {'status': 'NEW'})
+        self.assertEqual(response.status_code, 200)
+        inquiries = response.context['inquiries']
+        self.assertEqual(len(inquiries), 1)
+        self.assertEqual(inquiries[0].id, self.inquiry1.id)
+
+    def test_search_inquiries(self):
+        self.client.login(username='officer_support', password='testpassword123')
+        url = reverse('officer:inquiries')
+
+        # Поиск по теме
+        response = self.client.get(url, {'search': 'стоимости'})
+        self.assertEqual(response.status_code, 200)
+        inquiries = response.context['inquiries']
+        self.assertEqual(len(inquiries), 1)
+        self.assertEqual(inquiries[0].id, self.inquiry2.id)
+
+        # Поиск по ФИО
+        response = self.client.get(url, {'search': 'Морозов'})
+        self.assertEqual(response.status_code, 200)
+        inquiries = response.context['inquiries']
+        self.assertEqual(len(inquiries), 1)
+        self.assertEqual(inquiries[0].id, self.inquiry1.id)
+
+    def test_officer_respond_to_inquiry(self):
+        self.client.login(username='officer_support', password='testpassword123')
+        url = reverse('officer:inquiries')
+        response = self.client.post(url, {
+            'action': 'respond',
+            'inquiry_id': self.inquiry1.id,
+            'officer_response': 'Здравствуйте! Прием оригиналов документов завершается 25 июля в 18:00.',
+            'status': FeedbackMessage.Status.RESOLVED
+        })
+        self.assertEqual(response.status_code, 302)
+
+        self.inquiry1.refresh_from_db()
+        self.assertEqual(self.inquiry1.status, FeedbackMessage.Status.RESOLVED)
+        self.assertEqual(self.inquiry1.officer_response, 'Здравствуйте! Прием оригиналов документов завершается 25 июля в 18:00.')
+        self.assertEqual(self.inquiry1.responded_by, self.officer_user)
+        self.assertIsNotNone(self.inquiry1.responded_at)
+
+    def test_officer_take_in_progress(self):
+        self.client.login(username='officer_support', password='testpassword123')
+        url = reverse('officer:inquiries')
+        response = self.client.post(url, {
+            'action': 'take_in_progress',
+            'inquiry_id': self.inquiry1.id
+        })
+        self.assertEqual(response.status_code, 302)
+
+        self.inquiry1.refresh_from_db()
+        self.assertEqual(self.inquiry1.status, FeedbackMessage.Status.IN_PROGRESS)
+        self.assertEqual(self.inquiry1.responded_by, self.officer_user)
+
 

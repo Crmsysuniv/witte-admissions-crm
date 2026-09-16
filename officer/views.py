@@ -9,6 +9,7 @@ from .decorators import officer_required
 from admissions.models import Application, ApplicationDocument, Faculty, EducationProgram, ExamScore
 from audit.models import StatusLog, Notification
 from accounts.models import OfficerProfile
+from feedback.models import FeedbackMessage
 
 
 @login_required
@@ -568,5 +569,153 @@ def application_detail_view(request, pk):
     }
 
     return render(request, 'officer/application_detail.html', context)
+
+
+@login_required
+@officer_required
+def inquiries_view(request):
+    """
+    Раздел обработки входящих обращений с формы обратной связи.
+    Позволяет сотруднику приемной комиссии просматривать обращения граждан,
+    фильтровать их по статусам ('NEW', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'),
+    искать по ФИО, email, телефону и теме, а также вводить официальный ответ,
+    менять статус и просматривать детали тикета.
+    """
+    user = request.user
+    officer_profile = getattr(user, 'officer_profile', None)
+
+    # Обработка POST-действий (ввод ответа, изменение статуса, взятие в работу)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        inquiry_id = request.POST.get('inquiry_id')
+
+        if inquiry_id:
+            inquiry = get_object_or_404(FeedbackMessage, pk=inquiry_id)
+
+            if action == 'respond':
+                response_text = request.POST.get('officer_response', '').strip()
+                new_status = request.POST.get('status', FeedbackMessage.Status.RESOLVED)
+
+                if response_text:
+                    inquiry.officer_response = response_text
+                    inquiry.status = new_status
+                    inquiry.responded_by = user
+                    inquiry.responded_at = timezone.now()
+                    inquiry.save()
+
+                    messages.success(
+                        request,
+                        f'Ответ на обращение №{inquiry.id} («{inquiry.subject}») успешно сохранен. Статус: «{inquiry.get_status_display()}».'
+                    )
+                else:
+                    messages.error(request, 'Поле ответа сотрудника не может быть пустым.')
+
+            elif action == 'change_status':
+                new_status = request.POST.get('status')
+                valid_statuses = dict(FeedbackMessage.Status.choices)
+                if new_status in valid_statuses:
+                    inquiry.status = new_status
+                    if not inquiry.responded_by and new_status in [FeedbackMessage.Status.IN_PROGRESS, FeedbackMessage.Status.RESOLVED]:
+                        inquiry.responded_by = user
+                    inquiry.save()
+                    messages.success(
+                        request,
+                        f'Статус обращения №{inquiry.id} изменен на «{inquiry.get_status_display()}».'
+                    )
+                else:
+                    messages.error(request, 'Указан некорректный статус обращения.')
+
+            elif action == 'take_in_progress':
+                inquiry.status = FeedbackMessage.Status.IN_PROGRESS
+                inquiry.responded_by = user
+                inquiry.save()
+                messages.success(
+                    request,
+                    f'Обращение №{inquiry.id} взято в работу сотрудником {user.get_full_name() or user.username}.'
+                )
+
+            return redirect(request.get_full_path())
+
+    # Параметры фильтрации и поиска
+    status_filter = request.GET.get('status', '').strip()
+    search_query = request.GET.get('search', '').strip()
+    sort_by = request.GET.get('sort', 'newest').strip()
+
+    inquiries = FeedbackMessage.objects.select_related('responded_by').all()
+
+    # Фильтр по статусу
+    if status_filter and status_filter in dict(FeedbackMessage.Status.choices):
+        inquiries = inquiries.filter(status=status_filter)
+
+    # Поиск по ФИО, email, телефону, теме, тексту сообщения
+    if search_query:
+        tokens = search_query.split()
+        q_expr = Q()
+        for token in tokens:
+            q_expr &= (
+                Q(full_name__icontains=token)
+                | Q(email__icontains=token)
+                | Q(phone__icontains=token)
+                | Q(subject__icontains=token)
+                | Q(message__icontains=token)
+                | Q(id__icontains=token)
+            )
+        inquiries = inquiries.filter(q_expr)
+
+    # Сортировка
+    if sort_by == 'oldest':
+        inquiries = inquiries.order_by('created_at')
+    elif sort_by == 'name_asc':
+        inquiries = inquiries.order_by('full_name')
+    elif sort_by == 'name_desc':
+        inquiries = inquiries.order_by('-full_name')
+    elif sort_by == 'updated':
+        inquiries = inquiries.order_by('-updated_at')
+    else:  # 'newest' по умолчанию
+        inquiries = inquiries.order_by('-created_at')
+
+    # Пагинация (12 обращений на страницу)
+    paginator = Paginator(inquiries, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # Сохранение параметров GET-запроса для пагинации
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        query_params.pop('page')
+    pagination_query = query_params.urlencode()
+
+    # Сводные счетчики по статусам для верхних табов
+    status_counts = {
+        'total': FeedbackMessage.objects.count(),
+        'NEW': FeedbackMessage.objects.filter(status=FeedbackMessage.Status.NEW).count(),
+        'IN_PROGRESS': FeedbackMessage.objects.filter(status=FeedbackMessage.Status.IN_PROGRESS).count(),
+        'RESOLVED': FeedbackMessage.objects.filter(status=FeedbackMessage.Status.RESOLVED).count(),
+        'REJECTED': FeedbackMessage.objects.filter(status=FeedbackMessage.Status.REJECTED).count(),
+    }
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Рабочий стол сотрудника', 'url': '/officer/workplace/'},
+        {'title': 'Обращения граждан', 'is_active': True},
+    ]
+
+    context = {
+        'officer_profile': officer_profile,
+        'page_obj': page_obj,
+        'inquiries': page_obj.object_list,
+        'total_filtered_count': paginator.count,
+        'total_all_count': status_counts['total'],
+        'status_counts': status_counts,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'pagination_query': pagination_query,
+        'status_choices': FeedbackMessage.Status.choices,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'officer/inquiries.html', context)
+
 
 
