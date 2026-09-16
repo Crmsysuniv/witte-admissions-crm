@@ -1,0 +1,485 @@
+{% extends 'base.html' %}
+
+{% block title %}Регистрация абитуриента | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Регистрация абитуриента{% endblock %}
+
+{% block content %}
+<div class="space-y-10 pb-12" x-data="{
+    showPassword1: false,
+    showPassword2: false,
+    p1: '',
+    p2: '',
+    strengthScore: 0,
+    hasMinLength: false,
+    hasUpper: false,
+    hasLower: false,
+    hasDigit: false,
+    hasSpecial: false,
+    passwordsMatch: false,
+    isSubmitting: false,
+
+    calculateStrength(val) {
+        this.p1 = val || '';
+        this.hasMinLength = this.p1.length >= 8;
+        this.hasUpper = /[A-ZА-Я]/.test(this.p1);
+        this.hasLower = /[a-zа-я]/.test(this.p1);
+        this.hasDigit = /\d/.test(this.p1);
+        this.hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':&quot;\\|,.<>\/?~`]/.test(this.p1);
+
+        let score = 0;
+        if (this.hasMinLength) score += 1;
+        if (this.hasUpper) score += 1;
+        if (this.hasLower) score += 1;
+        if (this.hasDigit) score += 1;
+        if (this.hasSpecial) score += 1;
+        this.strengthScore = score;
+        this.checkMatch(this.p2);
+    },
+
+    checkMatch(val) {
+        this.p2 = val || '';
+        this.passwordsMatch = this.p1.length > 0 && this.p1 === this.p2;
+    },
+
+    getStrengthLabel() {
+        if (this.p1.length === 0) return 'Введите пароль';
+        if (this.strengthScore <= 1) return 'Очень слабый';
+        if (this.strengthScore === 2) return 'Слабый';
+        if (this.strengthScore === 3) return 'Средний';
+        if (this.strengthScore === 4) return 'Хороший';
+        return 'Отличный и надежный!';
+    },
+
+    getStrengthColor() {
+        if (this.strengthScore <= 1) return 'bg-rose-500';
+        if (this.strengthScore === 2) return 'bg-amber-500';
+        if (this.strengthScore === 3) return 'bg-blue-500';
+        if (this.strengthScore === 4) return 'bg-indigo-500';
+        return 'bg-emerald-500';
+    },
+
+    getStrengthTextColor() {
+        if (this.strengthScore <= 1) return 'text-rose-600';
+        if (this.strengthScore === 2) return 'text-amber-600';
+        if (this.strengthScore === 3) return 'text-blue-600';
+        if (this.strengthScore === 4) return 'text-indigo-600';
+        return 'text-emerald-600';
+    }
+}">
+
+    <!-- 1. HERO BANNER -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-witte-950 via-witte-900 to-indigo-950 text-white shadow-2xl border border-white/10 p-6 sm:p-10 lg:p-12">
+        <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-blue-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-3xl">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 mb-4 shadow-inner">
+                <i class="bi bi-person-badge-fill text-emerald-400"></i>
+                <span>Приемная кампания 2026/2027 • Единый личный кабинет</span>
+            </div>
+            
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                Регистрация <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-indigo-200 to-white">абитуриента</span>
+            </h1>
+
+            <p class="mt-4 text-sm sm:text-base text-blue-100/90 leading-relaxed font-normal">
+                Создайте персональную учетную запись абитуриента Московского университета имени С.Ю. Витте. После регистрации вам автоматически присваивается роль <strong>«Абитуриент» (APPLICANT)</strong>, открывающая доступ к онлайн-подаче заявлений, расчету баллов и конкурсному мониторингу.
+            </p>
+
+            <div class="mt-6 flex flex-wrap gap-3 text-xs font-medium text-blue-200">
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-shield-lock-fill text-emerald-400"></i>
+                    <span>Криптостойкая защита пароля</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-person-check-fill text-cyan-300"></i>
+                    <span>Роль APPLICANT по умолчанию</span>
+                </div>
+                <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 backdrop-blur-xs">
+                    <i class="bi bi-lock-fill text-amber-300"></i>
+                    <span>Соответствие 152-ФЗ РФ</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN REGISTRATION LAYOUT (2 COLUMNS) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- LEFT COLUMN: BENEFITS & PRIVILEGES (5 COLS) -->
+        <div class="lg:col-span-5 space-y-6">
+            
+            <!-- Information Card: Privileges of APPLICANT Role -->
+            <div class="bg-gradient-to-br from-slate-900 via-witte-950 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-xl space-y-6">
+                <div>
+                    <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider mb-3">
+                        <i class="bi bi-stars"></i> Возможности кабинета
+                    </span>
+                    <h2 class="text-xl sm:text-2xl font-black text-white">
+                        Что дает аккаунт абитуриента?
+                    </h2>
+                    <p class="text-xs text-blue-200/80 mt-1 leading-relaxed">
+                        Регистрация занимает не более 2 минут и открывает полный спектр сервисов приемной комиссии:
+                    </p>
+                </div>
+
+                <div class="space-y-3.5 text-xs">
+                    <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center shrink-0 text-sm mt-0.5">
+                            <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                        </div>
+                        <div>
+                            <strong class="text-white block text-sm mb-0.5">Электронная подача документов</strong>
+                            <p class="text-slate-300 leading-relaxed">Подавайте заявления на до 5 направлений подготовки одновременно без очередей и визитов в кампус.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 text-sm mt-0.5">
+                            <i class="bi bi-bar-chart-line-fill"></i>
+                        </div>
+                        <div>
+                            <strong class="text-white block text-sm mb-0.5">Конкурсные списки онлайн</strong>
+                            <p class="text-slate-300 leading-relaxed">Отслеживайте свои позиции в рейтинге, согласие на зачисление и динамику проходных баллов в реальном времени.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center shrink-0 text-sm mt-0.5">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                        <div>
+                            <strong class="text-white block text-sm mb-0.5">Скидки и льготные квоты</strong>
+                            <p class="text-slate-300 leading-relaxed">Автоматический учет индивидуальных достижений, расчет скидки до 20% и господдержки кредита 3%.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 text-sm mt-0.5">
+                            <i class="bi bi-chat-dots-fill"></i>
+                        </div>
+                        <div>
+                            <strong class="text-white block text-sm mb-0.5">Персональный куратор</strong>
+                            <p class="text-slate-300 leading-relaxed">Прямая связь со специалистами приемной комиссии по любым вопросам оформления договора и общежития.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Badge Notice -->
+                <div class="p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-xs text-blue-200 space-y-1">
+                    <div class="flex items-center gap-2 font-bold text-white">
+                        <i class="bi bi-info-circle-fill text-blue-400"></i>
+                        <span>Автоматическое назначение роли</span>
+                    </div>
+                    <p class="text-blue-200/90 leading-relaxed text-[11px]">
+                        При создании учетной записи профиль получает статус <code>APPLICANT</code> (Абитуриент) с автоматическим формированием карточки абитуриента в базе данных CRM.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Help Box -->
+            <div class="p-5 rounded-3xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-2.5">
+                <div class="flex items-center gap-2 font-bold text-slate-800">
+                    <i class="bi bi-headset text-indigo-600 text-base"></i>
+                    <span>Возникли трудности при регистрации?</span>
+                </div>
+                <p class="leading-relaxed">
+                    Телефон горячей линии приемной комиссии: <a href="tel:+74955000303" class="text-blue-600 font-bold hover:underline">+7 (495) 500-03-03</a> (пн–пт с 9:00 до 19:00).
+                </p>
+                <p class="text-slate-500 text-[11px]">
+                    Уже есть личный кабинет? <a href="/admin/login/" class="text-indigo-600 font-semibold hover:underline">Войдите в систему здесь →</a>
+                </p>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: REGISTRATION FORM (7 COLS) -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 lg:p-10 border border-slate-200/80 shadow-sm space-y-6">
+            
+            <div class="pb-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-slate-900">
+                        Анкета регистрации
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        Все поля формы обязательны для заполнения (за исключением отчества)
+                    </p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+                    <i class="bi bi-person-fill text-blue-600"></i>
+                    <span>Роль: Абитуриент</span>
+                </span>
+            </div>
+
+            <!-- Errors Alert Summary -->
+            {% if form.errors %}
+            <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5" role="alert">
+                <div class="flex items-center gap-2 font-bold text-rose-900">
+                    <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
+                    <span>Пожалуйста, исправьте следующие ошибки:</span>
+                </div>
+                <ul class="list-disc list-inside space-y-0.5 text-rose-700 pl-2">
+                    {% for field in form %}
+                        {% for error in field.errors %}
+                            <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'register' %}" @submit="isSubmitting = true" class="space-y-5" novalidate>
+                {% csrf_token %}
+
+                <!-- 1. Full Name Block (3 Fields) -->
+                <div class="space-y-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <i class="bi bi-person-lines-fill text-blue-600"></i>
+                        <span>Персональные данные заявителя</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Last Name -->
+                        <div>
+                            <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                Фамилия <span class="text-rose-500">*</span>
+                            </label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}
+                                <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.last_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- First Name -->
+                        <div>
+                            <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                Имя <span class="text-rose-500">*</span>
+                            </label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}
+                                <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.first_name.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Patronymic -->
+                    <div>
+                        <label for="{{ form.patronymic.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Отчество <span class="text-slate-400 font-normal lowercase">(при наличии)</span>
+                        </label>
+                        {{ form.patronymic }}
+                        {% if form.patronymic.errors %}
+                            <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.patronymic.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 2. Contacts Block -->
+                <div class="pt-2 space-y-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <i class="bi bi-telephone-fill text-blue-600"></i>
+                        <span>Контактная информация</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Email -->
+                        <div>
+                            <label for="{{ form.email.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                Электронная почта (Email) <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="bi bi-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <div class="pl-2">
+                                    {{ form.email }}
+                                </div>
+                            </div>
+                            {% if form.email.errors %}
+                                <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.email.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Phone -->
+                        <div>
+                            <label for="{{ form.phone.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                                Контактный телефон <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <i class="bi bi-telephone absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <div class="pl-2">
+                                    {{ form.phone }}
+                                </div>
+                            </div>
+                            {% if form.phone.errors %}
+                                <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.phone.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Account & Password Block -->
+                <div class="pt-2 space-y-4">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                        <i class="bi bi-shield-lock-fill text-blue-600"></i>
+                        <span>Данные для входа в систему</span>
+                    </div>
+
+                    <!-- Username -->
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Имя пользователя (Логин) <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.username }}
+                        <span class="text-[11px] text-slate-400 block mt-1">
+                            Используйте латинские буквы и цифры (например: <code>alex_ivanov</code>).
+                        </span>
+                        {% if form.username.errors %}
+                            <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password 1 -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="{{ form.password1.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                                Пароль <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-xs font-bold transition-colors" :class="getStrengthTextColor()" x-text="getStrengthLabel()"></span>
+                        </div>
+
+                        <div class="relative">
+                            <input :type="showPassword1 ? 'text' : 'password'"
+                                   name="password1"
+                                   id="{{ form.password1.id_for_label }}"
+                                   placeholder="Придумайте надежный пароль"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11"
+                                   autocomplete="new-password"
+                                   x-model="p1"
+                                   @input="calculateStrength($event.target.value)"
+                                   required>
+                            <button type="button" 
+                                    @click="showPassword1 = !showPassword1" 
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors focus:outline-none"
+                                    :title="showPassword1 ? 'Скрыть пароль' : 'Показать пароль'">
+                                <i class="bi" :class="showPassword1 ? 'bi-eye-slash-fill text-blue-600' : 'bi-eye-fill'"></i>
+                            </button>
+                        </div>
+                        {% if form.password1.errors %}
+                            <ul class="mt-1 text-xs text-rose-600 font-semibold space-y-0.5 list-disc list-inside">
+                                {% for error in form.password1.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+
+                        <!-- Interactive Password Strength Meter -->
+                        <div class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                            <!-- Progress Bar -->
+                            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
+                                <div class="h-2 transition-all duration-300 rounded-full"
+                                     :class="getStrengthColor()"
+                                     :style="`width: ${Math.min(100, strengthScore * 20)}%`">
+                                </div>
+                            </div>
+
+                            <!-- Criteria Checklist -->
+                            <div class="grid grid-cols-2 gap-1.5 text-[11px] pt-1">
+                                <div class="flex items-center gap-1.5 transition-colors" :class="hasMinLength ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="hasMinLength ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Минимум 8 знаков</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 transition-colors" :class="hasUpper ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="hasUpper ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Заглавная буква (A-Z)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 transition-colors" :class="hasLower ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="hasLower ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Строчная буква (a-z)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 transition-colors" :class="hasDigit ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="hasDigit ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Цифра (0-9)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 transition-colors" :class="hasSpecial ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="hasSpecial ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Спецсимвол (!@#$...)</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 transition-colors" :class="passwordsMatch ? 'text-emerald-600 font-semibold' : 'text-slate-400'">
+                                    <i class="bi" :class="passwordsMatch ? 'bi-check-circle-fill text-emerald-500' : 'bi-circle text-slate-300'"></i>
+                                    <span>Пароли совпадают</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password 2 (Confirm) -->
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                            Повторите пароль <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <input :type="showPassword2 ? 'text' : 'password'"
+                                   name="password2"
+                                   id="{{ form.password2.id_for_label }}"
+                                   placeholder="Введите пароль еще раз"
+                                   class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all pr-11"
+                                   autocomplete="new-password"
+                                   x-model="p2"
+                                   @input="checkMatch($event.target.value)"
+                                   required>
+                            <button type="button" 
+                                    @click="showPassword2 = !showPassword2" 
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors focus:outline-none"
+                                    :title="showPassword2 ? 'Скрыть пароль' : 'Показать пароль'">
+                                <i class="bi" :class="showPassword2 ? 'bi-eye-slash-fill text-blue-600' : 'bi-eye-fill'"></i>
+                            </button>
+                        </div>
+                        {% if form.password2.errors %}
+                            <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.password2.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 4. Consent to Personal Data Processing (152-FZ) -->
+                <div class="pt-2">
+                    <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                        {{ form.consent }}
+                        <span class="text-xs text-slate-600 leading-relaxed">
+                            Я подтверждаю достоверность введенных данных и выражаю согласие на <a href="/rules/" target="_blank" class="text-blue-600 hover:underline font-semibold">обработку персональных данных</a> в соответствии с требованиями Федерального закона № 152-ФЗ «О персональных данных». <span class="text-rose-500">*</span>
+                        </span>
+                    </label>
+                    {% if form.consent.errors %}
+                        <p class="mt-1 text-xs text-rose-600 font-semibold">{{ form.consent.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-3">
+                    <button type="submit" 
+                            :disabled="isSubmitting"
+                            class="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-witte-900 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60 text-white font-bold text-sm shadow-xl shadow-indigo-600/25 hover:scale-[1.01] active:scale-[0.99] transition-all">
+                        <i class="bi bi-person-check-fill" x-show="!isSubmitting"></i>
+                        <span class="spinner-border animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" x-show="isSubmitting" x-cloak></span>
+                        <span x-text="isSubmitting ? 'Регистрация абитуриента...' : 'Зарегистрироваться и войти в кабинет'"></span>
+                    </button>
+                </div>
+
+                <!-- Already Registered link -->
+                <div class="text-center pt-2">
+                    <span class="text-xs text-slate-500">Уже есть учетная запись?</span>
+                    <a href="/admin/login/" class="ml-1 text-xs text-blue-600 hover:text-blue-800 font-bold hover:underline">
+                        Войти в систему →
+                    </a>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

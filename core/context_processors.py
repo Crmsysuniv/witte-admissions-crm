@@ -6,6 +6,7 @@ PATH_TITLES = {
     'accounts': 'Пользователи',
     'user': 'Пользователи',
     'login': 'Вход в систему',
+    'register': 'Регистрация абитуриента',
     'logout': 'Выход',
     'password_change': 'Смена пароля',
     
