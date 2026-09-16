@@ -493,6 +493,21 @@ def admin_dashboard_view(request):
         'timeline_enrolled': chart_enrolled_counts,
         'faculty_labels': faculty_chart_labels,
         'faculty_data': faculty_chart_data,
+        'faculty_bar': {
+            'labels': [fac.name for fac in faculties],
+            'short_labels': faculty_chart_labels,
+            'total': [f['apps_total'] for f in faculty_stats],
+            'budget': [f['apps_budget'] for f in faculty_stats],
+            'paid': [f['apps_paid'] for f in faculty_stats],
+            'enrolled': [f['enrolled_total'] for f in faculty_stats],
+            'places': [f['total_places'] for f in faculty_stats],
+        },
+        'study_forms_pie': {
+            'labels': [f['name'] for f in study_forms_stat],
+            'data': [f['count'] for f in study_forms_stat],
+            'percentages': [f['percentage'] for f in study_forms_stat],
+            'codes': [f['code'] for f in study_forms_stat],
+        },
         'funnel_labels': ['Регистрации', 'Подали заявление', 'Загрузили документы', 'Одобрены (конкурс)', 'Зачислены'],
         'funnel_data': [stage_registered, stage_applied, stage_with_docs, stage_approved, stage_enrolled],
         'budget_paid_comparison': {

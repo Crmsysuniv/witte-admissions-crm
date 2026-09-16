@@ -138,6 +138,15 @@ class AdminDashboardTests(TestCase):
         self.assertGreater(response.context['funnel']['overall_conversion'], 0)
         self.assertIn('charts_json', response.context)
 
+        import json
+        charts_data = json.loads(response.context['charts_json'])
+        self.assertIn('faculty_bar', charts_data)
+        self.assertIn('labels', charts_data['faculty_bar'])
+        self.assertIn('total', charts_data['faculty_bar'])
+        self.assertIn('study_forms_pie', charts_data)
+        self.assertIn('labels', charts_data['study_forms_pie'])
+        self.assertIn('data', charts_data['study_forms_pie'])
+
         # Проверка контента на странице
         self.assertContains(response, 'Главный аналитический дашборд')
         self.assertContains(response, 'Прикладная информатика')
@@ -145,6 +154,9 @@ class AdminDashboardTests(TestCase):
         self.assertContains(response, 'Сквозная воронка конверсии')
         self.assertContains(response, 'Бюджетные места')
         self.assertContains(response, 'Платные места (Договор)')
+        self.assertContains(response, 'facultyBarChart')
+        self.assertContains(response, 'studyFormsPieChart')
+        self.assertContains(response, 'timelineChart')
 
     def test_superuser_access_granted(self):
         superuser = User.objects.create_superuser(
