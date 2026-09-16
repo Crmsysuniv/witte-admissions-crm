@@ -52,6 +52,7 @@ urlpatterns = [
     path('admin/users/', core_views.admin_users_list_view, name='admin_users_list'),
     path('admin/specialties/', core_views.admin_specialties_manage_view, name='admin_specialties_manage'),
     path('admin/audit/', core_views.admin_audit_logs_view, name='admin_audit_logs'),
+    path('admin/settings/', core_views.admin_settings_view, name='admin_settings'),
     path('admin/', admin.site.urls),
 ]
 

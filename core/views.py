@@ -262,8 +262,9 @@ from django.db.models import Count, Sum, Avg, Q, F
 from django.utils import timezone
 from accounts.decorators import admin_required
 from accounts.models import User, ApplicantProfile, OfficerProfile
-from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore
+from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore, CampaignSettings
 from audit.models import StatusLog, Notification, SecurityLog
+from audit.utils import log_security_event
 from feedback.models import FeedbackMessage
 
 
@@ -1112,6 +1113,153 @@ def admin_audit_logs_view(request):
     }
 
     return render(request, 'admin/audit_logs.html', context)
+
+
+@admin_required
+def admin_settings_view(request):
+    """
+    Страница системных параметров и конфигурации приемной кампании (admin/settings.html).
+    Позволяет администратору:
+    - Оперативно открывать / приостанавливать прием документов абитуриентов;
+    - Настраивать ключевые даты и дедлайны этапов зачисления (бюджет ВИ, бюджет ЕГЭ, договор);
+    - Устанавливать системные лимиты (макс. заявлений на студента, макс. размер файлов сканов);
+    - Управлять отображением глобального баннера системных объявлений на портале;
+    - Осуществлять массовую рассылку системных уведомлений (Broadcast) выбранным группам пользователей;
+    - Редактировать контактные данные и реквизиты технической поддержки приемной комиссии.
+    """
+    settings_obj = CampaignSettings.get_settings()
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'update_settings':
+            settings_obj.campaign_name = request.POST.get('campaign_name', '').strip() or settings_obj.campaign_name
+            settings_obj.is_active = request.POST.get('is_active') in ['1', 'true', 'on', True]
+            
+            # Даты кампании
+            start_date_str = request.POST.get('start_date')
+            end_vi_str = request.POST.get('end_date_budget_vi')
+            end_ege_str = request.POST.get('end_date_budget_ege')
+            end_paid_str = request.POST.get('end_date_paid')
+
+            settings_obj.start_date = start_date_str if start_date_str else None
+            settings_obj.end_date_budget_vi = end_vi_str if end_vi_str else None
+            settings_obj.end_date_budget_ege = end_ege_str if end_ege_str else None
+            settings_obj.end_date_paid = end_paid_str if end_paid_str else None
+
+            # Лимиты
+            try:
+                max_apps = int(request.POST.get('max_applications_per_applicant') or 5)
+                settings_obj.max_applications_per_applicant = max(1, min(10, max_apps))
+            except ValueError:
+                pass
+
+            try:
+                max_fsize = int(request.POST.get('max_file_size_mb') or 15)
+                settings_obj.max_file_size_mb = max(1, min(100, max_fsize))
+            except ValueError:
+                pass
+
+            settings_obj.allow_document_updates = request.POST.get('allow_document_updates') in ['1', 'true', 'on', True]
+            settings_obj.auto_notify_status_change = request.POST.get('auto_notify_status_change') in ['1', 'true', 'on', True]
+
+            # Системное объявление
+            settings_obj.system_announcement = request.POST.get('system_announcement', '').strip()
+            settings_obj.show_announcement = request.POST.get('show_announcement') in ['1', 'true', 'on', True]
+            settings_obj.announcement_type = request.POST.get('announcement_type', 'INFO')
+
+            # Контакты
+            settings_obj.hotline_phone = request.POST.get('hotline_phone', '').strip() or settings_obj.hotline_phone
+            settings_obj.support_email = request.POST.get('support_email', '').strip() or settings_obj.support_email
+
+            settings_obj.save()
+
+            log_security_event(
+                request=request,
+                event_type=SecurityLog.EventType.SETTINGS_CHANGE,
+                description=f"Администратор {request.user.email} обновил глобальные настройки кампании «{settings_obj.campaign_name}» (Статус: {'Открыт' if settings_obj.is_active else 'Закрыт'})"
+            )
+
+            messages.success(request, "Системные параметры и конфигурация приемной кампании успешно сохранены.")
+
+        elif action == 'toggle_active':
+            settings_obj.is_active = not settings_obj.is_active
+            settings_obj.save()
+            st_str = "открыт" if settings_obj.is_active else "приостановлен"
+            
+            log_security_event(
+                request=request,
+                event_type=SecurityLog.EventType.SETTINGS_CHANGE,
+                description=f"Администратор {request.user.email} изменил статус приема документов на: {st_str.upper()}"
+            )
+            messages.success(request, f"Прием документов абитуриентов успешно {st_str}.")
+
+        elif action == 'send_broadcast':
+            target_group = request.POST.get('target_group', 'ALL')
+            title = request.POST.get('broadcast_title', '').strip()
+            message_text = request.POST.get('broadcast_message', '').strip()
+            notif_type = request.POST.get('broadcast_type', Notification.NotificationType.INFO)
+
+            if title and message_text:
+                users_qs = User.objects.filter(is_active=True)
+                if target_group == 'APPLICANT':
+                    users_qs = users_qs.filter(role=User.Role.APPLICANT)
+                elif target_group == 'OFFICER':
+                    users_qs = users_qs.filter(role__in=[User.Role.OFFICER, User.Role.ADMIN])
+
+                recipient_count = users_qs.count()
+                notifications = [
+                    Notification(
+                        user=u,
+                        title=title,
+                        message=message_text,
+                        notification_type=notif_type
+                    )
+                    for u in users_qs
+                ]
+                Notification.objects.bulk_create(notifications)
+
+                log_security_event(
+                    request=request,
+                    event_type=SecurityLog.EventType.SETTINGS_CHANGE,
+                    description=f"Массовая рассылка системного уведомления «{title}» (Группа: {target_group}, Получателей: {recipient_count})"
+                )
+
+                messages.success(request, f"Системное уведомление «{title}» успешно доставлено {recipient_count} пользователям.")
+            else:
+                messages.error(request, "Для отправки рассылки необходимо указать заголовок и текст сообщения.")
+
+        return redirect(reverse('admin_settings'))
+
+    # GET-контекст
+    all_users_count = User.objects.filter(is_active=True).count()
+    applicants_count = User.objects.filter(role=User.Role.APPLICANT, is_active=True).count()
+    officers_count = User.objects.filter(role__in=[User.Role.OFFICER, User.Role.ADMIN], is_active=True).count()
+
+    recent_settings_logs = SecurityLog.objects.filter(
+        event_type=SecurityLog.EventType.SETTINGS_CHANGE
+    ).select_related('user').order_by('-created_at')[:5]
+
+    breadcrumbs = [
+        {'title': 'Главная', 'url': '/'},
+        {'title': 'Панель администратора', 'url': '/admin/dashboard/'},
+        {'title': 'Системные настройки кампании', 'is_active': True},
+    ]
+
+    context = {
+        'settings': settings_obj,
+        'user_counts': {
+            'all': all_users_count,
+            'applicants': applicants_count,
+            'officers': officers_count,
+        },
+        'notification_types': Notification.NotificationType.choices,
+        'recent_settings_logs': recent_settings_logs,
+        'breadcrumbs': breadcrumbs,
+    }
+
+    return render(request, 'admin/settings.html', context)
+
 
 
 

@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore
+from admissions.models import Faculty, Specialty, EducationProgram, ExamSubject, Application, ApplicationDocument, ExamScore, CampaignSettings
 from audit.models import StatusLog, Notification, SecurityLog
 from accounts.models import ApplicantProfile, OfficerProfile
 from feedback.models import FeedbackMessage
@@ -571,6 +571,126 @@ class AdminAuditLogsTests(TestCase):
         response = self.client.get(reverse('admin_audit_logs'), {'tab': 'status'})
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context['is_status_mode'])
+
+
+class AdminCampaignSettingsTests(TestCase):
+    """
+    Тестирование системных настроек приемной кампании (admin/settings.html).
+    """
+    def setUp(self):
+        self.client = Client()
+
+        self.admin = User.objects.create_user(
+            username='admin_settings_user',
+            password='testpassword123',
+            email='admin_set@witte.ru',
+            role=User.Role.ADMIN
+        )
+
+        self.officer = User.objects.create_user(
+            username='officer_settings_user',
+            password='testpassword123',
+            email='officer_set@witte.ru',
+            role=User.Role.OFFICER
+        )
+
+        self.applicant = User.objects.create_user(
+            username='applicant_settings_user',
+            password='testpassword123',
+            email='app_set@example.com',
+            role=User.Role.APPLICANT
+        )
+
+        self.settings = CampaignSettings.get_settings()
+
+    def test_anonymous_access_redirected(self):
+        response = self.client.get(reverse('admin_settings'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_officer_access_forbidden(self):
+        self.client.login(username='officer_settings_user', password='testpassword123')
+        response = self.client.get(reverse('admin_settings'))
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_access_success(self):
+        self.client.login(username='admin_settings_user', password='testpassword123')
+        response = self.client.get(reverse('admin_settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'admin/settings.html')
+        self.assertContains(response, 'Системные настройки приемной кампании')
+        self.assertContains(response, 'Приемная кампания 2026')
+
+    def test_update_settings_action(self):
+        self.client.login(username='admin_settings_user', password='testpassword123')
+        url = reverse('admin_settings')
+
+        post_data = {
+            'action': 'update_settings',
+            'campaign_name': 'Приемная кампания МУ Витте 2026/2027',
+            'is_active': '1',
+            'start_date': '2026-06-20',
+            'end_date_budget_vi': '2026-07-10',
+            'end_date_budget_ege': '2026-07-25',
+            'end_date_paid': '2026-08-28',
+            'max_applications_per_applicant': '5',
+            'max_file_size_mb': '20',
+            'allow_document_updates': '1',
+            'system_announcement': 'Сроки приема продлены до 30 августа!',
+            'show_announcement': '1',
+            'announcement_type': 'WARNING',
+            'hotline_phone': '+7 (495) 111-22-33',
+            'support_email': 'support@witte.ru',
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.campaign_name, 'Приемная кампания МУ Витте 2026/2027')
+        self.assertEqual(self.settings.max_file_size_mb, 20)
+        self.assertEqual(self.settings.hotline_phone, '+7 (495) 111-22-33')
+        self.assertTrue(self.settings.show_announcement)
+
+        # Проверяем запись в журнал безопасности
+        self.assertTrue(
+            SecurityLog.objects.filter(
+                event_type=SecurityLog.EventType.SETTINGS_CHANGE,
+                user=self.admin
+            ).exists()
+        )
+
+    def test_toggle_active_action(self):
+        self.client.login(username='admin_settings_user', password='testpassword123')
+        url = reverse('admin_settings')
+        initial_state = self.settings.is_active
+
+        response = self.client.post(url, {'action': 'toggle_active'})
+        self.assertEqual(response.status_code, 302)
+
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.is_active, not initial_state)
+
+    def test_send_broadcast_action(self):
+        self.client.login(username='admin_settings_user', password='testpassword123')
+        url = reverse('admin_settings')
+
+        post_data = {
+            'action': 'send_broadcast',
+            'target_group': 'APPLICANT',
+            'broadcast_title': 'Срочное сообщение абитуриентам',
+            'broadcast_message': 'Пожалуйста, проверьте статус верификации паспорта.',
+            'broadcast_type': Notification.NotificationType.WARNING,
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+
+        # Проверяем, что уведомление доставлено абитуриенту
+        self.assertTrue(
+            Notification.objects.filter(
+                user=self.applicant,
+                title='Срочное сообщение абитуриентам'
+            ).exists()
+        )
+
 
 
 

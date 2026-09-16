@@ -336,6 +336,116 @@ class ExamScore(models.Model):
         return self.score >= self.subject.min_score
 
 
+class CampaignSettings(models.Model):
+    """
+    Системные параметры и глобальная конфигурация приемной кампании.
+    """
+    campaign_name = models.CharField(
+        max_length=200,
+        default='Приемная кампания 2026',
+        verbose_name='Наименование кампании'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Прием документов открыт'
+    )
+    start_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Дата начала приема'
+    )
+    end_date_budget_vi = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Окончание приема с ВИ (бюджет)'
+    )
+    end_date_budget_ege = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Окончание приема по ЕГЭ (бюджет)'
+    )
+    end_date_paid = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name='Окончание приема на платной основе'
+    )
+    max_applications_per_applicant = models.PositiveIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        verbose_name='Лимит заявлений на одного абитуриента'
+    )
+    max_file_size_mb = models.PositiveIntegerField(
+        default=15,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name='Максимальный размер файла (МБ)'
+    )
+    allow_document_updates = models.BooleanField(
+        default=True,
+        verbose_name='Разрешить самостоятельную дозагрузку документов'
+    )
+    system_announcement = models.TextField(
+        blank=True,
+        verbose_name='Текст системного уведомления / объявления'
+    )
+    show_announcement = models.BooleanField(
+        default=False,
+        verbose_name='Отображать объявление на страницах портала'
+    )
+    announcement_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('INFO', 'Информационное (Синее)'),
+            ('WARNING', 'Предупреждение (Желтое)'),
+            ('SUCCESS', 'Успех / Важное (Зеленое)'),
+            ('DANGER', 'Срочное / Внимание (Красное)'),
+        ],
+        default='INFO',
+        verbose_name='Тип системного объявления'
+    )
+    auto_notify_status_change = models.BooleanField(
+        default=True,
+        verbose_name='Автоматическая отправка уведомлений при смене статуса'
+    )
+    hotline_phone = models.CharField(
+        max_length=50,
+        default='+7 (495) 500-03-03',
+        verbose_name='Телефон горячей линии'
+    )
+    support_email = models.EmailField(
+        default='pk@witte.ru',
+        verbose_name='Email приемной комиссии'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата последнего изменения'
+    )
+
+    class Meta:
+        verbose_name = 'Настройки приемной кампании'
+        verbose_name_plural = 'Настройки приемной кампании'
+
+    def __str__(self):
+        status_str = "Прием открыт" if self.is_active else "Прием закрыт"
+        return f"{self.campaign_name} ({status_str})"
+
+    @classmethod
+    def get_settings(cls):
+        obj, _ = cls.objects.get_or_create(
+            id=1,
+            defaults={
+                'campaign_name': 'Приемная кампания 2026',
+                'is_active': True,
+                'max_applications_per_applicant': 5,
+                'max_file_size_mb': 15,
+                'allow_document_updates': True,
+                'hotline_phone': '+7 (495) 500-03-03',
+                'support_email': 'pk@witte.ru',
+            }
+        )
+        return obj
+
+
+
 
 
 
