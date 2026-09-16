@@ -29,8 +29,10 @@ def dashboard_view(request):
         .order_by('-submission_date')
     )
 
-    primary_application = applications.first()
+    active_applications = applications.exclude(status=Application.Status.WITHDRAWN)
+    primary_application = active_applications.first() or applications.first()
     total_applications = applications.count()
+    active_applications_count = active_applications.count()
 
     # Документы и сканы
     user_documents = ApplicationDocument.objects.filter(application__applicant=user)
@@ -255,6 +257,8 @@ def dashboard_view(request):
     context = {
         'applicant_profile': applicant_profile,
         'applications': applications,
+        'active_applications': active_applications,
+        'active_applications_count': active_applications_count,
         'primary_application': primary_application,
         'total_applications': total_applications,
         'total_documents': total_documents,
@@ -807,6 +811,92 @@ def rating_view(request):
         'displayed_candidates': displayed_candidates,
     }
     return render(request, 'student/rating.html', context)
+
+
+@login_required
+def withdraw_application_view(request, application_id):
+    """
+    Отзыв поданного заявления абитуриентом (с подтверждением действия).
+    - Доступ только авторизованному владельцу заявления (applicant=request.user);
+    - Защита от повторного отзыва и отзыва уже зачисленных заявлений;
+    - Фиксация смены статуса на WITHDRAWN;
+    - Создание записи аудита в StatusLog с причиной отзыва;
+    - Отправка системного уведомления в Notification;
+    - Отображение Flash-сообщения об успешном отзыве заявления;
+    - Модальное подтверждение или отдельная страница подтверждения при прямом GET-переходе.
+    """
+    user = request.user
+    application = get_object_or_404(
+        Application.objects.select_related('program__specialty__faculty', 'program'),
+        id=application_id,
+        applicant=user
+    )
+
+    # Проверка возможности отзыва
+    if application.status == Application.Status.WITHDRAWN:
+        messages.warning(request, f'Заявление №{application.id} уже было отозвано ранее.')
+        return redirect('student:dashboard')
+
+    if application.status == Application.Status.ENROLLED:
+        messages.error(
+            request,
+            f'Невозможно отозвать заявление №{application.id}: вы уже зачислены приказом ректора. '
+            f'Для решения вопроса об отчислении обратитесь в студенческий отдел кадров МУ им. С.Ю. Витте.'
+        )
+        return redirect('student:dashboard')
+
+    if request.method == 'POST':
+        reason = request.POST.get('withdrawal_reason', '').strip()
+        custom_comment = request.POST.get('custom_comment', '').strip()
+
+        comment_parts = []
+        if reason:
+            comment_parts.append(reason)
+        if custom_comment:
+            comment_parts.append(custom_comment)
+
+        full_comment = " — ".join(comment_parts) if comment_parts else "Заявление отозвано абитуриентом по собственному желанию."
+
+        old_status = application.status
+        application.status = Application.Status.WITHDRAWN
+        application.officer_comment = f"Отозвано абитуриентом: {full_comment}"
+        application.save()
+
+        # 1. Запись в журнал аудита изменений статусов
+        StatusLog.objects.create(
+            application=application,
+            old_status=old_status,
+            new_status=Application.Status.WITHDRAWN,
+            changed_by=user,
+            comment=full_comment
+        )
+
+        # 2. Создание уведомления в личном кабинете
+        Notification.objects.create(
+            user=user,
+            title='Заявление успешно отозвано',
+            message=f'Вы успешно отозвали заявление №{application.id} на направление «{application.program.specialty.name}» ({application.program.get_study_form_display()} форма).',
+            notification_type=Notification.NotificationType.STATUS_CHANGE
+        )
+
+        messages.success(
+            request,
+            f'Заявление №{application.id} на программу «{application.program.specialty.name}» успешно отозвано.'
+        )
+
+        next_url = request.POST.get('next')
+        if next_url:
+            return redirect(next_url)
+        return redirect('student:dashboard')
+
+    # GET-запрос: отображение страницы подтверждения отзыва
+    context = {
+        'application': application,
+        'program': application.program,
+        'specialty': application.program.specialty,
+    }
+    return render(request, 'student/application_confirm_withdraw.html', context)
+
 
 
 

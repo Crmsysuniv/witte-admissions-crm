@@ -130,12 +130,22 @@
                     </div>
                 </div>
 
-                <!-- Footer Action -->
-                <a href="?program={{ item.program.id }}&financing={{ item.financing_type }}#competitive-table" 
-                   class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all {% if selected_program.id == item.program.id and selected_financing == item.financing_type %}bg-blue-600 text-white shadow-md shadow-blue-500/20{% else %}bg-slate-100 hover:bg-slate-200 text-slate-700{% endif %}">
-                    <i class="bi bi-list-ol"></i>
-                    <span>Смотреть этот конкурсный список</span>
-                </a>
+                <!-- Footer Actions -->
+                <div class="flex items-center gap-2">
+                    <a href="?program={{ item.program.id }}&financing={{ item.financing_type }}#competitive-table" 
+                       class="flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all {% if selected_program.id == item.program.id and selected_financing == item.financing_type %}bg-blue-600 text-white shadow-md shadow-blue-500/20{% else %}bg-slate-100 hover:bg-slate-200 text-slate-700{% endif %}">
+                        <i class="bi bi-list-ol"></i>
+                        <span>Конкурсный список</span>
+                    </a>
+                    {% if item.status != 'WITHDRAWN' and item.status != 'ENROLLED' %}
+                    <a href="{% url 'student:withdraw_application' item.application.id %}" 
+                       title="Отозвать заявление"
+                       class="inline-flex items-center justify-center px-3 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 transition-colors font-bold text-xs">
+                        <i class="bi bi-x-circle text-sm"></i>
+                        <span class="hidden sm:inline ml-1">Отозвать</span>
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>

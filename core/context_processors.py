@@ -15,6 +15,7 @@ PATH_TITLES = {
     'apply': 'Подача заявления',
     'documents': 'Документы и сканы',
     'rating': 'Конкурсные списки и рейтинг',
+    'withdraw': 'Отзыв заявления',
     
     # Admissions
     'admissions': 'Приемная комиссия',

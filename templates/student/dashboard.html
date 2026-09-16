@@ -7,7 +7,19 @@
 {% block content %}
 <div class="space-y-8 pb-12" x-data="{
     activeTab: 'applications',
-    showTimeline: true
+    showTimeline: true,
+    withdrawModalOpen: false,
+    withdrawAppId: '',
+    withdrawAppTitle: '',
+    withdrawAppNumber: '',
+    withdrawActionUrl: '',
+    openWithdrawModal(id, number, title, actionUrl) {
+        this.withdrawAppId = id;
+        this.withdrawAppNumber = number;
+        this.withdrawAppTitle = title;
+        this.withdrawActionUrl = actionUrl;
+        this.withdrawModalOpen = true;
+    }
 }">
 
     <!-- 1. HERO BANNER -->
@@ -266,8 +278,76 @@
                     <i class="bi bi-chat-left-dots"></i>
                     <span>Вопрос по заявлению</span>
                 </a>
+                {% if primary_application.status != 'WITHDRAWN' and primary_application.status != 'ENROLLED' %}
+                <button type="button" 
+                        @click="openWithdrawModal('{{ primary_application.id }}', '{{ primary_application.id }}', '{{ primary_application.program.specialty.code }} {{ primary_application.program.specialty.name }} ({{ primary_application.program.get_study_form_display }})', '{% url 'student:withdraw_application' primary_application.id %}')"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white border border-rose-500/30 font-semibold transition-all">
+                    <i class="bi bi-x-circle text-rose-400"></i>
+                    <span>Отозвать заявление</span>
+                </button>
+                {% elif primary_application.status == 'WITHDRAWN' %}
+                <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-500/20 text-slate-400 border border-white/10 font-medium">
+                    <i class="bi bi-dash-circle"></i>
+                    <span>Заявление отозвано</span>
+                </span>
+                {% endif %}
             </div>
         </div>
+
+        {% if applications.count > 1 %}
+        <!-- ALL APPLICATIONS LIST (WHEN MULTIPLE) -->
+        <div class="mt-6 pt-6 border-t border-slate-200/80 space-y-3">
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i class="bi bi-collection-fill text-indigo-600"></i>
+                    <span>Все ваши заявления ({{ total_applications }})</span>
+                </h4>
+                <span class="text-xs text-slate-400">Лимит: до 5 направлений</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {% for app in applications %}
+                <div class="p-4 rounded-2xl border transition-all {% if app.id == primary_application.id %}border-blue-300 bg-blue-50/30{% elif app.status == 'WITHDRAWN' %}border-slate-200 bg-slate-50/60 opacity-80{% else %}border-slate-200 bg-white hover:border-slate-300{% endif %} flex flex-col justify-between gap-3 text-xs">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <span class="font-mono font-bold text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                №{{ app.id }}
+                            </span>
+                            <span class="font-bold text-[10px] px-2 py-0.5 rounded-md {% if app.status == 'WITHDRAWN' %}bg-slate-200 text-slate-700{% elif app.status == 'APPROVED' %}bg-emerald-100 text-emerald-800{% elif app.status == 'ENROLLED' %}bg-purple-100 text-purple-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                {{ app.get_status_display }}
+                            </span>
+                        </div>
+                        <h5 class="font-bold text-slate-900 leading-snug">
+                            {{ app.program.specialty.code }} {{ app.program.specialty.name }}
+                        </h5>
+                        <p class="text-[11px] text-slate-500 mt-0.5">
+                            {{ app.program.get_study_form_display }} • {{ app.get_financing_type_display }}
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span class="text-[11px] text-slate-400">
+                            {{ app.submission_date|date:"d.m.Y" }}
+                        </span>
+                        
+                        <div class="flex items-center gap-2">
+                            <a href="/student/rating/?program={{ app.program.id }}&financing={{ app.financing_type }}" class="text-blue-600 hover:text-blue-700 font-bold text-[11px]">
+                                В рейтинге →
+                            </a>
+                            {% if app.status != 'WITHDRAWN' and app.status != 'ENROLLED' %}
+                            <button type="button" 
+                                    @click="openWithdrawModal('{{ app.id }}', '{{ app.id }}', '{{ app.program.specialty.code }} {{ app.program.specialty.name }} ({{ app.program.get_study_form_display }})', '{% url 'student:withdraw_application' app.id %}')"
+                                    class="text-rose-600 hover:text-rose-800 font-bold text-[11px] hover:underline">
+                                Отозвать
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         {% else %}
         <!-- ONBOARDING PROMPT: NO APPLICATION SUBMITTED YET -->
@@ -488,6 +568,78 @@
             </div>
         </div>
 
+    <!-- 6. WITHDRAWAL CONFIRMATION MODAL -->
+    <div x-show="withdrawModalOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+         style="display: none;">
+        
+        <div @click.away="withdrawModalOpen = false"
+             class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6">
+            
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                    <i class="bi bi-exclamation-octagon-fill"></i>
+                </div>
+                <div class="space-y-1">
+                    <h4 class="text-lg font-black text-slate-900">
+                        Отозвать заявление на поступление?
+                    </h4>
+                    <p class="text-xs text-slate-500">
+                        Действие необратимо. Заявление будет снято с конкурсного отбора.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Target Application Details -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <div class="text-[11px] text-slate-400 uppercase font-bold">Выбранное заявление:</div>
+                <div class="font-bold text-slate-800 text-sm">
+                    Заявление №<span x-text="withdrawAppNumber"></span>
+                </div>
+                <div class="text-slate-600 font-medium" x-text="withdrawAppTitle"></div>
+            </div>
+
+            <form method="POST" :action="withdrawActionUrl" class="space-y-4">
+                {% csrf_token %}
+
+                <div class="space-y-1.5">
+                    <label for="id_modal_reason" class="block text-xs font-bold text-slate-700">
+                        Причина отзыва:
+                    </label>
+                    <select id="id_modal_reason" name="withdrawal_reason" required
+                            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-xs text-slate-800 bg-white transition-all">
+                        <option value="Выбрал другое направление подготовки в МУ им. С.Ю. Витте">Выбрал другое направление подготовки в МУ им. С.Ю. Витте</option>
+                        <option value="Подал оригиналы документов в другой университет">Подал оригиналы документов в другой университет</option>
+                        <option value="Изменились личные планы / семейные обстоятельства">Изменились личные планы / семейные обстоятельства</option>
+                        <option value="Переход на другую форму обучения">Переход на другую форму обучения</option>
+                        <option value="Другая причина">Другая причина</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label for="id_modal_comment" class="block text-xs font-bold text-slate-700">
+                        Комментарий (необязательно):
+                    </label>
+                    <textarea id="id_modal_comment" name="custom_comment" rows="2" placeholder="Дополнительное пояснение для приемной комиссии"
+                              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-xs text-slate-800 placeholder-slate-400 transition-all"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button type="button" @click="withdrawModalOpen = false" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-md shadow-rose-600/20">
+                        Да, отозвать заявление
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
 </div>
