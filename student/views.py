@@ -6,9 +6,11 @@ from accounts.models import ApplicantProfile
 from admissions.models import Faculty, Specialty, EducationProgram, Application, ApplicationDocument, ExamScore
 from audit.models import Notification, StatusLog
 from .forms import StudentProfileForm, ApplicationSubmissionForm, DocumentUploadForm
+from .decorators import applicant_required
 
 
 @login_required
+@applicant_required
 def dashboard_view(request):
     """
     Дашборд абитуриента (student/dashboard.html):
@@ -278,6 +280,7 @@ def dashboard_view(request):
 
 
 @login_required
+@applicant_required
 def profile_view(request):
     """
     Страница заполнения и редактирования персональных данных профиля абитуриента (student/profile.html).
@@ -327,6 +330,7 @@ def profile_view(request):
 
 
 @login_required
+@applicant_required
 def apply_view(request):
     """
     Пошаговая форма подачи заявления на обучение (student/apply.html):
@@ -488,6 +492,7 @@ def apply_view(request):
 
 
 @login_required
+@applicant_required
 def documents_view(request):
     """
     Интерфейс загрузки и управления электронными документами/сканами (student/documents.html):
@@ -590,6 +595,7 @@ def documents_view(request):
 
 
 @login_required
+@applicant_required
 def rating_view(request):
     """
     Страница отслеживания конкурсных списков и позиций в рейтинге (student/rating.html):
@@ -814,6 +820,7 @@ def rating_view(request):
 
 
 @login_required
+@applicant_required
 def withdraw_application_view(request, application_id):
     """
     Отзыв поданного заявления абитуриентом (с подтверждением действия).

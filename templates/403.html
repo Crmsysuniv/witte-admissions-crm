@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Доступ ограничен (403) | МУ им. С.Ю. Витте{% endblock %}
+
+{% block header_breadcrumb %}Доступ ограничен{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-3xl p-8 sm:p-12 border border-slate-200/80 shadow-xl text-center space-y-6">
+        
+        <!-- Icon -->
+        <div class="w-20 h-20 rounded-3xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-4xl shadow-inner">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+
+        <!-- Badges & Title -->
+        <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 uppercase tracking-wider">
+                Ошибка 403 • Доступ ограничен
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900">
+                Раздел предназначен только для абитуриентов
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+                Личный кабинет, подача заявлений, загрузка документов и отслеживание рейтингов доступны исключительно пользователям с ролью <strong class="text-slate-800">«Абитуриент» (APPLICANT)</strong>.
+            </p>
+        </div>
+
+        <!-- Role Information Callout -->
+        {% if user.is_authenticated %}
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+            <div class="text-slate-500">Текущий пользователь:</div>
+            <div class="font-bold text-slate-900 text-sm">
+                {{ user.get_full_name|default:user.username }}
+            </div>
+            <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-800 font-semibold text-[11px]">
+                Роль в системе: {{ user.get_role_display|default:user.role }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Navigation Actions -->
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {% if user.is_staff or user.is_superuser %}
+            <a href="/admin/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-md">
+                <i class="bi bi-speedometer2"></i>
+                <span>Панель управления (Admin)</span>
+            </a>
+            <a href="/admin/admissions/application/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                <i class="bi bi-folder2-open"></i>
+                <span>Заявления в CRM</span>
+            </a>
+            {% else %}
+            <a href="/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md">
+                <i class="bi bi-house-door-fill"></i>
+                <span>Главная страница</span>
+            </a>
+            <a href="/logout/" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Сменить аккаунт</span>
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

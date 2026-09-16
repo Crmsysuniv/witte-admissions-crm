@@ -350,7 +350,7 @@
                             </div>
 
                             <div class="py-1">
-                                {% if user.is_authenticated %}
+                                {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
                                 <a href="/student/dashboard/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-person-workspace text-slate-400"></i>
                                     <span>Кабинет абитуриента</span>
@@ -371,6 +371,8 @@
                                     <i class="bi bi-trophy-fill text-slate-400"></i>
                                     <span>Конкурсные списки</span>
                                 </a>
+                                {% endif %}
+                                {% if user.is_authenticated %}
                                 <a href="/password_change/" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                                     <i class="bi bi-key-fill text-slate-400"></i>
                                     <span>Сменить пароль</span>
