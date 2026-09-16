@@ -31,6 +31,7 @@ urlpatterns = [
     path('dormitory/', admissions_views.dormitory_info, name='dormitory_info'),
     path('faq/', core_views.faq, name='faq'),
     path('contacts/', core_views.contacts, name='contacts'),
+    path('feedback/', include('feedback.urls')),
     path('admissions/', include('admissions.urls')),
     path('admin/', admin.site.urls),
 ]
